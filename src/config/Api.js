@@ -4,12 +4,13 @@ import DeviceInfo from 'react-native-device-info';
 import * as RootNavigation from './RootNavigation';
 import {encryptData} from '../helper/helper';
 import {getProfile, removeProfile} from '../storage';
+import Toast from 'react-native-toast-message';
 
 const generateToken = () => {
   let profile = getProfile();
   let token = null;
   if (profile) {
-    token = {phone: null, expired: moment().add(60, 'minutes')};
+    token = {phone: profile.phone, expired: moment().add(60, 'minutes')};
     token = encryptData(token);
   } else {
     token = 'OY0TC9T7iyCbHGtixotgyXzDbXR4cnMP';
@@ -40,9 +41,16 @@ $axios.interceptors.response.use(
   response => {
     let res = response.data;
     if (res && res.status_code && res.status_code == '401') {
-      removeProfile();
-      RootNavigation.navigateReplace('LoginView');
-      return Promise.resolve(response);
+      console.log(res);
+
+      Toast.show({
+        type: 'error',
+        text1: '401',
+        text2: res.message,
+      });
+      // removeProfile();
+      // RootNavigation.navigateReplace('LoginView');
+      // return Promise.resolve(response);
     }
     return Promise.resolve(response);
   },

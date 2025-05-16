@@ -1,12 +1,23 @@
 import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import color from '../../constant/color';
 import * as RootNavigation from '../../config/RootNavigation';
+import {getListItem} from '../../resource/Item';
 
 const Items = () => {
-  const handlePressAdd = () => {
-    RootNavigation.navigate('Item');
-    console.log('add item');
+  const [list, setList] = useState([]);
+  const handlePressAddItem = () => {
+    RootNavigation.navigate('ItemCreate');
+  };
+  const handlePressListItem = () => {
+    RootNavigation.navigate('ItemList', {list: list});
+  };
+  useEffect(() => {
+    loadData();
+  }, []);
+  const loadData = async () => {
+    let getdata = await getListItem({});
+    if (getdata) setList(getdata);
   };
   return (
     <View style={{marginTop: 15}}>
@@ -58,11 +69,14 @@ const Items = () => {
               paddingHorizontal: 12,
               backgroundColor: '#6D55B2',
               borderRadius: 20,
-            }}>
-            <Text style={{...styles.title, fontSize: 14}}>+454 Items</Text>
+            }}
+            onPress={() => handlePressListItem()}>
+            <Text style={{...styles.title, fontSize: 14}}>
+              . . . {list.length} Items
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => handlePressAdd()}
+            onPress={() => handlePressAddItem()}
             style={{
               paddingVertical: 10,
               paddingHorizontal: 14,
