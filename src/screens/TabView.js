@@ -1,21 +1,21 @@
-import {Image, Platform, StatusBar, StyleSheet, Text, View} from 'react-native';
-import React, {useEffect, useState} from 'react';
-import {SafeAreaView, TouchableOpacity} from 'react-native';
-import Home from './Home/Home';
 import Icon from '@react-native-vector-icons/lucide';
+import {useState} from 'react';
+import {
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import color from '../constant/color';
-import {storage} from '../storage';
+import Home from './Home/Home';
+import Profile from './Profile/Profile';
 
 const TabView = () => {
   const [activeTab, setActiveTab] = useState('Home');
-  useEffect(() => {
-    storage.set('time-open', 0);
-  }, []);
   const handleTabChange = tabName => {
-    console.log(tabName);
-    let count = storage.getNumber('time-open');
-    console.log((count += 1));
-    storage.set('time-open', count);
     setActiveTab(tabName);
   };
   return (
@@ -23,41 +23,35 @@ const TabView = () => {
       <StatusBar barStyle={'dark-content'} backgroundColor={color.white} />
       {activeTab === 'Home' && <Home />}
 
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-        }}>
+      {activeTab === 'Profile' && <Profile />}
+
+      <View style={{position: 'absolute', bottom: 0, left: 0, right: 0}}>
         <View style={styles.wrapper}>
           <TouchableOpacity onPress={() => handleTabChange('Home')}>
-            <View
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 8,
-                backgroundColor: color.primaryLight,
-                paddingVertical: 9,
-                paddingHorizontal: 14,
-                borderRadius: 30,
-              }}>
+            <View style={activeTab == 'Home' ? styles.activeTab : null}>
               <View>
                 <Icon name="house" size={24} color={color.primaryColor} />
               </View>
-              <Text style={{fontSize: 12, color: color.primaryColor}}>
-                Home
-              </Text>
+              {activeTab == 'Home' && (
+                <Text style={{fontSize: 12, color: color.primaryColor}}>
+                  Home
+                </Text>
+              )}
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTabChange('Home')}>
-            <View>
-              <Icon name="calendar" size={24} color={color.primaryColor} />
+          <TouchableOpacity onPress={() => handleTabChange('Profile')}>
+            <View style={activeTab == 'Profile' ? styles.activeTab : null}>
+              <View>
+                <Icon name="user" size={24} color={color.primaryColor} />
+              </View>
+              {activeTab == 'Profile' && (
+                <Text style={{fontSize: 12, color: color.primaryColor}}>
+                  Profile
+                </Text>
+              )}
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTabChange('Home')}>
+          {/* <TouchableOpacity onPress={() => handleTabChange('Home')}>
             <View>
               <Icon name="mail" size={24} color={color.primaryColor} />
             </View>
@@ -85,17 +79,7 @@ const TabView = () => {
                 </Text>
               </View>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTabChange('Home')}>
-            <View>
-              <Icon name="bell" size={24} color={color.primaryColor} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTabChange('Home')}>
-            <View>
-              <Icon name="user" size={24} color={color.primaryColor} />
-            </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </SafeAreaView>
@@ -119,5 +103,16 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     elevation: 1,
+  },
+  activeTab: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: color.primaryLight,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 30,
   },
 });

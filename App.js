@@ -3,6 +3,7 @@ import Toast from 'react-native-toast-message';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Router from './src/config/Router';
 import {navigationRef} from './src/config/RootNavigation';
+import 'react-native-get-random-values';
 const Stack = createNativeStackNavigator();
 
 export default function App() {

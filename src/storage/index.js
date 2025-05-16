@@ -15,3 +15,10 @@ export const getProfile = () => {
     return null;
   }
 };
+export const removeProfile = () => {
+  try {
+    return storage.delete('profile');
+  } catch (error) {
+    return null;
+  }
+};

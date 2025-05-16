@@ -1,7 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
 import React, {useEffect, useState} from 'react';
 import {
-  Alert,
   Platform,
   StatusBar,
   StyleSheet,
@@ -9,11 +8,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
 } from 'react-native';
+import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {loginSeller} from '../resource/Login';
 import {getProfile, setProfile} from '../storage';
-import * as RootNavigation from '../config/RootNavigation';
+
 const LoginView = ({navigation, route}) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -40,22 +41,23 @@ const LoginView = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <View
-        style={{
-          width: '100%',
-          height: Platform.OS === 'ios' ? 320 : 280,
-          backgroundColor: color.primaryColor,
-          paddingHorizontal: 30,
-        }}>
+      <ScrollView contentContainerStyle={{flexGrow: 1}}>
         <View
           style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingTop: Platform.OS === 'ios' ? 60 : 20,
+            width: '100%',
+            height: Platform.OS === 'ios' ? 220 : 180,
+            backgroundColor: color.primaryColor,
+            paddingHorizontal: 30,
           }}>
-          <View></View>
-          <View>
+          {/* Header */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingTop: Platform.OS === 'ios' ? 40 : 5,
+            }}>
+            <View />
             <TouchableOpacity
               style={{
                 borderRadius: 15,
@@ -69,75 +71,80 @@ const LoginView = ({navigation, route}) => {
               <Icon name="circle-help" size={25} color={color.white} />
             </TouchableOpacity>
           </View>
-        </View>
-        <View
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-start',
-            alignContent: 'center',
-            gap: 20,
-            flexDirection: 'row',
-            marginTop: 30,
-          }}>
+
+          {/* Logo + Title */}
           <View
             style={{
-              justifyContent: 'center',
-              alignContent: 'center',
-              flexDirection: 'column',
+              flexDirection: 'row',
+              gap: 20,
+              marginTop: 10,
             }}>
-            <Icon name="baggage-claim" size={80} color={color.white} />
-          </View>
-          <View>
-            <Text
+            <View
               style={{
-                fontSize: 22,
-                fontWeight: '700',
-                color: color.white,
+                justifyContent: 'center',
+                alignContent: 'center',
+                flexDirection: 'column',
               }}>
-              GasTrack
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: '500',
-                color: '#B1A3D2',
-                marginTop: 4,
-              }}>
-              By Gesang Aji Seto
-            </Text>
+              <Icon name="baggage-claim" size={80} color={color.white} />
+            </View>
+            <View>
+              <Text
+                style={{fontSize: 22, fontWeight: '700', color: color.white}}>
+                GasTrack
+              </Text>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: '500',
+                  color: '#B1A3D2',
+                  marginTop: 4,
+                }}>
+                By Gesang Aji Seto
+              </Text>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '500',
+                  color: '#B1A3D2',
+                  marginTop: 4,
+                }}>
+                Your Warehouse Partner
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.container}>
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="Nomor Telepon"
-          keyboardType="phone-pad"
-          style={styles.input}
-          textAlign="center"
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Kata Sandi"
-          secureTextEntry
-          style={styles.input}
-          textAlign="center"
-        />
-      </View>
-      <View style={{paddingBottom: 200}}></View>
+        {/* Form */}
+        <View style={styles.container}>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="Nomor Telepon"
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+            style={styles.input}
+            textAlign="center"
+          />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Kata Sandi"
+            secureTextEntry
+            style={styles.input}
+            textAlign="center"
+          />
+        </View>
 
-      <View style={{position: 'absolute', bottom: 30, left: 40, right: 40}}>
-        <TouchableOpacity
-          onPress={() => handleLogin()}
-          style={styles.loginButton}>
-          <Text style={{color: color.white, fontSize: 16, fontWeight: 'bold'}}>
-            Login
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* Button */}
+        <View style={{alignItems: 'center', marginTop: 20, padding: 40}}>
+          <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
+            <Text
+              style={{color: color.white, fontSize: 16, fontWeight: 'bold'}}>
+              Login
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -163,11 +170,12 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   loginButton: {
-    borderRadius: 20,
-    backgroundColor: color.primaryColor,
-    height: 50,
+    backgroundColor: '#0066FF',
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    minWidth: 200,
   },
 });
