@@ -1,13 +1,17 @@
 import {MMKV} from 'react-native-mmkv';
 export const storage = new MMKV(); // Returns an MMKV Instance
 
-export const getDeviceConfig = () => {
+export const setProfile = data => {
   try {
-    return JSON.parse(MMKV.getString('app_config'));
+    storage.set('profile', JSON.stringify(data));
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const getProfile = () => {
+  try {
+    return JSON.parse(storage.getString('profile'));
   } catch (error) {
     return null;
   }
-};
-export const setDeviceConfig = data => {
-  MMKV.setString('app_config', JSON.stringify(data));
 };

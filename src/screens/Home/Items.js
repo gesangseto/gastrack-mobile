@@ -3,6 +3,7 @@ import React from 'react';
 import color from '../../constant/color';
 
 const Items = () => {
+  const handlePressAdd = () => {};
   return (
     <View>
       <Text
@@ -20,7 +21,7 @@ const Items = () => {
         }}>
         <Text style={styles.title}>List Items</Text>
 
-        <View style={{flexDirection: 'row', marginTop: 12}}>
+        {/* <View style={{flexDirection: 'row', marginTop: 12}}>
           <Image
             source={{
               uri: 'https://www.shutterstock.com/image-photo/healthcare-medical-staff-concept-portrait-600nw-2281024823.jpg',
@@ -39,7 +40,7 @@ const Items = () => {
           <DoctorImage uri="https://img.freepik.com/free-photo/woman-doctor-wearing-lab-coat-with-stethoscope-isolated_1303-29791.jpg" />
 
           <DoctorImage uri="https://www.shutterstock.com/image-photo/young-asian-female-doctor-standing-600nw-2138546201.jpg" />
-        </View>
+        </View> */}
         <View
           style={{
             flexDirection: 'row',
@@ -57,6 +58,7 @@ const Items = () => {
             <Text style={{...styles.title, fontSize: 14}}>+454 Items</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={handlePressAdd()}
             style={{
               paddingVertical: 10,
               paddingHorizontal: 14,
