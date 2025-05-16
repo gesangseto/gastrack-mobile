@@ -1,11 +1,9 @@
 import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import React from 'react';
 import color from '../../constant/color';
-import * as RootNavigation from '../../config/RootNavigation';
 
-const Items = () => {
+const Batchs = () => {
   const handlePressAdd = () => {
-    RootNavigation.navigate('Item');
     console.log('add item');
   };
   return (
@@ -14,16 +12,16 @@ const Items = () => {
         style={{
           ...styles.title1,
         }}>
-        Items
+        Batchs
       </Text>
       <View
         style={{
-          marginTop: 15,
+          marginTop: 10,
           backgroundColor: color.primaryColor,
           padding: 20,
           borderRadius: 30,
         }}>
-        <Text style={styles.title}>List Items</Text>
+        <Text style={styles.title}>List Batchs</Text>
 
         {/* <View style={{flexDirection: 'row', marginTop: 12}}>
           <Image
@@ -59,7 +57,7 @@ const Items = () => {
               backgroundColor: '#6D55B2',
               borderRadius: 20,
             }}>
-            <Text style={{...styles.title, fontSize: 14}}>+454 Items</Text>
+            <Text style={{...styles.title, fontSize: 14}}>+454 Batchs</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handlePressAdd()}
@@ -75,7 +73,7 @@ const Items = () => {
                 fontSize: 14,
                 color: color.primaryColor,
               }}>
-              Tambah Item
+              Tambah Batch
             </Text>
           </TouchableOpacity>
         </View>
@@ -84,7 +82,7 @@ const Items = () => {
   );
 };
 
-export default Items;
+export default Batchs;
 
 const styles = StyleSheet.create({
   title1: {

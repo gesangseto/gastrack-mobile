@@ -7,6 +7,7 @@ import Details from '../screens/Details/Details';
 import TabView from '../screens/TabView';
 import Form from '../screens/Form/Form';
 import LoginView from '../screens/LoginView';
+import Item from '../screens/Items/Item';
 
 const shouldShowCustomSplashScreen = () => {
   if (Platform.OS === 'android') {
@@ -25,7 +26,7 @@ const Router = () => {
       initialRouteName="LoginView">
       <Stack.Screen name="LoginView" component={LoginView} />
       <Stack.Screen name="TabView" component={TabView} />
-      <Stack.Screen name="Details" component={Details} />
+      <Stack.Screen name="Item" component={Item} />
       <Stack.Screen name="Form" component={Form} />
     </Stack.Navigator>
   );

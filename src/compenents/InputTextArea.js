@@ -1,19 +1,16 @@
 import React from 'react';
-import {TextInput, View, Text, StyleSheet} from 'react-native';
+import {View, Text, TextInput, StyleSheet} from 'react-native';
 
-const InputText = (props = {}) => {
-  const {
-    label,
-    value,
-    onChangeText,
-    placeholder,
-    secureTextEntry,
-    keyboardType,
-    required,
-    errorMessage,
-    showError,
-  } = props;
-
+const InputTextArea = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  required,
+  errorMessage,
+  showError,
+  numberOfLines = 4,
+}) => {
   return (
     <View style={styles.container}>
       {label && (
@@ -25,12 +22,13 @@ const InputText = (props = {}) => {
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
+        multiline
+        numberOfLines={numberOfLines}
         style={[
           styles.input,
           showError && required && !value && {borderColor: 'red'},
         ]}
+        textAlignVertical="top"
         placeholderTextColor="#888"
       />
       {showError && required && !value && (
@@ -42,30 +40,28 @@ const InputText = (props = {}) => {
   );
 };
 
-export default InputText;
+export default InputTextArea;
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   label: {
-    marginBottom: 6,
-    fontSize: 10,
+    fontSize: 14,
+    marginBottom: 4,
     color: '#333',
-    fontWeight: '500',
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 10,
-    marginTop: 4,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    padding: 10,
     fontSize: 16,
-    backgroundColor: '#fff',
+    minHeight: 100,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
