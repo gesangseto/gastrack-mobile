@@ -1,3 +1,4 @@
+source 'https://github.com/CocoaPods/Specs.git'
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -16,6 +17,7 @@ end
 
 target 'GasTrack' do
   config = use_native_modules!
+  use_frameworks! :linkage => :static
 
   use_react_native!(
     :path => config[:reactNativePath],

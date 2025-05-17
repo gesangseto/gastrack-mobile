@@ -17,6 +17,8 @@ const Items = () => {
   }, []);
   const loadData = async () => {
     let getdata = await getListItem({});
+    console.log(getdata);
+
     if (getdata) setList(getdata);
   };
   return (

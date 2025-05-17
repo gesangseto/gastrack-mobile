@@ -15,6 +15,7 @@ import InputText from '../../compenents/InputText';
 import color from '../../constant/color';
 import {getProfile, removeProfile} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
+import moment from 'moment';
 
 const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
@@ -38,7 +39,7 @@ const ItemView = ({navigation, route}) => {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              paddingTop: Platform.OS === 'ios' ? 40 : 5,
+              paddingTop: Platform.OS === 'ios' ? 50 : 5,
             }}>
             <TouchableOpacity
               onPress={() => {
@@ -69,10 +70,12 @@ const ItemView = ({navigation, route}) => {
                 alignContent: 'center',
                 flexDirection: 'column',
               }}>
-              <Image
+              <Icon name="circle-help" size={80} color={color.white} />
+
+              {/* <Image
                 source={require('../../asset/icon/user.png')}
                 style={{width: 80, height: 80, borderRadius: 20}}
-              />
+              /> */}
               {/* <Text
               style={{
                 fontSize: 14,
@@ -136,6 +139,16 @@ const ItemView = ({navigation, route}) => {
               </Text>
               <View style={{marginTop: 18}}>
                 <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Order Time</Text>
+                  <Text style={styles.valueDetail}>
+                    {moment.utc(item?.created_at).format('YYYY-MM-DD HH:mm ')}
+                  </Text>
+                  <Text style={styles.titleDetail}>Last Update</Text>
+                  <Text style={styles.valueDetail}>
+                    {moment.utc(item?.updated_at).format('YYYY-MM-DD HH:mm ')}
+                  </Text>
+                </View>
+                <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Barcode</Text>
                   <Text style={styles.valueDetail}>{item?.barcode}</Text>
                 </View>
@@ -143,55 +156,24 @@ const ItemView = ({navigation, route}) => {
                   <Text style={styles.titleDetail}>Item Name</Text>
                   <Text style={styles.valueDetail}>{item?.item_name}</Text>
                 </View>
-                <InputText
-                  label="Name"
-                  // value={phone}
-                  // onChangeText={setPhone}
-                  placeholder="Masukkan nama anda"
-                />
-                <InputText
-                  label="Email"
-                  // value={phone}
-                  // onChangeText={setPhone}
-                  placeholder="Masukkan email anda"
-                />
-                <InputText
-                  label="Account Name"
-                  // value={phone}
-                  // onChangeText={setPhone}
-                  placeholder="Masukkan nama akun anda"
-                />
+                <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Batch No</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.batch_no || '-'}
+                  </Text>
+                </View>
+                <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Status</Text>
+                  <Text style={styles.valueDetail}>{item?.status}</Text>
+                </View>
+                <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Location Transit</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.warehouse_name || '-'}
+                  </Text>
+                </View>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                Alert.alert(
-                  'Under Construction 😎',
-                  'we are under construction and please wait...',
-                );
-              }}
-              style={{
-                marginTop: 10,
-                borderRadius: 20,
-                backgroundColor: color.primaryColor,
-                height: 50,
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-              }}>
-              <Text
-                style={{
-                  color: color.white,
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                }}>
-                Save Settings
-              </Text>
-            </TouchableOpacity>
-            <View
-              style={{
-                paddingBottom: 50,
-              }}></View>
           </ScrollView>
         </View>
       </ScrollView>
@@ -211,6 +193,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   titleDetail: {
+    marginTop: 7,
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',

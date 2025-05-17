@@ -3,12 +3,12 @@ import {Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 
-const Header = ({navigation, route}) => {
+const Header = ({title}) => {
   return (
     <View
       style={{
         width: '100%',
-        height: Platform.OS === 'ios' ? 100 : 85,
+        height: Platform.OS === 'ios' ? 140 : 85,
         backgroundColor: color.primaryColor,
         paddingHorizontal: 30,
       }}>
@@ -17,7 +17,7 @@ const Header = ({navigation, route}) => {
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingTop: Platform.OS === 'ios' ? 40 : 5,
+          paddingTop: Platform.OS === 'ios' ? 50 : 5,
         }}>
         <View />
         <View style={{flex: 1}}>
@@ -42,7 +42,7 @@ const Header = ({navigation, route}) => {
               color: color.white,
               textAlign: 'right',
             }}>
-            Add Item
+            {title ? title : 'No Title'}
           </Text>
         </View>
       </View>

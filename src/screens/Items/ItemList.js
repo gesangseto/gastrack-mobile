@@ -1,8 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
-import {useEffect, useState} from 'react';
 import {
   Image,
-  Platform,
   Pressable,
   ScrollView,
   StatusBar,
@@ -11,61 +9,64 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import InputText from '../../compenents/InputText';
-import InputTextArea from '../../compenents/InputTextArea';
-import UploadImage from '../../compenents/UploadImage';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
-import {createItem} from '../../resource/Item';
-import {getProfile} from '../../storage';
 import Header from '../../layouts/Header';
-const doctors = [
-  {
-    id: 1,
-    name: 'Dr. jane cooper',
-    position: 'Pediatrician',
-    profilePhoto:
-      'https://www.shutterstock.com/image-photo/healthcare-medical-staff-concept-portrait-600nw-2281024823.jpg',
-  },
-  {
-    id: 2,
-    name: 'Lily Taylor',
-    position: 'Ophthalmologist',
-    profilePhoto:
-      'https://www.shutterstock.com/image-photo/profile-photo-attractive-family-doc-600nw-1724693776.jpg',
-  },
-  {
-    id: 3,
-    name: 'Max Parker',
-    position: 'Endocrinologist',
-    profilePhoto:
-      'https://img.freepik.com/free-photo/woman-doctor-wearing-lab-coat-with-stethoscope-isolated_1303-29791.jpg',
-  },
-  {
-    id: 4,
-    name: 'John Doe',
-    position: 'Pediatrician',
-    profilePhoto:
-      'https://www.shutterstock.com/image-photo/healthcare-medical-staff-concept-portrait-600nw-2281024823.jpg',
-  },
-  {
-    id: 5,
-    name: 'John Doe',
-    position: 'Pediatrician',
-    profilePhoto:
-      'https://www.shutterstock.com/image-photo/healthcare-medical-staff-concept-portrait-600nw-2281024823.jpg',
-  },
-];
+import ThermalPrinterModule from 'react-native-thermal-printer';
+
+const printTest =
+  '[C]<img>https://via.placeholder.com/300.jpg</img>\n' +
+  '[L]\n' +
+  "[C]<u><font size='big'>ORDER N°045</font></u>\n" +
+  '[L]\n' +
+  '[C]================================\n' +
+  '[L]\n' +
+  '[L]<b>BEAUTIFUL SHIRT</b>[R]9.99e\n' +
+  '[L]  + Size : S\n' +
+  '[L]\n' +
+  '[L]<b>AWESOME HAT</b>[R]24.99e\n' +
+  '[L]  + Size : 57/58\n' +
+  '[L]\n' +
+  '[C]--------------------------------\n' +
+  '[R]TOTAL PRICE :[R]34.98e\n' +
+  '[R]TAX :[R]4.23e\n' +
+  '[L]\n' +
+  '[C]================================\n' +
+  '[L]\n' +
+  "[L]<font size='tall'>Customer :</font>\n" +
+  '[L]Raymond DUPONT\n' +
+  '[L]5 rue des girafes\n' +
+  '[L]31547 PERPETES\n' +
+  '[L]Tel : +33801201456\n' +
+  '[L]\n' +
+  "[C]<barcode type='ean13' height='10'>831254784551</barcode>\n" +
+  "[C]<qrcode size='20'>http://www.developpeur-web.dantsu.com/</qrcode>\n" +
+  '[L]\n' +
+  '[L]\n' +
+  '[L]\n' +
+  '[L]\n' +
+  '[L]\n';
 const ItemList = ({navigation, route}) => {
   const list = route.params?.list || [];
-
+  const handlePressPrint = async () => {
+    // inside async function
+    try {
+      await ThermalPrinterModule.printBluetooth({
+        payload: printTest,
+        printerNbrCharactersPerLine: 38,
+      });
+    } catch (err) {
+      //error handling
+      console.log(err);
+    }
+  };
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header />
+      <Header title={'List Item'} />
       <View
         style={{
           flex: 1,
@@ -101,10 +102,12 @@ const ItemList = ({navigation, route}) => {
                   flexDirection: 'row',
                   gap: 10,
                 }}>
-                <Image
+                <Icon name="circle-help" size={55} color={color.primaryColor} />
+
+                {/* <Image
                   source={{uri: item?.profilePhoto}}
                   style={{width: 55, height: 55, borderRadius: 15}}
-                />
+                /> */}
                 <View>
                   <Text
                     style={{
@@ -137,6 +140,7 @@ const ItemList = ({navigation, route}) => {
               </View>
               <View>
                 <TouchableOpacity
+                  onPress={() => handlePressPrint()}
                   style={{
                     padding: 12,
                     borderRadius: 15,
@@ -146,11 +150,7 @@ const ItemList = ({navigation, route}) => {
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                  <Icon
-                    name="phone-call"
-                    size={24}
-                    color={color.primaryColor}
-                  />
+                  <Icon name="printer" size={24} color={color.primaryColor} />
                 </TouchableOpacity>
               </View>
             </Pressable>

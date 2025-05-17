@@ -45,7 +45,7 @@ const LoginView = ({navigation, route}) => {
         <View
           style={{
             width: '100%',
-            height: Platform.OS === 'ios' ? 220 : 180,
+            height: Platform.OS === 'ios' ? 300 : 180,
             backgroundColor: color.primaryColor,
             paddingHorizontal: 30,
           }}>
@@ -55,7 +55,7 @@ const LoginView = ({navigation, route}) => {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              paddingTop: Platform.OS === 'ios' ? 40 : 5,
+              paddingTop: Platform.OS === 'ios' ? 85 : 5,
             }}>
             <View />
             <TouchableOpacity
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   loginButton: {
-    backgroundColor: '#0066FF',
+    backgroundColor: color.primaryColor,
     paddingVertical: 14,
     paddingHorizontal: 30,
     borderRadius: 10,

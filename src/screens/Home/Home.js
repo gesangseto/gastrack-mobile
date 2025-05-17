@@ -36,9 +36,6 @@ const Home = () => {
       </View>
       <Items />
       <Batchs />
-      {/* <HeadLine /> */}
-      {/* <Category /> */}
-      {/* <Doctor /> */}
     </ScrollView>
   );
 };

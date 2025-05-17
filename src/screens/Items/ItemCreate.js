@@ -1,7 +1,5 @@
-import Icon from '@react-native-vector-icons/lucide';
 import {useEffect, useState} from 'react';
 import {
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,9 +12,9 @@ import InputTextArea from '../../compenents/InputTextArea';
 import UploadImage from '../../compenents/UploadImage';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
+import Header from '../../layouts/Header';
 import {createItem} from '../../resource/Item';
 import {getProfile} from '../../storage';
-import Header from '../../layouts/Header';
 
 const ItemCreate = ({navigation, route}) => {
   const [formData, setFormData] = useState({
@@ -39,7 +37,7 @@ const ItemCreate = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header />
+      <Header title="Tambah Item" />
       <View
         style={{
           flex: 1,

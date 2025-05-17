@@ -46,6 +46,15 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIAppFonts</key>
+    <array>
+        <string>FontAwesome6_Brands.ttf</string>
+        <string>FontAwesome6_Reguler.ttf</string>
+        <string>FontAwesome6_Solid.ttf</string>
+        <string>Lucide.ttf</string>
+        <string>Ionicons.ttf</string>
+        <!-- Add other font files as needed -->
+    </array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 </dict>
