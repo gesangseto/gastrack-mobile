@@ -12,6 +12,7 @@ import {
 import color from '../constant/color';
 import Home from './Home/Home';
 import Profile from './Profile/Profile';
+import Scanner from './Scanner/Scanner';
 
 const TabView = () => {
   const [activeTab, setActiveTab] = useState('Home');
@@ -22,12 +23,14 @@ const TabView = () => {
     <SafeAreaView style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar barStyle={'dark-content'} backgroundColor={color.white} />
       {activeTab === 'Home' && <Home />}
-
       {activeTab === 'Profile' && <Profile />}
+      {activeTab === 'Scanner' && <Scanner />}
 
       <View style={{position: 'absolute', bottom: 0, left: 0, right: 0}}>
         <View style={styles.wrapper}>
-          <TouchableOpacity onPress={() => handleTabChange('Home')}>
+          <TouchableOpacity
+            onPress={() => handleTabChange('Home')}
+            style={styles.tabButton}>
             <View style={activeTab == 'Home' ? styles.activeTab : null}>
               <View>
                 <Icon name="house" size={24} color={color.primaryColor} />
@@ -39,7 +42,27 @@ const TabView = () => {
               )}
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTabChange('Profile')}>
+          <TouchableOpacity
+            onPress={() => handleTabChange('Scanner')}
+            style={styles.tabButton}>
+            <View style={activeTab == 'Scanner' ? styles.activeTab : null}>
+              <View>
+                <Icon
+                  name="scan-barcode"
+                  size={24}
+                  color={color.primaryColor}
+                />
+              </View>
+              {activeTab == 'Scanner' && (
+                <Text style={{fontSize: 12, color: color.primaryColor}}>
+                  Scan
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleTabChange('Profile')}
+            style={styles.tabButton}>
             <View style={activeTab == 'Profile' ? styles.activeTab : null}>
               <View>
                 <Icon name="user" size={24} color={color.primaryColor} />
@@ -114,5 +137,11 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 30,
+  },
+  tabButton: {
+    minWidth: 100,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

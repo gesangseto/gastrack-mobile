@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@pushpendersingh/react-native-scanner": "^1.5.0",
     "@react-native-vector-icons/evil-icons": "^12.0.0",
     "@react-native-vector-icons/fontawesome6": "^12.0.0",
     "@react-native-vector-icons/ionicons": "^12.0.0",
@@ -26,6 +27,7 @@
     "react-native-get-random-values": "^1.11.0",
     "react-native-image-picker": "^8.2.1",
     "react-native-mmkv": "^3.2.0",
+    "react-native-permissions": "^5.4.0",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.10.0",
     "react-native-thermal-printer": "^2.3.6",

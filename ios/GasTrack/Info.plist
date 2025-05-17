@@ -55,6 +55,8 @@
         <string>Ionicons.ttf</string>
         <!-- Add other font files as needed -->
     </array>
+	<key>NSCameraUsageDescription</key>
+		<string>Please allow for scan barcode</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 </dict>
