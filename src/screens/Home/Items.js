@@ -4,7 +4,8 @@ import color from '../../constant/color';
 import * as RootNavigation from '../../config/RootNavigation';
 import {getListItem} from '../../resource/Item';
 
-const Items = () => {
+const Items = props => {
+  const {refresh} = props;
   const [list, setList] = useState([]);
   const handlePressAddItem = () => {
     RootNavigation.navigate('ItemCreate');
@@ -14,13 +15,13 @@ const Items = () => {
   };
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refresh]);
+
   const loadData = async () => {
     let getdata = await getListItem({});
-    console.log(getdata);
-
     if (getdata) setList(getdata);
   };
+
   return (
     <View style={{marginTop: 15}}>
       <Text
@@ -37,27 +38,6 @@ const Items = () => {
           borderRadius: 30,
         }}>
         <Text style={styles.title}>List Items</Text>
-
-        {/* <View style={{flexDirection: 'row', marginTop: 12}}>
-          <Image
-            source={{
-              uri: 'https://www.shutterstock.com/image-photo/healthcare-medical-staff-concept-portrait-600nw-2281024823.jpg',
-            }}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 15,
-              borderWidth: 2,
-              borderColor: color.white,
-            }}
-          />
-
-          <DoctorImage uri="https://t3.ftcdn.net/jpg/02/60/04/08/360_F_260040863_fYxB1SnrzgJ9AOkcT0hoe7IEFtsPiHAD.jpg" />
-
-          <DoctorImage uri="https://img.freepik.com/free-photo/woman-doctor-wearing-lab-coat-with-stethoscope-isolated_1303-29791.jpg" />
-
-          <DoctorImage uri="https://www.shutterstock.com/image-photo/young-asian-female-doctor-standing-600nw-2138546201.jpg" />
-        </View> */}
         <View
           style={{
             flexDirection: 'row',

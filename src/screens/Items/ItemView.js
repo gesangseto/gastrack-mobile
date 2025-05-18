@@ -1,7 +1,6 @@
-import {useEffect, useState} from 'react';
+import Icon from '@react-native-vector-icons/lucide';
+import moment from 'moment';
 import {
-  Alert,
-  Image,
   Platform,
   ScrollView,
   StatusBar,
@@ -11,11 +10,7 @@ import {
   View,
 } from 'react-native';
 import * as RootNavigation from '../../config/RootNavigation';
-import InputText from '../../compenents/InputText';
 import color from '../../constant/color';
-import {getProfile, removeProfile} from '../../storage';
-import Icon from '@react-native-vector-icons/lucide';
-import moment from 'moment';
 
 const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
@@ -141,11 +136,11 @@ const ItemView = ({navigation, route}) => {
                 <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Order Time</Text>
                   <Text style={styles.valueDetail}>
-                    {moment.utc(item?.created_at).format('YYYY-MM-DD HH:mm ')}
+                    {moment(item?.created_at).format('YYYY-MM-DD HH:mm ')}
                   </Text>
                   <Text style={styles.titleDetail}>Last Update</Text>
                   <Text style={styles.valueDetail}>
-                    {moment.utc(item?.updated_at).format('YYYY-MM-DD HH:mm ')}
+                    {moment(item?.updated_at).format('YYYY-MM-DD HH:mm ')}
                   </Text>
                 </View>
                 <View style={styles.containerDetail}>

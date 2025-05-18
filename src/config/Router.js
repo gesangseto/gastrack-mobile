@@ -10,6 +10,9 @@ import LoginView from '../screens/LoginView';
 import ItemCreate from '../screens/Items/ItemCreate';
 import ItemView from '../screens/Items/ItemView';
 import ItemList from '../screens/Items/ItemList';
+import BatchCreate from '../screens/Batchs/BatchCreate';
+import BatchList from '../screens/Batchs/BatchList';
+import BatchView from '../screens/Batchs/BatchView';
 
 const shouldShowCustomSplashScreen = () => {
   if (Platform.OS === 'android') {
@@ -31,6 +34,9 @@ const Router = () => {
       <Stack.Screen name="ItemCreate" component={ItemCreate} />
       <Stack.Screen name="ItemList" component={ItemList} />
       <Stack.Screen name="ItemView" component={ItemView} />
+      <Stack.Screen name="BatchCreate" component={BatchCreate} />
+      <Stack.Screen name="BatchList" component={BatchList} />
+      <Stack.Screen name="BatchView" component={BatchView} />
       <Stack.Screen name="Form" component={Form} />
     </Stack.Navigator>
   );

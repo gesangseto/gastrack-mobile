@@ -1,10 +1,25 @@
 import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import color from '../../constant/color';
+import {getListBatch} from '../../resource/Batch';
+import * as RootNavigation from '../../config/RootNavigation';
 
-const Batchs = () => {
-  const handlePressAdd = () => {
-    console.log('add item');
+const Batchs = props => {
+  const {refresh} = props;
+  const [list, setList] = useState([]);
+  const handlePressAddBatch = () => {
+    RootNavigation.navigate('BatchCreate');
+  };
+  const handlePressListBatch = () => {
+    RootNavigation.navigate('BatchList', {list: list});
+  };
+  useEffect(() => {
+    loadData();
+  }, [refresh]);
+
+  const loadData = async () => {
+    let response = await getListBatch({status: ['on-delivery', 'draft']});
+    if (response) setList(response);
   };
   return (
     <View style={{marginTop: 15}}>
@@ -51,16 +66,19 @@ const Batchs = () => {
             justifyContent: 'space-between',
           }}>
           <TouchableOpacity
+            onPress={() => handlePressListBatch()}
             style={{
               paddingVertical: 5,
               paddingHorizontal: 12,
               backgroundColor: '#6D55B2',
               borderRadius: 20,
             }}>
-            <Text style={{...styles.title, fontSize: 14}}>+454 Batchs</Text>
+            <Text style={{...styles.title, fontSize: 14}}>
+              . . . {list.length} Batchs
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => handlePressAdd()}
+            onPress={() => handlePressAddBatch()}
             style={{
               paddingVertical: 10,
               paddingHorizontal: 14,

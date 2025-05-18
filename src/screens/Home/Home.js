@@ -2,6 +2,7 @@ import Icon from '@react-native-vector-icons/lucide';
 import {useState} from 'react';
 import {
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -14,8 +15,22 @@ import Items from './Items';
 
 const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [refresh, setRefresh] = useState(false);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setRefresh(prev => !prev); // trigger useEffect di Items
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  };
+
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
       style={{
         paddingHorizontal: 20,
         paddingTop: 10,
@@ -34,8 +49,8 @@ const Home = () => {
           onChangeText={text => setSearchTerm(text)}
         />
       </View>
-      <Items />
-      <Batchs />
+      <Items refresh={refresh} />
+      <Batchs refresh={refresh} />
     </ScrollView>
   );
 };
