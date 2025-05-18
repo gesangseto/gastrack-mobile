@@ -1,9 +1,10 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import {StatusBar, View} from 'react-native';
 import ListViewBatch from '../../compenents/ListViewBatch';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {getListBatch} from '../../resource/Batch';
+import {useFocusEffect} from '@react-navigation/native';
 
 const printTest =
   '[C]<img>https://via.placeholder.com/300.jpg</img>\n' +
@@ -39,10 +40,13 @@ const printTest =
   '[L]\n';
 const BatchList = ({navigation, route}) => {
   const [list, setList] = useState([]);
-  // const [list, setList] = useState(route.params?.list || []);
-  useEffect(() => {
-    loadData();
-  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      // kode yang dijalankan saat screen difokuskan kembali
+      loadData();
+    }, []),
+  );
 
   const loadData = async () => {
     let response = await getListBatch({status: ['on-delivery', 'draft']});
@@ -57,7 +61,7 @@ const BatchList = ({navigation, route}) => {
         backgroundColor={color.primaryColor}
       />
       <Header title={'List Batch'} />
-      <ListViewBatch list={list} />
+      <ListViewBatch list={list} refresh={() => loadData()} />
     </View>
   );
 };

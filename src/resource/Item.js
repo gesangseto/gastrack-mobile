@@ -60,3 +60,32 @@ export const createItem = async (Params = {}) => {
       });
   });
 };
+
+export const cancelItem = async (Params = {}) => {
+  Params = {data: Params};
+  return new Promise(resolve => {
+    $axios
+      .delete(url, Params)
+      .then(result => {
+        let data = result.data;
+        Toast.show({
+          type: data.error ? 'error' : 'success',
+          text1: data.error ? 'Error' : 'Success',
+          text2: data.error ? data.message : 'Data has been save',
+        });
+        if (data.error) {
+          return resolve(false);
+        } else {
+          return resolve(true);
+        }
+      })
+      .catch(e => {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: e.message,
+        });
+        return resolve(false);
+      });
+  });
+};

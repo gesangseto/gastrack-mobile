@@ -11,9 +11,18 @@ import {
 } from 'react-native';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
+import {cancelItem} from '../../resource/Item';
 
 const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
+
+  const handlePressDelete = async () => {
+    let response = await cancelItem({barcode: item.barcode});
+    if (response) {
+      RootNavigation.goBack();
+    }
+  };
+
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -111,6 +120,28 @@ const ItemView = ({navigation, route}) => {
                 {item?.email}
               </Text>
             </View>
+            {item?.status === 'draft' && (
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                }}>
+                <TouchableOpacity
+                  onPress={() => handlePressDelete()}
+                  style={{
+                    borderRadius: 15,
+                    borderWidth: 1,
+                    borderColor: color.danger,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Icon name="trash-2" size={25} color={color.danger} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 

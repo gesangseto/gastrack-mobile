@@ -45,7 +45,7 @@ const printTest =
   '[L]\n' +
   '[L]\n';
 const ListViewItem = props => {
-  const {list} = props;
+  const {list, refresh} = props;
   const handlePressPrint = async () => {
     // inside async function
     try {

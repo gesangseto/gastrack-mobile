@@ -12,6 +12,7 @@ import color from '../constant/color';
 import * as RootNavigation from '../config/RootNavigation';
 import ThermalPrinterModule from 'react-native-thermal-printer';
 import moment from 'moment';
+import {shippingBatch} from '../resource/Batch';
 
 const printTest =
   '[C]<img>https://via.placeholder.com/300.jpg</img>\n' +
@@ -46,7 +47,7 @@ const printTest =
   '[L]\n' +
   '[L]\n';
 const ListViewBatch = props => {
-  const {list} = props;
+  const {list, refresh} = props;
 
   const handlePressPrint = async () => {
     // inside async function
@@ -61,11 +62,10 @@ const ListViewBatch = props => {
     }
   };
   const handlePressSubmit = async item => {
-    // inside async function
     try {
       let response = await shippingBatch(item);
-      if (response) {
-        await loadData();
+      if (response && refresh) {
+        refresh();
       }
     } catch (err) {
       //error handling

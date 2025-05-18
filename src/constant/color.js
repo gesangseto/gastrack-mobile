@@ -1,6 +1,7 @@
 export default {
   primaryColor: '#553B9C',
   warning: '#fad250',
+  danger: '#f57878',
   success: '#67fa50',
   primaryLight: '#F6F4FB',
   secondaryColor: '#FF9B55',

@@ -13,7 +13,7 @@ import {
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import {useEffect, useState} from 'react';
-import {getListBatch} from '../../resource/Batch';
+import {cancelBatch, getListBatch} from '../../resource/Batch';
 import ListViewItem from '../../compenents/ListViewItem';
 
 const BatchView = ({navigation, route}) => {
@@ -26,67 +26,18 @@ const BatchView = ({navigation, route}) => {
 
   const loadData = async () => {
     let response = await getListBatch({batch_no: item.batch_no});
-    console.log(response[0]);
-
     if (response && response[0]) {
       setData(response[0]);
       setList(response[0].items);
     }
   };
 
-  const ListView = () => {
-    return (
-      <View style={styles.containerList1}>
-        <ScrollView contentContainerStyle={{flexGrow: 1}}>
-          {list?.map((item, index) => (
-            <Pressable
-              onPress={() => RootNavigation.navigate('BatchView', {item: item})}
-              key={index}
-              style={styles.containerList2}>
-              <View style={styles.leftIcon}>
-                {item?.status == 'draft' ? (
-                  <Icon name="file-clock" size={55} color={color.warning} />
-                ) : (
-                  <Icon name="plane" size={55} color={color.primaryColor} />
-                )}
-                <View>
-                  <Text style={styles.h1}>{item?.batch_no}</Text>
-                  <Text style={styles.h3}>
-                    Quantity: {item?.total_quantity}, {item?.status}
-                  </Text>
-                  <Text style={styles.h2}>
-                    {moment(item?.created_at).format('YY-MM-DD HH:mm')}
-                  </Text>
-                </View>
-              </View>
-              <View
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  justifyContent: 'flex-end',
-                  gap: 5,
-                }}>
-                {item?.status === 'draft' && (
-                  <TouchableOpacity
-                    onPress={() => handlePressSubmit(item)}
-                    style={styles.rightIcon}>
-                    <Icon name="send" size={24} color={color.primaryColor} />
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  onPress={() => handlePressPrint()}
-                  style={styles.rightIcon}>
-                  <Icon name="printer" size={24} color={color.primaryColor} />
-                </TouchableOpacity>
-              </View>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-    );
+  const handlePressDelete = async () => {
+    let response = await cancelBatch({batch_no: item.batch_no});
+    if (response) {
+      RootNavigation.goBack();
+    }
   };
-
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -187,6 +138,28 @@ const BatchView = ({navigation, route}) => {
                 {moment(item?.created_at).format('YYYY-MM-DD HH:mm')}
               </Text>
             </View>
+            {item?.status === 'draft' && (
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                }}>
+                <TouchableOpacity
+                  onPress={() => handlePressDelete()}
+                  style={{
+                    borderRadius: 15,
+                    borderWidth: 1,
+                    borderColor: color.danger,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Icon name="trash-2" size={25} color={color.danger} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 

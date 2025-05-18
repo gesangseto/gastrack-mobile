@@ -1,5 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
-import {useState} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
+import {useCallback, useState} from 'react';
 import {
   Platform,
   RefreshControl,
@@ -18,18 +19,20 @@ const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [refresh, setRefresh] = useState(false);
 
+  useFocusEffect(
+    useCallback(() => {
+      onRefresh();
+    }, []),
+  );
+
   const onRefresh = () => {
-    setRefreshing(true);
     setRefresh(prev => !prev); // trigger useEffect di Items
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
   };
 
   return (
     <ScrollView
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl refreshing={refreshing} onRefresh={() => onRefresh()} />
       }
       style={{
         paddingHorizontal: 20,
