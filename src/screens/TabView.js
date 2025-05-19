@@ -15,27 +15,32 @@ import Profile from './Profile/Profile';
 import Scanner from './Scanner/Scanner';
 
 const TabView = () => {
-  const [activeTab, setActiveTab] = useState('Home');
-  const handleTabChange = tabName => {
-    setActiveTab(tabName);
+  const [activeTab, setActiveTab] = useState({name: 'Home', param: null});
+  const handleTabChange = (tabName, param = null) => {
+    setActiveTab({name: tabName, param});
   };
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar barStyle={'dark-content'} backgroundColor={color.white} />
-      {activeTab === 'Home' && <Home />}
-      {activeTab === 'Profile' && <Profile />}
-      {activeTab === 'Scanner' && <Scanner />}
+      {activeTab.name === 'Home' && <Home param={activeTab.param} />}
+      {activeTab.name === 'Profile' && <Profile param={activeTab.param} />}
+      {activeTab.name === 'Scanner' && (
+        <Scanner
+          param={activeTab.param}
+          goToTab={handleTabChange} // <- ini penting
+        />
+      )}
 
       <View style={{position: 'absolute', bottom: 0, left: 0, right: 0}}>
         <View style={styles.wrapper}>
           <TouchableOpacity
             onPress={() => handleTabChange('Home')}
             style={styles.tabButton}>
-            <View style={activeTab == 'Home' ? styles.activeTab : null}>
+            <View style={activeTab.name == 'Home' ? styles.activeTab : null}>
               <View>
                 <Icon name="house" size={24} color={color.primaryColor} />
               </View>
-              {activeTab == 'Home' && (
+              {activeTab.name == 'Home' && (
                 <Text style={{fontSize: 12, color: color.primaryColor}}>
                   Home
                 </Text>
@@ -45,7 +50,7 @@ const TabView = () => {
           <TouchableOpacity
             onPress={() => handleTabChange('Scanner')}
             style={styles.tabButton}>
-            <View style={activeTab == 'Scanner' ? styles.activeTab : null}>
+            <View style={activeTab.name == 'Scanner' ? styles.activeTab : null}>
               <View>
                 <Icon
                   name="scan-barcode"
@@ -53,7 +58,7 @@ const TabView = () => {
                   color={color.primaryColor}
                 />
               </View>
-              {activeTab == 'Scanner' && (
+              {activeTab.name == 'Scanner' && (
                 <Text style={{fontSize: 12, color: color.primaryColor}}>
                   Scan
                 </Text>
@@ -63,11 +68,11 @@ const TabView = () => {
           <TouchableOpacity
             onPress={() => handleTabChange('Profile')}
             style={styles.tabButton}>
-            <View style={activeTab == 'Profile' ? styles.activeTab : null}>
+            <View style={activeTab.name == 'Profile' ? styles.activeTab : null}>
               <View>
                 <Icon name="user" size={24} color={color.primaryColor} />
               </View>
-              {activeTab == 'Profile' && (
+              {activeTab.name == 'Profile' && (
                 <Text style={{fontSize: 12, color: color.primaryColor}}>
                   Profile
                 </Text>

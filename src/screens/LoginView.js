@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/lucide';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   Platform,
   StatusBar,
@@ -18,6 +18,7 @@ import {getProfile, setProfile} from '../storage';
 const LoginView = ({navigation, route}) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const passwordInputRef = useRef(null); // ← Ref untuk password input
 
   const handleLogin = async () => {
     let response = await loginSeller({phone: phone, password: password});
@@ -124,14 +125,17 @@ const LoginView = ({navigation, route}) => {
             textContentType="telephoneNumber"
             style={styles.input}
             textAlign="center"
+            onSubmitEditing={() => passwordInputRef.current?.focus()} // ← pindah ke password
           />
           <TextInput
+            ref={passwordInputRef} // ← set ref
             value={password}
             onChangeText={setPassword}
             placeholder="Kata Sandi"
             secureTextEntry
             style={styles.input}
             textAlign="center"
+            onSubmitEditing={handleLogin} // ← ini yang penting
           />
         </View>
 

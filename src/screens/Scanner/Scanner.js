@@ -7,6 +7,7 @@ import {
   Button,
   View,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 
 import {
@@ -19,13 +20,18 @@ import {
   Commands,
   ReactNativeScannerView,
 } from '@pushpendersingh/react-native-scanner';
+import color from '../../constant/color';
 
-export default function Scanner() {
+export default function Scanner({param, goToTab}) {
   const scannerRef = useRef(null);
   const [isCameraPermissionGranted, setIsCameraPermissionGranted] =
     useState(false);
   const [isActive, setIsActive] = useState(true);
-  const [scannedData, setScannedData] = useState(null);
+  const [scannedData, setScannedData] = useState({
+    data: null,
+    bounds: null,
+    type: null,
+  });
 
   useEffect(() => {
     checkCameraPermission();
@@ -33,21 +39,21 @@ export default function Scanner() {
 
   const handleBarcodeScanned = event => {
     const {data, bounds, type} = event?.nativeEvent;
-    setScannedData({data, bounds, type});
-    console.log('Barcode / QR Code scanned:', data, bounds, type);
+    let scanned = {data: data, bounds: bounds, type: type};
+    setScannedData(scanned);
   };
 
-  const enableFlashlight = () => {
-    if (scannerRef?.current) {
-      Commands.enableFlashlight(scannerRef.current);
-    }
-  };
+  // const enableFlashlight = () => {
+  //   if (scannerRef?.current) {
+  //     Commands.enableFlashlight(scannerRef.current);
+  //   }
+  // };
 
-  const disableFlashlight = () => {
-    if (scannerRef?.current) {
-      Commands.disableFlashlight(scannerRef.current);
-    }
-  };
+  // const disableFlashlight = () => {
+  //   if (scannerRef?.current) {
+  //     Commands.disableFlashlight(scannerRef.current);
+  //   }
+  // };
 
   // Pause the camera after barcode / QR code is scanned
   const stopScanning = () => {
@@ -65,16 +71,28 @@ export default function Scanner() {
     }
   };
 
-  const releaseCamera = () => {
-    if (scannerRef?.current) {
-      Commands.releaseCamera(scannerRef?.current);
-    }
-  };
+  // const releaseCamera = () => {
+  //   if (scannerRef?.current) {
+  //     Commands.releaseCamera(scannerRef?.current);
+  //   }
+  // };
 
   const startScanning = () => {
     if (scannerRef?.current) {
+      setScannedData({
+        data: null,
+        bounds: null,
+        type: null,
+      });
       Commands.startCamera(scannerRef?.current);
     }
+  };
+
+  const searchBarcode = () => {
+    // Pindah ke tab Home dengan param
+    console.log('pindah tab');
+
+    goToTab('Home', scannedData);
   };
 
   const checkCameraPermission = async () => {
@@ -122,55 +140,85 @@ export default function Scanner() {
           />
         )}
 
+        {scannedData?.data && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between', // memberi jarak antara tombol
+              alignItems: 'center', // meratakan secara vertikal
+              paddingHorizontal: 20, // opsional: beri padding kiri-kanan
+              paddingBottom: 50,
+            }}>
+            <TouchableOpacity
+              style={styles.Button}
+              onPress={() => {
+                searchBarcode();
+              }}>
+              <Text
+                style={{
+                  color: color.white,
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                }}>
+                Search
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.Button}
+              onPress={() => {
+                startScanning();
+              }}>
+              <Text
+                style={{
+                  color: color.white,
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                }}>
+                Resume
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.controls}>
-          <Button
+          {/* <Button
             title="Stop Scanning"
             onPress={() => {
               stopScanning();
               setIsActive(false);
             }}
-          />
-          <Button
+          /> */}
+          {/* <Button
             title="Resume Scanning"
             onPress={() => {
               resumeScanning();
               setIsActive(true);
             }}
-          />
-          <Button
+          /> */}
+          {/* <Button
             title="Flash Off"
             onPress={() => {
               disableFlashlight();
             }}
-          />
-          <Button
+          /> */}
+          {/* <Button
             title="Flash On"
             onPress={() => {
               enableFlashlight();
             }}
-          />
-          <Button
+          /> */}
+          {/* <Button
             title="Release Camera"
             onPress={() => {
               releaseCamera();
             }}
-          />
-          <Button
+          /> */}
+          {/* <Button
             title="Start Camera"
             onPress={() => {
               startScanning();
             }}
-          />
+          /> */}
         </View>
-
-        {scannedData && (
-          <View style={styles.result}>
-            <Text style={styles.resultText}>
-              Scanned Data: {scannedData?.data}
-            </Text>
-            <Text style={styles.resultText}>Type: {scannedData?.type}</Text>
-          </View>
-        )}
       </SafeAreaView>
     );
   } else {
@@ -216,5 +264,15 @@ const styles = StyleSheet.create({
   TextStyle: {
     fontSize: 30,
     color: 'red',
+  },
+  Button: {
+    backgroundColor: color.primaryColor,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    marginTop: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 125,
   },
 });

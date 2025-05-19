@@ -1,6 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
 import {useFocusEffect} from '@react-navigation/native';
-import {useCallback, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
   Platform,
   RefreshControl,
@@ -13,11 +13,21 @@ import {
 import color from '../../constant/color';
 import Batchs from './Batchs';
 import Items from './Items';
+import Toast from 'react-native-toast-message';
 
-const Home = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+const Home = ({param}) => {
+  const [searchString, setSearchString] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [refresh, setRefresh] = useState(false);
+
+  useEffect(() => {
+    if (param?.data) {
+      console.log(param?.data);
+
+      setSearchString(param?.data);
+      handleSearch(param?.data);
+    }
+  }, [param]);
 
   useFocusEffect(
     useCallback(() => {
@@ -25,6 +35,22 @@ const Home = () => {
     }, []),
   );
 
+  const handleSearch = async (data = null) => {
+    let string = searchString;
+    if (data) string = data;
+
+    console.log(string.length);
+
+    if (string.length == 10) {
+    } else if (string.length == 13) {
+    } else {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: `Invalid barcode`,
+      });
+    }
+  };
   const onRefresh = () => {
     setRefresh(prev => !prev); // trigger useEffect di Items
   };
@@ -48,8 +74,10 @@ const Home = () => {
         <TextInput
           style={styles.textInput}
           placeholder="Search Barcode ..."
-          value={searchTerm}
-          onChangeText={text => setSearchTerm(text)}
+          value={searchString}
+          onChangeText={text => setSearchString(text)}
+          onSubmitEditing={handleSearch} // ← ini yang penting
+          returnKeyType="search" // opsional, agar tombol di keyboard berubah jadi "Search"
         />
       </View>
       <Items refresh={refresh} />
