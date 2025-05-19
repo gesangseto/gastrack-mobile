@@ -22,7 +22,7 @@ const $axios = axios.create();
 $axios.defaults.timeout = 60000;
 $axios.interceptors.request.use(
   config => {
-    let url = 'http://192.168.0.233:8001';
+    let url = 'http://192.168.2.199:8001';
     let deviceProfile = `Android App: ${DeviceInfo.getBrand()}, ${DeviceInfo.getModel()}`;
     config.baseURL = url;
     config.headers = {
