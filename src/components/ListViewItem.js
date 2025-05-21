@@ -2,6 +2,7 @@ import Icon from '@react-native-vector-icons/lucide';
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,8 @@ import {
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {printBarcode} from '../helper/helper';
+import {getEndpoint} from '../storage';
+import Thumbnail from './Thumbnail';
 
 const ListViewItem = props => {
   const {list, refresh} = props;
@@ -21,37 +24,49 @@ const ListViewItem = props => {
     await printBarcode(item);
     setIsLoading(false);
   };
+
   return (
     <View style={styles.containerList1}>
       <ScrollView contentContainerStyle={{flexGrow: 1}}>
-        {list?.map((item, index) => (
-          <Pressable
-            onPress={() => RootNavigation.navigate('ItemView', {item: item})}
-            key={index}
-            style={styles.containerList2}>
-            <View style={styles.leftIcon}>
-              <Icon name="circle-help" size={55} color={color.primaryColor} />
+        {list?.map((item, index) => {
+          let imageUrl = null;
+          if (item?.photo)
+            imageUrl = `${getEndpoint()}/api/v1/helper/image/thumbnail?filename=${
+              item?.photo
+            }`;
+          return (
+            <Pressable
+              onPress={() => RootNavigation.navigate('ItemView', {item: item})}
+              key={index}
+              style={styles.containerList2}>
+              <View style={styles.leftIcon}>
+                <Thumbnail filename={item?.photo} />
 
-              <View>
-                <Text style={styles.h2}>{item?.customer_name}</Text>
-                <Text style={styles.h3}>{item?.item_name}</Text>
-                <Text style={styles.h2}>{item?.barcode}</Text>
+                <View>
+                  <Text style={styles.h2}>{item?.customer_name}</Text>
+                  <Text style={styles.h3}>{item?.item_name}</Text>
+                  <Text style={styles.h2}>{item?.barcode}</Text>
+                  <Text style={styles.h2}>{item?.photo}</Text>
+                </View>
               </View>
-            </View>
-            <View>
-              <TouchableOpacity
-                onPress={() => handlePressPrint(item)}
-                disabled={isLoading ? true : false}
-                style={styles.rightIcon}>
-                {isLoading && isLoading == item?.id ? (
-                  <ActivityIndicator size="small" color={color.primaryColor} />
-                ) : (
-                  <Icon name="printer" size={24} color={color.primaryColor} />
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        ))}
+              <View>
+                <TouchableOpacity
+                  onPress={() => handlePressPrint(item)}
+                  disabled={isLoading ? true : false}
+                  style={styles.rightIcon}>
+                  {isLoading && isLoading == item?.id ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={color.primaryColor}
+                    />
+                  ) : (
+                    <Icon name="printer" size={24} color={color.primaryColor} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );

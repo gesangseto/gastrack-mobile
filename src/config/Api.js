@@ -3,7 +3,7 @@ import moment from 'moment';
 import DeviceInfo from 'react-native-device-info';
 import * as RootNavigation from './RootNavigation';
 import {encryptData} from '../helper/helper';
-import {getProfile, removeProfile} from '../storage';
+import {getEndpoint, getProfile, removeProfile} from '../storage';
 import Toast from 'react-native-toast-message';
 
 const generateToken = () => {
@@ -22,7 +22,7 @@ const $axios = axios.create();
 $axios.defaults.timeout = 60000;
 $axios.interceptors.request.use(
   config => {
-    let url = 'http://192.168.2.199:8001';
+    let url = getEndpoint();
     let deviceProfile = `Android App: ${DeviceInfo.getBrand()}, ${DeviceInfo.getModel()}`;
     config.baseURL = url;
     config.headers = {

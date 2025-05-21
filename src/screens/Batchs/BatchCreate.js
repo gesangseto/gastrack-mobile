@@ -1,14 +1,25 @@
 import {useEffect, useState} from 'react';
-import {StatusBar, TouchableOpacity, Text, View} from 'react-native';
-import ListViewItem from '../../compenents/ListViewItem';
+import {
+  StatusBar,
+  TouchableOpacity,
+  Text,
+  View,
+  StyleSheet,
+} from 'react-native';
+import ListViewItem from '../../components/ListViewItem';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {createItem, getListItem} from '../../resource/Item';
 import {getProfile} from '../../storage';
 import {createBatch} from '../../resource/Batch';
-
+import DropDownPicker from 'react-native-dropdown-picker';
+import {getListMstWarehouse} from '../../resource/MstWarehouse';
 const BatchCreate = ({navigation, route}) => {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(null);
+  const [list, setList] = useState([]);
+
   const [formData, setFormData] = useState({
     items: [],
     seller_phone: getProfile()?.phone,
@@ -16,11 +27,22 @@ const BatchCreate = ({navigation, route}) => {
 
   useEffect(() => {
     loadItems();
+    loadWarehouse();
   }, []);
   const loadItems = async () => {
     let response = await getListItem({status: 'draft'});
     if (response) {
       setFormData({...formData, items: response});
+    }
+  };
+  const loadWarehouse = async () => {
+    let response = await getListMstWarehouse({status: 'active'});
+    if (response) {
+      let arr = [];
+      for (const it of response) {
+        arr.push({value: it.id, label: it.address, ...it});
+      }
+      setList(arr);
     }
   };
 
@@ -35,8 +57,16 @@ const BatchCreate = ({navigation, route}) => {
         backgroundColor={color.primaryColor}
       />
       <Header title="Tambah Batch" />
+      <DropDownPicker
+        open={open}
+        value={value}
+        items={list}
+        setOpen={setOpen}
+        setValue={setValue}
+        setItems={setList}
+        placeholder={'Choose a fruit.'}
+      />
       <ListViewItem list={formData.items} />
-
       <TouchableOpacity
         onPress={() => save()}
         style={{
@@ -64,3 +94,27 @@ const BatchCreate = ({navigation, route}) => {
 };
 
 export default BatchCreate;
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    fontSize: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    color: 'black',
+    paddingRight: 30,
+    backgroundColor: '#fff',
+  },
+  inputAndroid: {
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    color: 'black',
+    backgroundColor: '#fff',
+    paddingRight: 30,
+  },
+});

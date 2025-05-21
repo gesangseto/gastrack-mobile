@@ -15,6 +15,15 @@ export const getProfile = () => {
     return null;
   }
 };
+export const getEndpoint = () => {
+  try {
+    let endpoint = storage.getString('endpoint');
+    if (!endpoint) endpoint = 'http://192.168.2.199:8001';
+    return endpoint;
+  } catch (error) {
+    return null;
+  }
+};
 export const removeProfile = () => {
   try {
     return storage.delete('profile');

@@ -1,6 +1,6 @@
 import {useEffect, useState, useCallback} from 'react';
 import {StatusBar, View} from 'react-native';
-import ListViewBatch from '../../compenents/ListViewBatch';
+import ListViewBatch from '../../components/ListViewBatch';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {getListBatch} from '../../resource/Batch';

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import * as RootNavigation from '../../config/RootNavigation';
-import InputText from '../../compenents/InputText';
+import InputText from '../../components/InputText';
 import color from '../../constant/color';
 import {getProfile, removeProfile} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';

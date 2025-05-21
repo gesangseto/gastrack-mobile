@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import InputText from '../../compenents/InputText';
-import InputTextArea from '../../compenents/InputTextArea';
-import UploadImage from '../../compenents/UploadImage';
+import InputText from '../../components/InputText';
+import InputTextArea from '../../components/InputTextArea';
+import UploadImage from '../../components/UploadImage';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';

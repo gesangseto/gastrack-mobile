@@ -14,7 +14,7 @@ import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import {useEffect, useState} from 'react';
 import {cancelBatch, getListBatch} from '../../resource/Batch';
-import ListViewItem from '../../compenents/ListViewItem';
+import ListViewItem from '../../components/ListViewItem';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};

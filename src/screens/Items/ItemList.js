@@ -1,5 +1,5 @@
 import {StatusBar, StyleSheet, View} from 'react-native';
-import ListViewItem from '../../compenents/ListViewItem';
+import ListViewItem from '../../components/ListViewItem';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {getListItem} from '../../resource/Item';
