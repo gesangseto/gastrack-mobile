@@ -90,7 +90,7 @@ const ListViewBatch = props => {
       <FlatList
         data={list}
         renderItem={({item, index}) => renderItem(item, index)}
-        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+        keyExtractor={(item, index) => index.toString()}
       />
     </View>
   );

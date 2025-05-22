@@ -38,6 +38,42 @@ export const getListBatch = async (property = {}, useAlert = true) => {
   });
 };
 
+export const getListUnfinishBatch = async (property = {}, useAlert = true) => {
+  let thisUrl = '/api/v1/warehouse-tracking/transaction/batch/unfinish';
+  var defaultParam = {status: [], ...property};
+  if (defaultParam.status.length > 0) {
+    defaultParam.status = JSON.stringify(defaultParam.status);
+  }
+
+  var query_string = new URLSearchParams(defaultParam).toString();
+  console.log(query_string);
+  return new Promise(resolve => {
+    $axios
+      .get(`${thisUrl}?${query_string}`)
+      .then(result => {
+        let data = result.data;
+        if (data.error && useAlert) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(data.data);
+      })
+      .catch(e => {
+        if (useAlert)
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });
+        return resolve(false);
+      });
+  });
+};
+
 export const createBatch = async (Params = {}) => {
   return new Promise(resolve => {
     $axios

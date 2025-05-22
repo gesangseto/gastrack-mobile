@@ -1,18 +1,25 @@
-import {useEffect, useState, useCallback} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
+import {useCallback, useState} from 'react';
 import {StatusBar, View} from 'react-native';
 import ListViewBatch from '../../components/ListViewBatch';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {getListBatch} from '../../resource/Batch';
-import {useFocusEffect} from '@react-navigation/native';
 
 const BatchList = ({navigation, route}) => {
   const [list, setList] = useState([]);
+  const [title, setTitle] = useState('List Batch');
 
   useFocusEffect(
     useCallback(() => {
-      // kode yang dijalankan saat screen difokuskan kembali
-      loadData();
+      if (route.params.list) {
+        setList(route.params.list);
+        if (route.params.title) {
+          setTitle(route.params.title);
+        }
+      } else {
+        loadData();
+      }
     }, []),
   );
 
@@ -28,7 +35,7 @@ const BatchList = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title={`List Batch (${list.length})`} />
+      <Header title={`${title} (${list.length})`} />
       <ListViewBatch list={list} refresh={() => loadData()} />
     </View>
   );
