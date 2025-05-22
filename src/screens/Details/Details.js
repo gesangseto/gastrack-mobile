@@ -1,37 +1,35 @@
+import React from 'react';
 import {
-  StyleSheet,
-  SafeAreaView,
-  Text,
-  View,
-  StatusBar,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
   Alert,
-} from "react-native";
-import React from "react";
-import DetailsHeader from "./DetailsHeader";
-import color from "../../constant/color";
-import DetailsProfile from "./DetailsProfile";
-import DetailsContent from "./DetailsContent";
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import color from '../../constant/color';
+import DetailsContent from './DetailsContent';
+import DetailsHeader from './DetailsHeader';
+import DetailsProfile from './DetailsProfile';
 
-const Details = ({ navigation, route }) => {
-  const { doctor } = route.params;
+const Details = ({navigation, route}) => {
+  const {doctor} = route.params;
   console.log(doctor);
   return (
-    <View style={{ flex: 1, backgroundColor: color.white }}>
+    <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
-        barStyle={"light-content"}
+        barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
       <View
         style={{
-          width: "100%",
-          height: Platform.OS === "ios" ? 320 : 280,
+          width: '100%',
+          height: Platform.OS === 'ios' ? 320 : 280,
           backgroundColor: color.primaryColor,
           paddingHorizontal: 30,
-        }}
-      >
+        }}>
         <DetailsHeader />
         <DetailsProfile doctor={doctor} />
       </View>
@@ -44,49 +42,44 @@ const Details = ({ navigation, route }) => {
           borderTopLeftRadius: 35,
           borderTopRightRadius: 35,
           padding: 30,
-        }}
-      >
+        }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <DetailsContent />
           <View
             style={{
               paddingBottom: 200,
-            }}
-          ></View>
+            }}></View>
         </ScrollView>
       </View>
 
       <View
         style={{
-          position: "absolute",
+          position: 'absolute',
           bottom: 30,
           left: 40,
           right: 40,
-        }}
-      >
+        }}>
         <TouchableOpacity
           onPress={() => {
             Alert.alert(
-              "Under Construction 😎",
-              "we are under construction and please wait..."
+              'Under Construction 😎',
+              'we are under construction and please wait...',
             );
           }}
           style={{
             borderRadius: 20,
             backgroundColor: color.primaryColor,
             height: 50,
-            alignItems: "center",
-            justifyContent: "center",
-            width: "100%",
-          }}
-        >
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+          }}>
           <Text
             style={{
               color: color.white,
               fontSize: 16,
-              fontWeight: "bold",
-            }}
-          >
+              fontWeight: 'bold',
+            }}>
             Book Appointment
           </Text>
         </TouchableOpacity>

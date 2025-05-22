@@ -28,7 +28,7 @@ const ItemList = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title={'List Item'} />
+      <Header title={`List Item (${list.length})`} />
       <ListViewItem list={list} />
     </View>
   );

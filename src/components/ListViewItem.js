@@ -2,9 +2,8 @@ import Icon from '@react-native-vector-icons/lucide';
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
-  Image,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,8 +12,7 @@ import {
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {printBarcode} from '../helper/helper';
-import {getEndpoint} from '../storage';
-import Thumbnail from './Thumbnail';
+import ImageThumbnail from './ImageThumbnail';
 
 const ListViewItem = props => {
   const {list, refresh} = props;
@@ -25,49 +23,43 @@ const ListViewItem = props => {
     setIsLoading(false);
   };
 
+  const renderItem = (item, index) => {
+    return (
+      <Pressable
+        onPress={() => RootNavigation.navigate('ItemView', {item: item})}
+        key={index}
+        style={styles.containerList2}>
+        <View style={styles.leftIcon}>
+          <ImageThumbnail filename={item?.photo} />
+
+          <View>
+            <Text style={styles.h2}>{item?.customer_name}</Text>
+            <Text style={styles.h3}>{item?.item_name}</Text>
+            <Text style={styles.h2}>{item?.barcode}</Text>
+          </View>
+        </View>
+        <View>
+          <TouchableOpacity
+            onPress={() => handlePressPrint(item)}
+            disabled={isLoading ? true : false}
+            style={styles.rightIcon}>
+            {isLoading && isLoading == item?.id ? (
+              <ActivityIndicator size="small" color={color.primaryColor} />
+            ) : (
+              <Icon name="printer" size={24} color={color.primaryColor} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </Pressable>
+    );
+  };
   return (
     <View style={styles.containerList1}>
-      <ScrollView contentContainerStyle={{flexGrow: 1}}>
-        {list?.map((item, index) => {
-          let imageUrl = null;
-          if (item?.photo)
-            imageUrl = `${getEndpoint()}/api/v1/helper/image/thumbnail?filename=${
-              item?.photo
-            }`;
-          return (
-            <Pressable
-              onPress={() => RootNavigation.navigate('ItemView', {item: item})}
-              key={index}
-              style={styles.containerList2}>
-              <View style={styles.leftIcon}>
-                <Thumbnail filename={item?.photo} />
-
-                <View>
-                  <Text style={styles.h2}>{item?.customer_name}</Text>
-                  <Text style={styles.h3}>{item?.item_name}</Text>
-                  <Text style={styles.h2}>{item?.barcode}</Text>
-                  <Text style={styles.h2}>{item?.photo}</Text>
-                </View>
-              </View>
-              <View>
-                <TouchableOpacity
-                  onPress={() => handlePressPrint(item)}
-                  disabled={isLoading ? true : false}
-                  style={styles.rightIcon}>
-                  {isLoading && isLoading == item?.id ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={color.primaryColor}
-                    />
-                  ) : (
-                    <Icon name="printer" size={24} color={color.primaryColor} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <FlatList
+        data={list}
+        renderItem={({item, index}) => renderItem(item, index)}
+        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+      />
     </View>
   );
 };
@@ -81,16 +73,17 @@ const styles = StyleSheet.create({
     marginTop: -40,
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
-    padding: 30,
+    paddingHorizontal: 30,
+    paddingVertical: 15,
   },
   containerList2: {
     alignItems: 'center',
     justifyContent: 'space-between',
     flexDirection: 'row',
-    marginTop: 15,
-    paddingVertical: 10,
+    marginTop: 10,
+    paddingVertical: 5,
     paddingHorizontal: 10,
-    backgroundColor: color.white,
+    backgroundColor: color.brokenWhite,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowOffset: {height: 0.2, width: 0.2},

@@ -34,9 +34,11 @@ export const getListItem = async (property = {}, useAlert = true) => {
 };
 
 export const createItem = async (Params = {}) => {
+  console.log(Params);
+
   return new Promise(resolve => {
     $axios
-      .put(url, Params)
+      .put(url, Params, {headers: {'Content-Type': 'multipart/form-data'}})
       .then(result => {
         let data = result.data;
         Toast.show({

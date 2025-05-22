@@ -28,8 +28,27 @@ const ItemCreate = ({navigation, route}) => {
   useEffect(() => {}, []);
 
   const save = async () => {
-    let submit = await createItem(formData);
-    if (submit) RootNavigation.goBack();
+    const form = new FormData();
+    // Isi FormData dengan semua properti dari Params
+    try {
+      for (let key in formData) {
+        const value = formData[key];
+        // Jika value adalah file (misal gambar dari picker)
+        if (value && typeof value === 'object' && value.uri) {
+          form.append(key, {
+            uri: value.uri,
+            name: value.name || 'file.jpg',
+            type: value.type || 'image/jpeg',
+          });
+        } else {
+          form.append(key, value);
+        }
+      }
+      let submit = await createItem(form);
+      if (submit) RootNavigation.goBack();
+    } catch (error) {
+      console.log(error);
+    }
   };
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>

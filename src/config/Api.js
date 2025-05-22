@@ -26,7 +26,7 @@ $axios.interceptors.request.use(
     let deviceProfile = `Android App: ${DeviceInfo.getBrand()}, ${DeviceInfo.getModel()}`;
     config.baseURL = url;
     config.headers = {
-      'Content-Type': 'application/json',
+      ...config.headers, // ini penting agar header khusus per request tidak tertimpa
       token: generateToken(),
       'User-Type': deviceProfile,
     };

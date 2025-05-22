@@ -1,20 +1,18 @@
 import Icon from '@react-native-vector-icons/lucide';
 import moment from 'moment';
+import {useEffect, useState} from 'react';
 import {
   Platform,
-  Pressable,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import ListViewItem from '../../components/ListViewItem';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
-import {useEffect, useState} from 'react';
 import {cancelBatch, getListBatch} from '../../resource/Batch';
-import ListViewItem from '../../components/ListViewItem';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};
@@ -44,7 +42,8 @@ const BatchView = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <ScrollView contentContainerStyle={{flexGrow: 1}}>
+
+      <View style={{flexGrow: 1}}>
         <View
           style={{
             width: '100%',
@@ -165,7 +164,7 @@ const BatchView = ({navigation, route}) => {
 
         {/* <ListView /> */}
         <ListViewItem list={list} />
-      </ScrollView>
+      </View>
     </View>
   );
 };

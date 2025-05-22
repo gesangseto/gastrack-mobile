@@ -7,5 +7,6 @@ export default {
   secondaryColor: '#FF9B55',
   black: '#000',
   white: '#fff',
+  brokenWhite: '#fafaf5',
   primaryLighter: '#EDEFFD',
 };

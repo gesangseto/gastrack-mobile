@@ -7,6 +7,14 @@ import 'react-native-get-random-values';
 const Stack = createNativeStackNavigator();
 import {PermissionsAndroid, Platform} from 'react-native';
 
+// ErrorUtils.setGlobalHandler(error => {
+//   console.log('💥 Uncaught Error:', error);
+//   // misal:
+//   if (__DEV__) {
+//     alert(`Error: ${error.message}`);
+//   }
+// });
+
 export default function App() {
   async function requestPermission() {
     if (Platform.OS === 'android') {

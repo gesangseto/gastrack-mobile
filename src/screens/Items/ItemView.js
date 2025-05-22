@@ -12,9 +12,13 @@ import {
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import {cancelItem} from '../../resource/Item';
+import ImageThumbnail from '../../components/ImageThumbnail';
+import {useState} from 'react';
+import ImageViewer from '../../components/ImageViewer';
 
 const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
+  const [visibleImageViewer, setVisibleImageViewer] = useState(false);
 
   const handlePressDelete = async () => {
     let response = await cancelItem({barcode: item.barcode});
@@ -58,6 +62,12 @@ const ItemView = ({navigation, route}) => {
             </TouchableOpacity>
             <View />
           </View>
+          {visibleImageViewer && (
+            <ImageViewer
+              filename={item?.photo}
+              onClose={() => setVisibleImageViewer(false)}
+            />
+          )}
           {/* Pre Header */}
           <View
             style={{
@@ -68,29 +78,16 @@ const ItemView = ({navigation, route}) => {
               flexDirection: 'row',
               marginTop: 10,
             }}>
-            <View
+            <TouchableOpacity
+              onPress={() => setVisibleImageViewer(true)}
               style={{
                 justifyContent: 'center',
                 alignContent: 'center',
                 flexDirection: 'column',
               }}>
-              <Icon name="circle-help" size={80} color={color.white} />
+              <ImageThumbnail filename={item?.photo} />
+            </TouchableOpacity>
 
-              {/* <Image
-                source={require('../../asset/icon/user.png')}
-                style={{width: 80, height: 80, borderRadius: 20}}
-              /> */}
-              {/* <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: color.white,
-                textAlign: 'center',
-                marginTop: 8,
-              }}>
-              4.5 <Icon name="star" size={15} color={color.white} />{' '}
-            </Text> */}
-            </View>
             <View>
               <Text
                 style={{

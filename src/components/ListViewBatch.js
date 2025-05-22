@@ -1,19 +1,19 @@
 import Icon from '@react-native-vector-icons/lucide';
+import moment from 'moment';
 import React, {useState} from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import color from '../constant/color';
 import * as RootNavigation from '../config/RootNavigation';
-import moment from 'moment';
-import {shippingBatch} from '../resource/Batch';
+import color from '../constant/color';
 import {printBarcode} from '../helper/helper';
+import {shippingBatch} from '../resource/Batch';
 
 const ListViewBatch = props => {
   const {list, refresh} = props;
@@ -34,60 +34,64 @@ const ListViewBatch = props => {
       console.log(err);
     }
   };
+  const renderItem = (item, index) => {
+    return (
+      <Pressable
+        onPress={() => RootNavigation.navigate('BatchView', {item: item})}
+        key={index}
+        style={styles.containerList2}>
+        <View style={styles.leftIcon}>
+          {item?.status == 'draft' ? (
+            <Icon name="file-clock" size={55} color={color.warning} />
+          ) : (
+            <Icon name="plane" size={55} color={color.primaryColor} />
+          )}
+          <View>
+            <Text style={styles.h1}>{item?.batch_no}</Text>
+            <Text style={styles.h3}>
+              Quantity: {item?.total_quantity}, {item?.status}
+            </Text>
+            <Text style={styles.h2}>
+              {moment(item?.created_at).format('YY-MM-DD HH:mm')}
+            </Text>
+          </View>
+        </View>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            gap: 5,
+          }}>
+          {item?.status === 'draft' && (
+            <TouchableOpacity
+              onPress={() => handlePressSubmit(item)}
+              style={styles.rightIcon}>
+              <Icon name="send" size={24} color={color.primaryColor} />
+            </TouchableOpacity>
+          )}
 
+          <TouchableOpacity
+            onPress={() => handlePressPrint(item)}
+            disabled={isLoading ? true : false}
+            style={styles.rightIcon}>
+            {isLoading && isLoading == item?.id ? (
+              <ActivityIndicator size="small" color={color.primaryColor} />
+            ) : (
+              <Icon name="printer" size={24} color={color.primaryColor} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </Pressable>
+    );
+  };
   return (
     <View style={styles.containerList1}>
-      <ScrollView contentContainerStyle={{flexGrow: 1}}>
-        {list?.map((item, index) => (
-          <Pressable
-            onPress={() => RootNavigation.navigate('BatchView', {item: item})}
-            key={index}
-            style={styles.containerList2}>
-            <View style={styles.leftIcon}>
-              {item?.status == 'draft' ? (
-                <Icon name="file-clock" size={55} color={color.warning} />
-              ) : (
-                <Icon name="plane" size={55} color={color.primaryColor} />
-              )}
-              <View>
-                <Text style={styles.h1}>{item?.batch_no}</Text>
-                <Text style={styles.h3}>
-                  Quantity: {item?.total_quantity}, {item?.status}
-                </Text>
-                <Text style={styles.h2}>
-                  {moment(item?.created_at).format('YY-MM-DD HH:mm')}
-                </Text>
-              </View>
-            </View>
-            <View
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                justifyContent: 'flex-end',
-                gap: 5,
-              }}>
-              {item?.status === 'draft' && (
-                <TouchableOpacity
-                  onPress={() => handlePressSubmit(item)}
-                  style={styles.rightIcon}>
-                  <Icon name="send" size={24} color={color.primaryColor} />
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                onPress={() => handlePressPrint(item)}
-                disabled={isLoading ? true : false}
-                style={styles.rightIcon}>
-                {isLoading && isLoading == item?.id ? (
-                  <ActivityIndicator size="small" color={color.primaryColor} />
-                ) : (
-                  <Icon name="printer" size={24} color={color.primaryColor} />
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <FlatList
+        data={list}
+        renderItem={({item, index}) => renderItem(item, index)}
+        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+      />
     </View>
   );
 };
