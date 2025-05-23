@@ -72,8 +72,6 @@ const ItemView = ({navigation, route}) => {
           <View
             style={{
               display: 'flex',
-              justifyContent: 'flex-start',
-              alignContent: 'center',
               gap: 20,
               flexDirection: 'row',
               marginTop: 10,
@@ -88,18 +86,18 @@ const ItemView = ({navigation, route}) => {
               <ImageThumbnail filename={item?.photo} />
             </TouchableOpacity>
 
-            <View>
-              <Text
-                style={{
-                  fontSize: 22,
-                  fontWeight: '700',
-                  color: color.white,
-                }}>
-                {item?.customer_name || 'account not set'}
-              </Text>
+            <View style={{width: 200}}>
               <Text
                 style={{
                   fontSize: 18,
+                  fontWeight: '700',
+                  color: color.white,
+                }}>
+                {item?.customer_name}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 16,
                   fontWeight: '700',
                   color: color.white,
                   marginTop: 4,
@@ -107,14 +105,16 @@ const ItemView = ({navigation, route}) => {
                 {item?.customer_phone}
               </Text>
               <Text
+                numberOfLines={3}
+                ellipsizeMode="tail"
                 style={{
-                  fontSize: 16,
+                  fontSize: 12,
                   fontWeight: 'bold',
                   color: color.white,
                   marginTop: 4,
                   textDecorationLine: 'underline',
                 }}>
-                {item?.email}
+                {item?.customer_address}
               </Text>
             </View>
             {item?.status === 'draft' && (
@@ -193,6 +193,24 @@ const ItemView = ({navigation, route}) => {
                   <Text style={styles.titleDetail}>Location Transit</Text>
                   <Text style={styles.valueDetail}>
                     {item?.warehouse_name || '-'}
+                  </Text>
+                </View>
+                <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Destination Address</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.customer_destination_address || '-'}
+                  </Text>
+                </View>
+                <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Destination Phone</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.customer_destination_phone || '-'}
+                  </Text>
+                </View>
+                <View style={styles.containerDetail}>
+                  <Text style={styles.titleDetail}>Destination PIC</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.customer_destination_name || '-'}
                   </Text>
                 </View>
               </View>

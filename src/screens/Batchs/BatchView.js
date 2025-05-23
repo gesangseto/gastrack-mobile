@@ -36,6 +36,16 @@ const BatchView = ({navigation, route}) => {
       RootNavigation.goBack();
     }
   };
+
+  const renderIncon = (item, index) => {
+    if (item?.status == 'draft') {
+      return <Icon name="file-clock" size={80} color={color.warning} />;
+    } else if (item?.status == 'on-progress') {
+      return <Icon name="plane" size={80} color={color.white} />;
+    } else {
+      return <Icon name="baggage-claim" size={80} color={color.success} />;
+    }
+  };
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -88,11 +98,7 @@ const BatchView = ({navigation, route}) => {
                 alignContent: 'center',
                 flexDirection: 'column',
               }}>
-              {item?.status == 'draft' ? (
-                <Icon name="file-clock" size={80} color={color.white} />
-              ) : (
-                <Icon name="plane" size={80} color={color.white} />
-              )}
+              {renderIncon(item)}
 
               {/* <Image
                 source={require('../../asset/icon/user.png')}

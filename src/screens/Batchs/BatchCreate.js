@@ -22,6 +22,7 @@ const BatchCreate = ({navigation, route}) => {
 
   const [formData, setFormData] = useState({
     items: [],
+    warehouse_id: null,
     seller_phone: getProfile()?.phone,
   });
 
@@ -59,12 +60,14 @@ const BatchCreate = ({navigation, route}) => {
       <Header title="Tambah Batch" />
       <DropDownPicker
         open={open}
-        value={value}
+        value={formData.warehouse_id}
         items={list}
         setOpen={setOpen}
-        setValue={setValue}
+        onSelectItem={item => {
+          setFormData({...formData, warehouse_id: item.value});
+        }}
         setItems={setList}
-        placeholder={'Choose a fruit.'}
+        placeholder={'Pilih tujuan'}
       />
       <ListViewItem list={formData.items} />
       <TouchableOpacity

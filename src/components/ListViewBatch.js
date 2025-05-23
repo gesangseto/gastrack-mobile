@@ -34,6 +34,16 @@ const ListViewBatch = props => {
       console.log(err);
     }
   };
+
+  const renderIncon = (item, index) => {
+    if (item?.status == 'draft') {
+      return <Icon name="file-clock" size={55} color={color.warning} />;
+    } else if (item?.status == 'on-progress') {
+      return <Icon name="plane" size={55} color={color.primaryColor} />;
+    } else {
+      return <Icon name="baggage-claim" size={55} color={color.success} />;
+    }
+  };
   const renderItem = (item, index) => {
     return (
       <Pressable
@@ -41,11 +51,7 @@ const ListViewBatch = props => {
         key={index}
         style={styles.containerList2}>
         <View style={styles.leftIcon}>
-          {item?.status == 'draft' ? (
-            <Icon name="file-clock" size={55} color={color.warning} />
-          ) : (
-            <Icon name="plane" size={55} color={color.primaryColor} />
-          )}
+          {renderIncon(item, index)}
           <View>
             <Text style={styles.h1}>{item?.batch_no}</Text>
             <Text style={styles.h3}>

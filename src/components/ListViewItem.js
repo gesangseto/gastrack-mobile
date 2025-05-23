@@ -33,9 +33,10 @@ const ListViewItem = props => {
           <ImageThumbnail filename={item?.photo} />
 
           <View>
-            <Text style={styles.h2}>{item?.customer_name}</Text>
-            <Text style={styles.h3}>{item?.item_name}</Text>
             <Text style={styles.h2}>{item?.barcode}</Text>
+            <Text style={styles.h3}>{item?.customer_name}</Text>
+            <Text style={styles.h3}>{item?.item_name}</Text>
+            <Text style={styles.h3}>{item?.status}</Text>
           </View>
         </View>
         <View>

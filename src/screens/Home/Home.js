@@ -91,10 +91,7 @@ const Home = ({param}) => {
           />
         }
         contentContainerStyle={styles.scrollViewContent}
-        style={{
-          // paddingHorizontal: 20,
-          marginTop: Platform.OS === 'ios' ? 0 : 10,
-        }}
+        style={{width: '100%', marginTop: Platform.OS === 'ios' ? 0 : 10}}
         showsVerticalScrollIndicator={false}>
         <Items refresh={refresh} />
         <Batchs refresh={refresh} />
@@ -109,11 +106,10 @@ export default Home;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     backgroundColor: 'transparent',
     borderRadius: 15,
-    paddingHorizontal: 10,
-    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 5,
     borderColor: color.primaryLighter,
   },
   scrollViewContent: {

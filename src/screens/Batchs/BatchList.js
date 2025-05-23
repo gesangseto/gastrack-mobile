@@ -24,7 +24,7 @@ const BatchList = ({navigation, route}) => {
   );
 
   const loadData = async () => {
-    let response = await getListBatch({status: ['on-delivery', 'draft']});
+    let response = await getListBatch({status: ['on-progress', 'draft']});
     if (response) {
       setList(response);
     }
