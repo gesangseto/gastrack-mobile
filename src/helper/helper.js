@@ -52,3 +52,25 @@ export const printBarcode = async item => {
     return false;
   }
 };
+
+export const getMimeType = filename => {
+  if (!filename) return null;
+
+  const extension = filename.split('.').pop().toLowerCase();
+
+  const mimeTypes = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    bmp: 'image/bmp',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+
+  return mimeTypes[extension] || 'application/octet-stream';
+};

@@ -13,11 +13,13 @@ import UploadImage from '../../components/UploadImage';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {createItem} from '../../resource/Item';
-import {getProfile} from '../../storage';
+import {createItem, updateItem} from '../../resource/Item';
+import {getEndpoint, getProfile} from '../../storage';
+import {getMimeType} from '../../helper/helper';
 
 const ItemCreate = ({navigation, route}) => {
   const [formData, setFormData] = useState({
+    id: null,
     item_name: null,
     phone: null,
     name: null,
@@ -25,8 +27,32 @@ const ItemCreate = ({navigation, route}) => {
     photo: null,
     seller_phone: getProfile()?.phone,
   });
-  useEffect(() => {}, []);
+  useEffect(() => {
+    if (route && route?.params && route?.params?.item) {
+      let item = route?.params?.item;
+      let param = {};
+      param.id = item.id || null;
+      param.phone = item.customer_phone || null;
+      param.name = item.customer_name || null;
+      param.item_name = item.item_name || null;
+      param.address = item.customer_address || null;
+      param.photo = getImageObject(item.photo);
+      setFormData({...formData, ...param});
+    }
+  }, []);
 
+  const getImageObject = filename => {
+    if (!filename) return null;
+    const url = `${getEndpoint()}/api/v1/helper/image/normal?filename=${encodeURIComponent(
+      filename,
+    )}`;
+    let photo = {
+      uri: url,
+      filename: filename,
+      type: getMimeType(filename),
+    };
+    return photo;
+  };
   const save = async () => {
     const form = new FormData();
     // Isi FormData dengan semua properti dari Params
@@ -40,11 +66,21 @@ const ItemCreate = ({navigation, route}) => {
             name: value.name || 'file.jpg',
             type: value.type || 'image/jpeg',
           });
-        } else {
+        } else if (value) {
+          // Jika value bukan null
           form.append(key, value);
         }
       }
-      let submit = await createItem(form);
+      console.log('📝 formData:', JSON.stringify(formData, null, 2));
+      form._parts.forEach(part => {
+        console.log('📦 FORM PART:', part[0], part[1]);
+      });
+      let submit = null;
+      if (formData.id) {
+        submit = await updateItem(form);
+      } else {
+        submit = await createItem(form);
+      }
       if (submit) RootNavigation.goBack();
     } catch (error) {
       console.log(error);

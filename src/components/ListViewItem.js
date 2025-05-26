@@ -22,6 +22,9 @@ const ListViewItem = props => {
     await printBarcode(item);
     setIsLoading(false);
   };
+  const handlePressEdit = async item => {
+    RootNavigation.navigate('ItemCreate', {item: item});
+  };
 
   const renderItem = (item, index) => {
     return (
@@ -39,7 +42,14 @@ const ListViewItem = props => {
             <Text style={styles.h3}>{item?.status}</Text>
           </View>
         </View>
-        <View>
+        <View style={{flexDirection: 'row'}}>
+          {item.status == 'draft' ? (
+            <TouchableOpacity
+              onPress={() => handlePressEdit(item)}
+              style={styles.rightIcon}>
+              <Icon name="pencil" size={24} color={color.warning} />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             onPress={() => handlePressPrint(item)}
             disabled={isLoading ? true : false}
@@ -104,6 +114,7 @@ const styles = StyleSheet.create({
     height: 50,
     width: 50,
     alignItems: 'center',
+    marginHorizontal: 5,
     justifyContent: 'center',
   },
   h1: {

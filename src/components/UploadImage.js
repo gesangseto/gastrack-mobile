@@ -6,6 +6,7 @@ import {
   Image,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
@@ -29,6 +30,8 @@ const UploadImage = ({label, image, setImage, required, showError}) => {
         onPress: () =>
           launchImageLibrary({mediaType: 'photo', quality: 0.5}, response => {
             if (!response.didCancel && !response.errorCode) {
+              let image = response.assets[0];
+              let uri = image.uri;
               setImage(response.assets[0]);
             }
           }),
@@ -37,6 +40,13 @@ const UploadImage = ({label, image, setImage, required, showError}) => {
     ]);
   };
 
+  const handlePilihImage = image => {
+    let uri = image.uri;
+    if (Platform.OS === 'ios' && uri.startsWith('file://')) {
+      uri = decodeURI(uri);
+    }
+    console.log(image, uri);
+  };
   return (
     <View style={styles.container}>
       {label && (
