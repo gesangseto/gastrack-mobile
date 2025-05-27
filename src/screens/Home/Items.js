@@ -71,7 +71,7 @@ const Items = props => {
                 fontSize: 14,
                 color: color.primaryColor,
               }}>
-              Tambah Item
+              Create Item
             </Text>
           </TouchableOpacity>
         </View>

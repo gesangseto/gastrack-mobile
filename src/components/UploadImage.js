@@ -1,29 +1,27 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {
-  View,
+  Alert,
+  Image,
+  Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  Image,
-  StyleSheet,
-  Alert,
-  Platform,
+  View,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
 const UploadImage = ({label, image, setImage, required, showError}) => {
-  useEffect(() => {
-    console.log(image);
-  }, [image]);
   const pickImage = () => {
     Alert.alert('Pilih Sumber Gambar', '', [
       {
         text: 'Kamera',
-        onPress: () =>
+        onPress: () => {
           launchCamera({mediaType: 'photo', quality: 0.5}, response => {
             if (!response.didCancel && !response.errorCode) {
               setImage(response.assets[0]);
             }
-          }),
+          });
+        },
       },
       {
         text: 'Galeri',
@@ -45,7 +43,6 @@ const UploadImage = ({label, image, setImage, required, showError}) => {
     if (Platform.OS === 'ios' && uri.startsWith('file://')) {
       uri = decodeURI(uri);
     }
-    console.log(image, uri);
   };
   return (
     <View style={styles.container}>
@@ -57,6 +54,7 @@ const UploadImage = ({label, image, setImage, required, showError}) => {
       <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
         {image ? (
           <Image
+            key={image.uri}
             source={{uri: image.uri}}
             style={styles.imagePreview}
             resizeMode="cover"

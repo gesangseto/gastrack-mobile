@@ -57,18 +57,33 @@ const BatchCreate = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title="Tambah Batch" />
-      <DropDownPicker
-        open={open}
-        value={formData.warehouse_id}
-        items={list}
-        setOpen={setOpen}
-        onSelectItem={item => {
-          setFormData({...formData, warehouse_id: item.value});
-        }}
-        setItems={setList}
-        placeholder={'Pilih tujuan'}
-      />
+      <Header title="Create Batch" />
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingBottom: 50,
+          marginTop: -40,
+          backgroundColor: color.primaryColor,
+        }}>
+        <DropDownPicker
+          open={open}
+          value={formData.warehouse_id}
+          items={list}
+          setOpen={setOpen}
+          onSelectItem={item => {
+            setFormData({...formData, warehouse_id: item.value});
+          }}
+          setItems={setList}
+          placeholder={'Pilih tujuan'}
+          style={{
+            borderRadius: 15,
+            borderColor: color.white,
+            shadowColor: 'black',
+            shadowOpacity: 0.5,
+            elevation: 4,
+          }}
+        />
+      </View>
       <ListViewItem list={formData.items} />
       <TouchableOpacity
         onPress={() => save()}

@@ -43,14 +43,16 @@ const ItemCreate = ({navigation, route}) => {
 
   const getImageObject = filename => {
     if (!filename) return null;
+    const time = new Date().getTime(); // 👈 cache buster
     const url = `${getEndpoint()}/api/v1/helper/image/normal?filename=${encodeURIComponent(
       filename,
-    )}`;
+    )}&t=${time}`;
     let photo = {
       uri: url,
       filename: filename,
       type: getMimeType(filename),
     };
+
     return photo;
   };
   const save = async () => {
@@ -71,10 +73,6 @@ const ItemCreate = ({navigation, route}) => {
           form.append(key, value);
         }
       }
-      console.log('📝 formData:', JSON.stringify(formData, null, 2));
-      form._parts.forEach(part => {
-        console.log('📦 FORM PART:', part[0], part[1]);
-      });
       let submit = null;
       if (formData.id) {
         submit = await updateItem(form);
@@ -92,7 +90,7 @@ const ItemCreate = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title="Tambah Item" />
+      <Header title={formData.id ? 'Edit Item' : 'Create Item'} />
       <View
         style={{
           flex: 1,

@@ -25,6 +25,8 @@ const ImageThumbnail = ({filename}) => {
         const base64String = Buffer.from(response.data, 'binary').toString(
           'base64',
         );
+        console.log('gambar baru nih');
+
         setBase64(base64String);
       })
       .catch(error => {

@@ -59,23 +59,6 @@ const UnfinishBatchs = props => {
               . . . {list.length} Batchs
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handlePressAddBatch()}
-            style={{
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              backgroundColor: color.white,
-              borderRadius: 15,
-            }}>
-            <Text
-              style={{
-                ...styles.title,
-                fontSize: 14,
-                color: color.primaryColor,
-              }}>
-              Tambah Batch
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     </View>

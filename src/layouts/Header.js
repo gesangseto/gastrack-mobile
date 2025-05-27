@@ -8,9 +8,9 @@ const Header = ({title}) => {
     <View
       style={{
         width: '100%',
-        height: Platform.OS === 'ios' ? 140 : 85,
+        height: Platform.OS === 'ios' ? 140 : 90,
         backgroundColor: color.primaryColor,
-        paddingHorizontal: 30,
+        paddingHorizontal: 15,
       }}>
       <View
         style={{

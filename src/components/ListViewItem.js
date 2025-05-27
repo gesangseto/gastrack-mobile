@@ -47,7 +47,7 @@ const ListViewItem = props => {
             <TouchableOpacity
               onPress={() => handlePressEdit(item)}
               style={styles.rightIcon}>
-              <Icon name="pencil" size={24} color={color.warning} />
+              <Icon name="pencil" size={20} color={color.warning} />
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -57,7 +57,7 @@ const ListViewItem = props => {
             {isLoading && isLoading == item?.id ? (
               <ActivityIndicator size="small" color={color.primaryColor} />
             ) : (
-              <Icon name="printer" size={24} color={color.primaryColor} />
+              <Icon name="printer" size={20} color={color.primaryColor} />
             )}
           </TouchableOpacity>
         </View>
@@ -108,14 +108,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   rightIcon: {
-    padding: 12,
-    borderRadius: 15,
+    padding: 5,
+    borderRadius: 5,
     backgroundColor: color.primaryLight,
-    height: 50,
-    width: 50,
+    height: 35,
+    width: 35,
     alignItems: 'center',
-    marginHorizontal: 5,
+    marginHorizontal: 1,
     justifyContent: 'center',
+    elevation: 5,
   },
   h1: {
     fontWeight: 'bold',

@@ -26,6 +26,9 @@ const ItemView = ({navigation, route}) => {
       RootNavigation.goBack();
     }
   };
+  const handlePressEdit = async item => {
+    RootNavigation.navigate('ItemCreate', {item: item});
+  };
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -37,7 +40,7 @@ const ItemView = ({navigation, route}) => {
         <View
           style={{
             width: '100%',
-            height: Platform.OS === 'ios' ? 270 : 230,
+            height: Platform.OS === 'ios' ? 270 : 175,
             backgroundColor: color.primaryColor,
             paddingHorizontal: 30,
           }}>
@@ -72,9 +75,8 @@ const ItemView = ({navigation, route}) => {
           <View
             style={{
               display: 'flex',
-              gap: 20,
               flexDirection: 'row',
-              marginTop: 10,
+              justifyContent: 'space-between',
             }}>
             <TouchableOpacity
               onPress={() => setVisibleImageViewer(true)}
@@ -82,14 +84,15 @@ const ItemView = ({navigation, route}) => {
                 justifyContent: 'center',
                 alignContent: 'center',
                 flexDirection: 'column',
+                marginRight: 5,
               }}>
               <ImageThumbnail filename={item?.photo} />
             </TouchableOpacity>
 
-            <View style={{width: 200}}>
+            <View style={{width: 175}}>
               <Text
                 style={{
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: '700',
                   color: color.white,
                 }}>
@@ -97,7 +100,7 @@ const ItemView = ({navigation, route}) => {
               </Text>
               <Text
                 style={{
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: '700',
                   color: color.white,
                   marginTop: 4,
@@ -108,11 +111,10 @@ const ItemView = ({navigation, route}) => {
                 numberOfLines={3}
                 ellipsizeMode="tail"
                 style={{
-                  fontSize: 12,
+                  fontSize: 10,
                   fontWeight: 'bold',
                   color: color.white,
                   marginTop: 4,
-                  textDecorationLine: 'underline',
                 }}>
                 {item?.customer_address}
               </Text>
@@ -120,22 +122,17 @@ const ItemView = ({navigation, route}) => {
             {item?.status === 'draft' && (
               <View
                 style={{
-                  flex: 1,
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
+                  flexDirection: 'row',
                 }}>
                 <TouchableOpacity
+                  onPress={() => handlePressEdit(item)}
+                  style={styles.iconRight}>
+                  <Icon name="pencil" size={15} color={color.warning} />
+                </TouchableOpacity>
+                <TouchableOpacity
                   onPress={() => handlePressDelete()}
-                  style={{
-                    borderRadius: 15,
-                    borderWidth: 1,
-                    borderColor: color.danger,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <Icon name="trash-2" size={25} color={color.danger} />
+                  style={styles.iconRight}>
+                  <Icon name="trash-2" size={15} color={color.danger} />
                 </TouchableOpacity>
               </View>
             )}
@@ -243,5 +240,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#555',
     marginTop: 4,
+  },
+  iconRight: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: color.brokenWhite,
+    height: 30,
+    width: 30,
+    margin: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

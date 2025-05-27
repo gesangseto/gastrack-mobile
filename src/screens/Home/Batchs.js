@@ -91,7 +91,7 @@ const Batchs = props => {
                 fontSize: 14,
                 color: color.primaryColor,
               }}>
-              Tambah Batch
+              Create Batch
             </Text>
           </TouchableOpacity>
         </View>

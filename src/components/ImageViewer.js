@@ -33,8 +33,6 @@ const ImageViewer = ({filename, onClose}) => {
           'base64',
         );
         setBase64(base64String);
-        console.log(base64String);
-
         setVisible(true);
       })
       .catch(error => {
