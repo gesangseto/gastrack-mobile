@@ -1,7 +1,7 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 // import {Toaster} from '../utils';
-let url = `/api/v1/warehouse-tracking/transaction/item`;
+let url = `/api/v1/warehouse-tracking/transaction/stock-item`;
 
 export const getListItem = async (property = {}, useAlert = true) => {
   var defaultParam = {status: 'draft', ...property};
