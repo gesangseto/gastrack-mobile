@@ -13,14 +13,17 @@ import {
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {loginSeller} from '../resource/Login';
-import {getProfile, setProfile} from '../storage';
+import {getEndpoint, getProfile, setEndpoint, setProfile} from '../storage';
 
 const LoginView = ({navigation, route}) => {
+  const [api, setApi] = useState(getEndpoint());
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const phoneInputRef = useRef(null); // ← Ref untuk password input
   const passwordInputRef = useRef(null); // ← Ref untuk password input
 
   const handleLogin = async () => {
+    if (api) setEndpoint(api);
     let response = await loginSeller({phone: phone, password: password});
     if (response) {
       setProfile(response);
@@ -118,6 +121,15 @@ const LoginView = ({navigation, route}) => {
         {/* Form */}
         <View style={styles.container}>
           <TextInput
+            value={api}
+            onChangeText={setApi}
+            placeholder="API"
+            style={styles.input}
+            textAlign="center"
+            onSubmitEditing={() => phoneInputRef.current?.focus()} // ← pindah ke Phone
+          />
+          <TextInput
+            ref={phoneInputRef} // ← set ref
             value={phone}
             onChangeText={setPhone}
             placeholder="Nomor Telepon"

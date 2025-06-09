@@ -48,6 +48,8 @@ const BatchCreate = ({navigation, route}) => {
   };
 
   const save = async () => {
+    console.log(formData);
+
     let submit = await createBatch(formData);
     if (submit) RootNavigation.goBack();
   };
