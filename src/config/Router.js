@@ -13,6 +13,14 @@ import ItemList from '../screens/Items/ItemList';
 import BatchCreate from '../screens/Batchs/BatchCreate';
 import BatchList from '../screens/Batchs/BatchList';
 import BatchView from '../screens/Batchs/BatchView';
+import BatchItemPicker from '../screens/Batchs/BatchItemPicker';
+import SettingsView from '../screens/Settings/SettingsView';
+import ProfileView from '../screens/Settings/ProfileView';
+import LocalSettingView from '../screens/Settings/LocalSettingView';
+import AppSettingView from '../screens/Settings/AppSettingView';
+import AboutView from '../screens/Settings/AboutView';
+import CustomerList from '../screens/Customer/CustomerList';
+import CustomerEdit from '../screens/Customer/CustomerEdit';
 
 const shouldShowCustomSplashScreen = () => {
   if (Platform.OS === 'android') {
@@ -37,6 +45,14 @@ const Router = () => {
       <Stack.Screen name="BatchCreate" component={BatchCreate} />
       <Stack.Screen name="BatchList" component={BatchList} />
       <Stack.Screen name="BatchView" component={BatchView} />
+      <Stack.Screen name="BatchItemPicker" component={BatchItemPicker} />
+      <Stack.Screen name="SettingsView" component={SettingsView} />
+      <Stack.Screen name="ProfileView" component={ProfileView} />
+      <Stack.Screen name="LocalSettingView" component={LocalSettingView} />
+      <Stack.Screen name="AppSettingView" component={AppSettingView} />
+      <Stack.Screen name="AboutView" component={AboutView} />
+      <Stack.Screen name="CustomerList" component={CustomerList} />
+      <Stack.Screen name="CustomerEdit" component={CustomerEdit} />
       <Stack.Screen name="Form" component={Form} />
     </Stack.Navigator>
   );

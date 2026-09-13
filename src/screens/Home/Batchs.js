@@ -27,7 +27,7 @@ const Batchs = props => {
         style={{
           ...styles.title1,
         }}>
-        Batchs
+        Daftar Batch
       </Text>
       <View
         style={{
@@ -36,7 +36,7 @@ const Batchs = props => {
           padding: 20,
           borderRadius: 30,
         }}>
-        <Text style={styles.title}>List Batchs</Text>
+        <Text style={styles.title}>Outbound Manifest</Text>
 
         {/* <View style={{flexDirection: 'row', marginTop: 12}}>
           <Image
@@ -74,7 +74,7 @@ const Batchs = props => {
               borderRadius: 20,
             }}>
             <Text style={{...styles.title, fontSize: 14}}>
-              . . . {list.length} Batchs
+              . . . {list.length} Batch
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -91,7 +91,7 @@ const Batchs = props => {
                 fontSize: 14,
                 color: color.primaryColor,
               }}>
-              Create Batch
+              Tambah Batch
             </Text>
           </TouchableOpacity>
         </View>

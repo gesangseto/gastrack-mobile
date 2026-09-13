@@ -12,37 +12,64 @@ import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {getListItem} from '../../resource/Item';
-import {createBatch} from '../../resource/Batch';
 
-const BatchCreate = ({navigation, route}) => {
-  const [items, setItems] = useState([]);
-  const [saving, setSaving] = useState(false);
+// Pilih item (status 200, belum masuk batch) untuk ditambahkan ke batch.
+// Kembali ke BatchView dengan route.params.selected = [{id, ...}]
+const BatchItemPicker = ({navigation, route}) => {
+  const [list, setList] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadItems();
   }, []);
 
   const loadItems = async () => {
-    let response = await getListItem({status: 200}, false);
+    setLoading(true);
+    let response = await getListItem({status: 200, batch_id: null}, false);
     if (response) {
-      setItems(response);
+      setList(response);
     }
+    setLoading(false);
   };
 
-  const save = async () => {
+  const toggle = item => {
+    setSelected(prev => {
+      const next = {...prev};
+      if (next[item.id]) {
+        delete next[item.id];
+      } else {
+        next[item.id] = item;
+      }
+      return next;
+    });
+  };
+
+  const handleAdd = () => {
+    const items = Object.values(selected);
     if (items.length === 0) {
       return;
     }
-    setSaving(true);
-    // Weight & Tujuan diisi saat kirim (Detail Batch)
-    let submit = await createBatch({items: items.map(i => ({id: i.id}))});
-    setSaving(false);
-    if (submit) RootNavigation.goBack();
+    RootNavigation.goBack();
+    // Kirim hasil pilihan ke BatchView via params (dibaca useFocusEffect)
+    navigation.navigate('BatchView', {
+      pickedItems: items,
+    });
   };
 
   const renderItem = (item, index) => {
-    return <ItemCard key={index} item={item} />;
+    const isSelected = !!selected[item.id];
+    return (
+      <ItemCard
+        key={index}
+        item={item}
+        selected={isSelected}
+        onToggle={() => toggle(item)}
+      />
+    );
   };
+
+  const count = Object.keys(selected).length;
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -50,31 +77,26 @@ const BatchCreate = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title="Create Batch" />
+      <Header title={`Pilih Item (${count})`} />
       <View style={styles.container}>
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Item ({items.length})</Text>
-        </View>
         <FlatList
-          data={items}
+          data={list}
           renderItem={({item, index}) => renderItem(item, index)}
           keyExtractor={(item, index) => item.id?.toString() || index.toString()}
           ListEmptyComponent={
             <Text style={styles.empty}>
-              Tidak ada item draft yang tersedia
+              {loading
+                ? 'Memuat...'
+                : 'Tidak ada item tersedia (semua sudah masuk batch)'}
             </Text>
           }
         />
-
         <TouchableOpacity
-          onPress={() => save()}
-          disabled={saving || items.length === 0}
-          style={[
-            styles.saveButton,
-            (saving || items.length === 0) && styles.btnDisabled,
-          ]}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Membuat...' : 'Create Batch'}
+          onPress={handleAdd}
+          disabled={count === 0}
+          style={[styles.addButton, count === 0 && styles.addButtonDisabled]}>
+          <Text style={styles.addButtonText}>
+            Tambah ke Batch ({count})
           </Text>
         </TouchableOpacity>
       </View>
@@ -82,7 +104,7 @@ const BatchCreate = ({navigation, route}) => {
   );
 };
 
-export default BatchCreate;
+export default BatchItemPicker;
 
 const styles = StyleSheet.create({
   container: {
@@ -92,28 +114,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  listTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F1F1F',
+    paddingVertical: 15,
   },
   empty: {
     textAlign: 'center',
     color: '#9A9A9A',
-    marginTop: 30,
+    marginTop: 40,
     fontSize: 13,
   },
-  saveButton: {
+  addButton: {
     marginTop: 10,
-    marginBottom: 30,
+    marginBottom: 20,
     borderRadius: 20,
     backgroundColor: color.primaryColor,
     height: 50,
@@ -121,10 +132,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
   },
-  btnDisabled: {
+  addButtonDisabled: {
     backgroundColor: '#C4C4C4',
   },
-  saveButtonText: {
+  addButtonText: {
     color: color.white,
     fontSize: 16,
     fontWeight: 'bold',

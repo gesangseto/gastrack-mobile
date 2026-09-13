@@ -8,10 +8,19 @@ import {useCallback, useState} from 'react';
 
 const ItemList = ({navigation, route}) => {
   const [list, setList] = useState([]);
+  const [title, setTitle] = useState('List Item');
+
   useFocusEffect(
     useCallback(() => {
-      // kode yang dijalankan saat screen difokuskan kembali
-      loadData();
+      // Jika dikirim list via route params (mis. hasil cari by phone), pakai itu
+      if (route.params?.list) {
+        setList(route.params.list);
+        if (route.params?.title) {
+          setTitle(route.params.title);
+        }
+      } else {
+        loadData();
+      }
     }, []),
   );
 
@@ -28,7 +37,7 @@ const ItemList = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title={`List Item (${list.length})`} />
+      <Header title={`${title} (${list.length})`} />
       <ListViewItem list={list} />
     </View>
   );

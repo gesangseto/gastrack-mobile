@@ -14,7 +14,15 @@ import {
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {loginSeller} from '../resource/Login';
-import {getEndpoint, getProfile, setEndpoint, setProfile} from '../storage';
+import {fetchSysConfig} from '../resource/Configuration';
+import {
+  getEndpoint,
+  getProfile,
+  getSysConfig,
+  setEndpoint,
+  setProfile,
+  setSysConfig,
+} from '../storage';
 
 const Field = React.forwardRef(({icon, ...props}, ref) => (
   <View style={styles.field}>
@@ -44,6 +52,9 @@ const LoginView = ({navigation, route}) => {
     setLoading(false);
     if (response) {
       setProfile(response);
+      // Simpan semua data sys_configuration_mst ke MMKV (tanpa logo/password)
+      const config = await fetchSysConfig();
+      if (config) setSysConfig(config);
       return RootNavigation.navigateReplace('TabView');
     }
   };
@@ -52,6 +63,11 @@ const LoginView = ({navigation, route}) => {
     const checkLogin = async () => {
       const profile = await getProfile();
       if (profile) {
+        // Pastikan konfigurasi tersimpan (mis. app di-update tanpa login ulang)
+        if (!getSysConfig()) {
+          const config = await fetchSysConfig();
+          if (config) setSysConfig(config);
+        }
         RootNavigation.navigateReplace('TabView');
       }
     };

@@ -1,7 +1,7 @@
 import React from 'react';
 import {TextInput, View, Text, StyleSheet} from 'react-native';
 
-const InputText = (props = {}) => {
+const InputText = React.forwardRef((props = {}, ref) => {
   const {
     label,
     value,
@@ -12,6 +12,8 @@ const InputText = (props = {}) => {
     required,
     errorMessage,
     showError,
+    prefix,
+    ...rest
   } = props;
 
   return (
@@ -21,18 +23,24 @@ const InputText = (props = {}) => {
           {label} {required && <Text style={{color: 'red'}}>*</Text>}
         </Text>
       )}
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
+      <View
         style={[
-          styles.input,
+          styles.inputWrapper,
           showError && required && !value && {borderColor: 'red'},
-        ]}
-        placeholderTextColor="#888"
-      />
+        ]}>
+        {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
+        <TextInput
+          ref={ref}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          style={styles.input}
+          placeholderTextColor="#888"
+          {...rest}
+        />
+      </View>
       {showError && required && !value && (
         <Text style={styles.errorText}>
           {errorMessage || `${label || 'Field'} wajib diisi`}
@@ -40,7 +48,7 @@ const InputText = (props = {}) => {
       )}
     </View>
   );
-};
+});
 
 export default InputText;
 
@@ -59,10 +67,29 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  prefix: {
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 10,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    backgroundColor: '#f5f5f5',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  input: {
+    flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,

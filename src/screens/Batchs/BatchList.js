@@ -12,9 +12,9 @@ const BatchList = ({navigation, route}) => {
 
   useFocusEffect(
     useCallback(() => {
-      if (route.params.list) {
+      if (route.params?.list) {
         setList(route.params.list);
-        if (route.params.title) {
+        if (route.params?.title) {
           setTitle(route.params.title);
         }
       } else {

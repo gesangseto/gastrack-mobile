@@ -29,7 +29,7 @@ const UnfinishBatchs = props => {
         style={{
           ...styles.title1,
         }}>
-        Unfinish Batchs
+        Batch Belum Selesai
       </Text>
       <View
         style={{
@@ -38,7 +38,7 @@ const UnfinishBatchs = props => {
           padding: 20,
           borderRadius: 30,
         }}>
-        <Text style={styles.title}>List Unfinish Batchs</Text>
+        <Text style={styles.title}>Perlu Dikirim</Text>
 
         <View
           style={{
@@ -56,7 +56,7 @@ const UnfinishBatchs = props => {
               borderRadius: 20,
             }}>
             <Text style={{...styles.title, fontSize: 14}}>
-              . . . {list.length} Batchs
+              . . . {list.length} Batch
             </Text>
           </TouchableOpacity>
         </View>

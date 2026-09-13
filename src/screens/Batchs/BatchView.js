@@ -1,7 +1,8 @@
 import Icon from '@react-native-vector-icons/lucide';
 import moment from 'moment';
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
+  FlatList,
   Platform,
   StatusBar,
   StyleSheet,
@@ -9,28 +10,103 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ListViewItem from '../../components/ListViewItem';
+import ImageThumbnail from '../../components/ImageThumbnail';
 import InputText from '../../components/InputText';
+import ItemCard from '../../components/ItemCard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
-import {cancelBatch, getListBatch, shippingBatch} from '../../resource/Batch';
+import {
+  cancelBatch,
+  getListBatch,
+  shippingBatch,
+  updateBatch,
+} from '../../resource/Batch';
+import {useFocusEffect} from '@react-navigation/native';
+import DropDownPicker from 'react-native-dropdown-picker';
+import {getListMstWarehouse} from '../../resource/MstWarehouse';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};
   const [data, setData] = useState(null);
   const [list, setList] = useState([]);
+  const [weight, setWeight] = useState('');
   const [shipmentNumber, setShipmentNumber] = useState('');
   const [shipmentPrice, setShipmentPrice] = useState('');
-  useEffect(() => {
-    loadData();
-  }, [item]);
+  const [showShipForm, setShowShipForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [shipping, setShipping] = useState(false);
+  // Dropdown tujuan (warehouse)
+  const [open, setOpen] = useState(false);
+  const [warehouseList, setWarehouseList] = useState([]);
+  const [warehouseId, setWarehouseId] = useState(null);
+
+  const loadWarehouse = async () => {
+    let response = await getListMstWarehouse({status: 'Active'}, false);
+    if (response) {
+      let arr = [];
+      for (const it of response) {
+        arr.push({value: it.id, label: it.address, ...it});
+      }
+      setWarehouseList(arr);
+    }
+  };
 
   const loadData = async () => {
     // Backend hanya mengisi items saat query memakai id
     let response = await getListBatch({id: item.id});
     if (response && response[0]) {
       setData(response[0]);
-      setList(response[0].items);
+      setList(response[0].items || []);
+      setWeight(response[0].weight != null ? String(response[0].weight) : '');
+      setWarehouseId(response[0].warehouse_id || null);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    loadWarehouse();
+  }, [item]);
+
+  // Terima item yang dipilih dari BatchItemPicker
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.pickedItems) {
+        const picked = route.params.pickedItems;
+        setList(prev => {
+          const existing = new Set(prev.map(i => i.id));
+          const merged = [...prev];
+          for (const p of picked) {
+            if (!existing.has(p.id)) {
+              merged.push(p);
+              existing.add(p.id);
+            }
+          }
+          return merged;
+        });
+        // Bersihkan params agar tidak ter-merge dua kali
+        navigation.setParams({pickedItems: undefined});
+      }
+    }, [route.params?.pickedItems]),
+  );
+
+  const handleRemoveItem = item => {
+    setList(prev => prev.filter(i => i.id !== item.id));
+  };
+
+  const handleSave = async () => {
+    if (list.length === 0) {
+      return;
+    }
+    setSaving(true);
+    let response = await updateBatch({
+      id: item.id,
+      items: list.map(i => ({id: i.id})),
+      weight: data?.weight,
+      modified_by: 0,
+    });
+    setSaving(false);
+    if (response) {
+      loadData();
     }
   };
 
@@ -42,29 +118,40 @@ const BatchView = ({navigation, route}) => {
   };
 
   const handlePressShip = async () => {
-    if (!shipmentNumber || !shipmentPrice) {
+    if (!shipmentNumber || !shipmentPrice || !warehouseId) {
       return;
     }
+    setShipping(true);
     let response = await shippingBatch({
       id: data.id,
+      weight: weight,
       shipment_number: shipmentNumber,
       shipment_price: shipmentPrice,
-      warehouse_id: data.warehouse_id,
+      warehouse_id: warehouseId,
     });
+    setShipping(false);
     if (response) {
       RootNavigation.goBack();
     }
   };
 
-  const renderIncon = (item, index) => {
-    if (item?.status == 'Draft') {
-      return <Icon name="file-clock" size={80} color={color.warning} />;
-    } else if (item?.status == 'Shipping') {
-      return <Icon name="plane" size={80} color={color.white} />;
-    } else {
-      return <Icon name="baggage-claim" size={80} color={color.success} />;
-    }
+  const statusColor = {
+    Draft: color.warning,
+    Shipping: color.secondaryColor,
+    Done: color.success,
   };
+
+  const renderItem = (item, index) => {
+    return (
+      <ItemCard
+        key={index}
+        item={item}
+        size={44}
+        onRemove={data?.status === 'Draft' ? handleRemoveItem : null}
+      />
+    );
+  };
+
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -72,178 +159,149 @@ const BatchView = ({navigation, route}) => {
         backgroundColor={color.primaryColor}
       />
 
-      <View style={{flexGrow: 1}}>
-        <View
-          style={{
-            width: '100%',
-            height: Platform.OS === 'ios' ? 270 : 230,
-            backgroundColor: color.primaryColor,
-            paddingHorizontal: 30,
-          }}>
-          {/* Header */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingTop: Platform.OS === 'ios' ? 50 : 5,
-            }}>
+      {/* Header minimalis */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            onPress={() => RootNavigation.goBack()}
+            style={styles.headerBtn}>
+            <Icon name="arrow-left" size={22} color={color.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Detail Batch</Text>
+          {data?.status === 'Draft' ? (
             <TouchableOpacity
-              onPress={() => {
-                RootNavigation.goBack();
-              }}
-              style={{
-                padding: 10,
-                alignItems: 'left',
-                justifyContent: 'center',
-              }}>
-              <Icon name="arrow-left" size={25} color={color.white} />
+              onPress={handlePressDelete}
+              style={styles.headerBtn}>
+              <Icon name="trash-2" size={20} color={color.danger} />
             </TouchableOpacity>
-            <View />
-          </View>
-          {/* Pre Header */}
+          ) : (
+            <View style={styles.headerBtn} />
+          )}
+        </View>
+        <View style={styles.headerInfo}>
+          <Text style={styles.batchNo} numberOfLines={1}>
+            {data?.batch_no || '...'}
+          </Text>
           <View
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignContent: 'center',
-              gap: 20,
-              flexDirection: 'row',
-              marginTop: 10,
-            }}>
-            <View
-              style={{
-                justifyContent: 'center',
-                alignContent: 'center',
-                flexDirection: 'column',
-              }}>
-              {renderIncon(item)}
-
-              {/* <Image
-                source={require('../../asset/icon/user.png')}
-                style={{width: 80, height: 80, borderRadius: 20}}
-              /> */}
-              {/* <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: color.white,
-                textAlign: 'center',
-                marginTop: 8,
-              }}>
-              4.5 <Icon name="star" size={15} color={color.white} />{' '}
-            </Text> */}
-            </View>
-            <View>
-              <Text
-                style={{
-                  fontSize: 22,
-                  fontWeight: '700',
-                  color: color.white,
-                }}>
-                {data?.batch_no || 'account not set'}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: '700',
-                  color: color.white,
-                  marginTop: 4,
-                }}>
-                Quantity: {data?.quantity}, {data?.status}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                  color: color.white,
-                  marginTop: 4,
-                }}>
-                {moment(item?.created_date).format('YYYY-MM-DD HH:mm')}
-              </Text>
-            </View>
-            {item?.status === 'Draft' && (
-              <View
-                style={{
-                  flex: 1,
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                }}>
-                <TouchableOpacity
-                  onPress={() => handlePressDelete()}
-                  style={{
-                    borderRadius: 15,
-                    borderWidth: 1,
-                    borderColor: color.danger,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <Icon name="trash-2" size={25} color={color.danger} />
-                </TouchableOpacity>
-              </View>
-            )}
+            style={[
+              styles.statusChip,
+              {backgroundColor: statusColor[data?.status] || '#C4C4C4'},
+            ]}>
+            <Text style={styles.statusText}>{data?.status || '-'}</Text>
           </View>
         </View>
-
-        {/* <ListView /> */}
-        <ListViewItem list={list} />
-        {/* Form Shipment - tampilkan hanya saat status Draft */}
-        {data?.status === 'Draft' && (
-          <View
-            style={{
-              paddingHorizontal: 30,
-              paddingBottom: 30,
-              backgroundColor: color.white,
-            }}>
-            <Text
-              style={{
-                color: color.primaryColor,
-                fontSize: 20,
-                fontWeight: '700',
-                marginBottom: 10,
-              }}>
-              Shipment
-            </Text>
-            <InputText
-              label="Shipment Number"
-              required={true}
-              value={shipmentNumber}
-              onChangeText={setShipmentNumber}
-              placeholder="Masukkan nomor resi"
-            />
-            <InputText
-              label="Shipment Price"
-              required={true}
-              keyboardType="numeric"
-              value={shipmentPrice}
-              onChangeText={setShipmentPrice}
-              placeholder="Masukkan harga kirim"
-            />
-            <TouchableOpacity
-              onPress={() => handlePressShip()}
-              style={{
-                marginTop: 10,
-                borderRadius: 20,
-                backgroundColor: color.primaryColor,
-                height: 50,
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-              }}>
-              <Text
-                style={{
-                  color: color.white,
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                }}>
-                Ship Batch
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <Text style={styles.headerMeta}>
+          {list.length} item • {moment(item?.created_date).format('DD MMM YYYY, HH:mm')}
+        </Text>
       </View>
+
+      {/* List item batch */}
+      <View style={styles.listContainer}>
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Item Batch ({list.length})</Text>
+          {data?.status === 'Draft' && (
+            <TouchableOpacity
+              onPress={() =>
+                RootNavigation.navigate('BatchItemPicker', {
+                  batchId: item.id,
+                })
+              }
+              style={styles.addItemBtn}>
+              <Icon name="plus" size={14} color={color.white} />
+              <Text style={styles.addItemText}>Tambah Item</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <FlatList
+          data={list}
+          renderItem={({item, index}) => renderItem(item, index)}
+          keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          ListEmptyComponent={
+            <Text style={styles.empty}>Belum ada item dalam batch</Text>
+          }
+        />
+      </View>
+
+      {/* Aksi Draft: simpan + kirim */}
+      {data?.status === 'Draft' && (
+        <View style={styles.formCard}>
+          {!showShipForm ? (
+            <View style={styles.formActions}>
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={saving || list.length === 0}
+                style={[
+                  styles.secondaryBtn,
+                  (saving || list.length === 0) && styles.btnDisabled,
+                ]}>
+                <Text style={styles.secondaryBtnText}>
+                  {saving ? 'Menyimpan...' : 'Simpan'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowShipForm(true)}
+                style={styles.primaryBtn}>
+                <Text style={styles.primaryBtnText}>Kirim</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.formTitle}>Kirim Batch</Text>
+              <InputText
+                label="Weight (kg)"
+                required={true}
+                keyboardType="numeric"
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="Masukkan berat batch"
+              />
+              <DropDownPicker
+                open={open}
+                value={warehouseId}
+                items={warehouseList}
+                setOpen={setOpen}
+                onSelectItem={item => {
+                  setWarehouseId(item.value);
+                }}
+                setItems={setWarehouseList}
+                placeholder={'Pilih tujuan'}
+                style={styles.picker}
+                dropDownContainerStyle={styles.pickerDropdown}
+              />
+              <InputText
+                label="Shipment Number"
+                required={true}
+                value={shipmentNumber}
+                onChangeText={setShipmentNumber}
+                placeholder="Masukkan nomor resi"
+              />
+              <InputText
+                label="Shipment Price"
+                required={true}
+                keyboardType="numeric"
+                value={shipmentPrice}
+                onChangeText={setShipmentPrice}
+                placeholder="Masukkan harga kirim"
+              />
+              <View style={styles.formActions}>
+                <TouchableOpacity
+                  onPress={() => setShowShipForm(false)}
+                  style={styles.secondaryBtn}>
+                  <Text style={styles.secondaryBtnText}>Batal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handlePressShip}
+                  disabled={shipping}
+                  style={[styles.primaryBtn, shipping && styles.btnDisabled]}>
+                  <Text style={styles.primaryBtnText}>
+                    {shipping ? 'Mengirim...' : 'Konfirmasi Kirim'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 };
@@ -251,78 +309,150 @@ const BatchView = ({navigation, route}) => {
 export default BatchView;
 
 const styles = StyleSheet.create({
-  title: {
-    color: color.primaryColor,
-    fontSize: 20,
-    fontWeight: '700',
+  header: {
+    backgroundColor: color.primaryColor,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 55 : 15,
+    paddingBottom: 20,
   },
-  containerDetail: {
-    marginBottom: 12,
-  },
-  titleDetail: {
-    marginTop: 7,
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  valueDetail: {
-    fontSize: 16,
-    color: '#555',
-    marginTop: 4,
-  },
-  containerList1: {
-    flex: 1,
-    backgroundColor: color.white,
-    marginTop: -40,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    padding: 30,
-  },
-  containerList2: {
+  headerTop: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: color.white,
+  },
+  headerInfo: {
     flexDirection: 'row',
-    marginTop: 15,
-    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  batchNo: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: color.white,
+    flexShrink: 1,
+  },
+  statusChip: {
     paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: color.white,
+  },
+  headerMeta: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 6,
+  },
+  listContainer: {
+    flex: 1,
     backgroundColor: color.white,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: {height: 0.2, width: 0.2},
-    elevation: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 15,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F1F1F',
+  },
+  addItemBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: color.primaryColor,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 20,
   },
-  leftIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  addItemText: {
+    color: color.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  empty: {
+    textAlign: 'center',
+    color: '#9A9A9A',
+    marginTop: 30,
+    fontSize: 13,
+  },
+  formCard: {
+    backgroundColor: color.white,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F5',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  formTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1F1F1F',
+    marginBottom: 8,
+  },
+  picker: {
+    borderRadius: 15,
+    borderColor: '#E0E0E8',
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  pickerDropdown: {
+    borderRadius: 15,
+    borderColor: '#E0E0E8',
+  },
+  formActions: {
     flexDirection: 'row',
     gap: 10,
+    marginTop: 10,
   },
-  rightIcon: {
-    padding: 12,
-    borderRadius: 15,
-    backgroundColor: color.primaryLight,
-    height: 50,
-    width: 50,
+  primaryBtn: {
+    flex: 1,
+    borderRadius: 20,
+    backgroundColor: color.primaryColor,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  h1: {
-    fontWeight: 'bold',
-    color: color.black,
-    fontSize: 14,
-    letterSpacing: 0.5,
+  secondaryBtn: {
+    flex: 1,
+    borderRadius: 20,
+    backgroundColor: color.primaryLight,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  h2: {
-    fontWeight: 'bold',
-    color: 'gray',
-    fontSize: 14,
-    marginTop: 4,
+  btnDisabled: {
+    backgroundColor: '#C4C4C4',
   },
-  h3: {
-    fontWeight: '400',
-    color: 'gray',
-    fontSize: 12,
-    marginTop: 4,
+  primaryBtnText: {
+    color: color.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  secondaryBtnText: {
+    color: color.primaryColor,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

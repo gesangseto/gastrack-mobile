@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/lucide';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {
   Platform,
   SafeAreaView,
@@ -10,26 +10,28 @@ import {
   View,
 } from 'react-native';
 import color from '../constant/color';
+import * as RootNavigation from '../config/RootNavigation';
+import {syncContactsIfNeeded} from '../helper/contactSync';
 import Home from './Home/Home';
-import Profile from './Profile/Profile';
-import Scanner from './Scanner/Scanner';
+import Statistik from './Statistik/Statistik';
 
 const TabView = () => {
   const [activeTab, setActiveTab] = useState({name: 'Home', param: null});
   const handleTabChange = (tabName, param = null) => {
     setActiveTab({name: tabName, param});
   };
+
+  // Saat aplikasi pertama dibuka (setelah login): minta permission kontak,
+  // jika disetujui sinkronkan kontak ke mst_customer (hanya sekali).
+  useEffect(() => {
+    syncContactsIfNeeded();
+  }, []);
+
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar barStyle={'dark-content'} backgroundColor={color.white} />
       {activeTab.name === 'Home' && <Home param={activeTab.param} />}
-      {activeTab.name === 'Profile' && <Profile param={activeTab.param} />}
-      {activeTab.name === 'Scanner' && (
-        <Scanner
-          param={activeTab.param}
-          goToTab={handleTabChange} // <- ini penting
-        />
-      )}
+      {activeTab.name === 'Statistik' && <Statistik param={activeTab.param} />}
 
       <View style={{position: 'absolute', bottom: 0, left: 0, right: 0}}>
         <View style={styles.wrapper}>
@@ -47,67 +49,28 @@ const TabView = () => {
               )}
             </View>
           </TouchableOpacity>
+
+          {/* Tombol Add (tengah) — buka form Item Registry */}
           <TouchableOpacity
-            onPress={() => handleTabChange('Scanner')}
+            onPress={() => RootNavigation.navigate('ItemCreate')}
+            style={styles.addButton}>
+            <Icon name="plus" size={30} color={color.white} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => handleTabChange('Statistik')}
             style={styles.tabButton}>
-            <View style={activeTab.name == 'Scanner' ? styles.activeTab : null}>
+            <View style={activeTab.name == 'Statistik' ? styles.activeTab : null}>
               <View>
-                <Icon
-                  name="scan-barcode"
-                  size={24}
-                  color={color.primaryColor}
-                />
+                <Icon name="chart-bar" size={24} color={color.primaryColor} />
               </View>
-              {activeTab.name == 'Scanner' && (
+              {activeTab.name == 'Statistik' && (
                 <Text style={{fontSize: 12, color: color.primaryColor}}>
-                  Scan
+                  Statistik
                 </Text>
               )}
             </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleTabChange('Profile')}
-            style={styles.tabButton}>
-            <View style={activeTab.name == 'Profile' ? styles.activeTab : null}>
-              <View>
-                <Icon name="user" size={24} color={color.primaryColor} />
-              </View>
-              {activeTab.name == 'Profile' && (
-                <Text style={{fontSize: 12, color: color.primaryColor}}>
-                  Profile
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-          {/* <TouchableOpacity onPress={() => handleTabChange('Home')}>
-            <View>
-              <Icon name="mail" size={24} color={color.primaryColor} />
-            </View>
-            <View
-              style={{
-                position: 'absolute',
-                top: -5,
-                right: -5,
-              }}>
-              <View
-                style={{
-                  width: 15,
-                  height: 15,
-                  borderRadius: 10,
-                  alignContent: 'center',
-                  backgroundColor: color.secondaryColor,
-                }}>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: color.white,
-                    textAlign: 'center',
-                  }}>
-                  2
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity> */}
         </View>
       </View>
     </SafeAreaView>
@@ -148,5 +111,19 @@ const styles = StyleSheet.create({
     minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  addButton: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: color.primaryColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -26,
+    shadowColor: color.primaryColor,
+    shadowOpacity: 0.4,
+    shadowOffset: {width: 0, height: 6},
+    shadowRadius: 12,
+    elevation: 8,
   },
 });

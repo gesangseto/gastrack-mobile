@@ -40,3 +40,54 @@ export const removeProfile = () => {
     return null;
   }
 };
+
+// Simpan konfigurasi aplikasi (sys_configuration_mst) ke MMKV.
+// Field sensitif (password) dan logo dibuang agar tidak tersimpan di device.
+export const setSysConfig = data => {
+  try {
+    if (!data) return null;
+    const {
+      users_password,
+      db_pwd,
+      backup_password,
+      identity_logo_path,
+      login_logo,
+      home_logo,
+      ...safe
+    } = data;
+    storage.set('sys_config', JSON.stringify(safe));
+    return safe;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+export const getSysConfig = () => {
+  try {
+    return JSON.parse(storage.getString('sys_config'));
+  } catch (error) {
+    return null;
+  }
+};
+
+// ===== Local Setting (pengaturan lokal perangkat) =====
+// Menyimpan preferensi device: currency_from, currency_to.
+export const getLocalSetting = () => {
+  try {
+    return JSON.parse(storage.getString('local_setting')) || {};
+  } catch (error) {
+    return {};
+  }
+};
+export const setLocalSetting = data => {
+  try {
+    if (!data) return null;
+    const current = getLocalSetting();
+    const merged = {...current, ...data};
+    storage.set('local_setting', JSON.stringify(merged));
+    return merged;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};

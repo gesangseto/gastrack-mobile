@@ -62,6 +62,66 @@ export const getItemByBarcode = async (barcode, useAlert = true) => {
   });
 };
 
+// Cari item berdasarkan nomor HP customer (toleransi format: 0812..., 62..., +62...)
+export const getItemByPhone = async (phone, useAlert = true) => {
+  return new Promise(resolve => {
+    $axios
+      .get(
+        `${url}?phone=${encodeURIComponent(phone)}&status=200`,
+      )
+      .then(result => {
+        let data = result.data;
+        if (data.error && useAlert) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(data.data || []);
+      })
+      .catch(e => {
+        if (useAlert)
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });
+        return resolve(false);
+      });
+  });
+};
+
+// Ambil item yang belum dibuatkan batch (batch_id IS NULL)
+export const getItemWithoutBatch = async (useAlert = true) => {
+  return new Promise(resolve => {
+    $axios
+      .get(`${url}?batch_id=null&status=200`)
+      .then(result => {
+        let data = result.data;
+        if (data.error && useAlert) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(data.data || []);
+      })
+      .catch(e => {
+        if (useAlert)
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });
+        return resolve(false);
+      });
+  });
+};
+
 export const createItem = async (Params = {}) => {
   return new Promise(resolve => {
     $axios

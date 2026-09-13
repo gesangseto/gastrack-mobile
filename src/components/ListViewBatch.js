@@ -27,13 +27,13 @@ const ListViewBatch = props => {
     RootNavigation.navigate('BatchView', {item: item});
   };
 
-  const renderIncon = (item, index) => {
+  const renderIcon = (item, index) => {
     if (item?.status == 'Draft') {
-      return <Icon name="file-clock" size={55} color={color.warning} />;
+      return <Icon name="file-clock" size={22} color={color.warning} />;
     } else if (item?.status == 'Shipping') {
-      return <Icon name="plane" size={55} color={color.primaryColor} />;
+      return <Icon name="plane" size={22} color={color.primaryColor} />;
     } else {
-      return <Icon name="baggage-claim" size={55} color={color.success} />;
+      return <Icon name="baggage-claim" size={22} color={color.success} />;
     }
   };
   const renderItem = (item, index) => {
@@ -41,42 +41,35 @@ const ListViewBatch = props => {
       <Pressable
         onPress={() => RootNavigation.navigate('BatchView', {item: item})}
         key={index}
-        style={styles.containerList2}>
-        <View style={styles.leftIcon}>
-          {renderIncon(item, index)}
-          <View>
-            <Text style={styles.h1}>{item?.batch_no}</Text>
-            <Text style={styles.h3}>
-              Quantity: {item?.quantity}, {item?.status}
-            </Text>
-            <Text style={styles.h2}>
-              {moment(item?.created_date).format('YY-MM-DD HH:mm')}
-            </Text>
-          </View>
+        style={styles.card}>
+        <View style={styles.iconBox}>{renderIcon(item, index)}</View>
+        <View style={styles.info}>
+          <Text style={styles.batchNo} numberOfLines={1}>
+            {item?.batch_no}
+          </Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            Quantity: {item?.quantity} • {item?.status}
+          </Text>
+          <Text style={styles.date}>
+            {moment(item?.created_date).format('YY-MM-DD HH:mm')}
+          </Text>
         </View>
-        <View
-          style={{
-            flex: 1,
-            flexDirection: 'row',
-            justifyContent: 'flex-end',
-            gap: 5,
-          }}>
+        <View style={styles.actions}>
           {item?.status === 'Draft' && (
             <TouchableOpacity
               onPress={() => handlePressSubmit(item)}
-              style={styles.rightIcon}>
-              <Icon name="send" size={24} color={color.primaryColor} />
+              style={styles.actionBtn}>
+              <Icon name="send" size={16} color={color.primaryColor} />
             </TouchableOpacity>
           )}
-
           <TouchableOpacity
             onPress={() => handlePressPrint(item)}
             disabled={isLoading ? true : false}
-            style={styles.rightIcon}>
+            style={styles.actionBtn}>
             {isLoading && isLoading == item?.id ? (
               <ActivityIndicator size="small" color={color.primaryColor} />
             ) : (
-              <Icon name="printer" size={24} color={color.primaryColor} />
+              <Icon name="printer" size={16} color={color.primaryColor} />
             )}
           </TouchableOpacity>
         </View>
@@ -84,11 +77,11 @@ const ListViewBatch = props => {
     );
   };
   return (
-    <View style={styles.containerList1}>
+    <View style={styles.container}>
       <FlatList
         data={list}
         renderItem={({item, index}) => renderItem(item, index)}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
       />
     </View>
   );
@@ -97,59 +90,62 @@ const ListViewBatch = props => {
 export default ListViewBatch;
 
 const styles = StyleSheet.create({
-  containerList1: {
+  container: {
     flex: 1,
     backgroundColor: color.white,
     marginTop: -40,
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
-    padding: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  containerList2: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  card: {
     flexDirection: 'row',
-    marginTop: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    alignItems: 'center',
     backgroundColor: color.white,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: {height: 0.2, width: 0.2},
-    elevation: 1,
-    borderRadius: 20,
-  },
-  leftIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 10,
-  },
-  rightIcon: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F5',
     padding: 12,
-    borderRadius: 15,
+    marginBottom: 10,
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: color.primaryLight,
-    height: 50,
-    width: 50,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  h1: {
-    fontWeight: 'bold',
-    color: color.black,
-    fontSize: 14,
-    letterSpacing: 0.5,
+  info: {
+    flex: 1,
+    marginLeft: 12,
   },
-  h2: {
-    fontWeight: 'bold',
-    color: 'gray',
+  batchNo: {
+    fontWeight: '700',
+    color: '#1F1F1F',
     fontSize: 14,
-    marginTop: 4,
   },
-  h3: {
-    fontWeight: '400',
-    color: 'gray',
+  sub: {
+    color: '#9A9A9A',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 2,
+  },
+  date: {
+    color: '#C4C4C4',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: color.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -2,12 +2,12 @@ import React from 'react';
 import ImageViewing from 'react-native-image-viewing';
 import {getEndpoint} from '../storage';
 import {View} from 'react-native';
+import {normalizePhotoPath} from './ImageThumbnail';
 
 const ImageViewer = ({filename, onClose}) => {
   // Backend menyimpan foto di public/uploads/jastip (di-serve statis)
-  const url = filename
-    ? `${getEndpoint()}/${filename.replace(/^public\//, '')}`
-    : null;
+  const normalized = normalizePhotoPath(filename);
+  const url = normalized ? `${getEndpoint()}/${normalized}` : null;
 
   return (
     <View>

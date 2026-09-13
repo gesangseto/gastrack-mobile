@@ -28,7 +28,7 @@ const Items = props => {
         style={{
           ...styles.title1,
         }}>
-        Items
+        Daftar Item
       </Text>
       <View
         style={{
@@ -37,7 +37,7 @@ const Items = props => {
           padding: 20,
           borderRadius: 30,
         }}>
-        <Text style={styles.title}>List Items</Text>
+        <Text style={styles.title}>Item Registry</Text>
         <View
           style={{
             flexDirection: 'row',
@@ -54,7 +54,7 @@ const Items = props => {
             }}
             onPress={() => handlePressListItem()}>
             <Text style={{...styles.title, fontSize: 14}}>
-              . . . {list.length} Items
+              . . . {list.length} Item
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -71,7 +71,7 @@ const Items = props => {
                 fontSize: 14,
                 color: color.primaryColor,
               }}>
-              Create Item
+              Tambah Item
             </Text>
           </TouchableOpacity>
         </View>

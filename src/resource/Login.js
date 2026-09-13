@@ -3,6 +3,7 @@ import $axios from '../config/Api';
 // import {Toaster} from '../utils';
 
 let url = `/api/v1/authentication/login`;
+let logoutUrl = `/api/v1/authentication/logout`;
 
 export const loginSeller = async (Params = {}) => {
   if (Object.keys(Params).length == 0) {
@@ -33,6 +34,35 @@ export const loginSeller = async (Params = {}) => {
           });
           return resolve(user);
         }
+      })
+      .catch(e => {
+        Toast.show({
+          type: 'error',
+          text1: 'Server Error',
+          text2: e,
+        });
+        return resolve(false);
+      });
+  });
+};
+
+// Logout — hapus token sesi di Backend (sys_authentication).
+// Token dikirim otomatis via interceptor $axios.
+export const logoutUser = async () => {
+  return new Promise(resolve => {
+    $axios
+      .post(logoutUrl, {})
+      .then(result => {
+        let _data = result.data;
+        if (_data.error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Gagal Logout',
+            text2: _data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(true);
       })
       .catch(e => {
         Toast.show({
