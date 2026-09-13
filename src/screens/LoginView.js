@@ -1,6 +1,8 @@
 import Icon from '@react-native-vector-icons/lucide';
 import React, {useEffect, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
   StatusBar,
   StyleSheet,
@@ -8,28 +10,44 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ScrollView,
 } from 'react-native';
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {loginSeller} from '../resource/Login';
 import {getEndpoint, getProfile, setEndpoint, setProfile} from '../storage';
 
+const Field = React.forwardRef(({icon, ...props}, ref) => (
+  <View style={styles.field}>
+    <Icon name={icon} size={18} color="#9A9A9A" />
+    <TextInput
+      ref={ref}
+      placeholderTextColor="#B0B0B0"
+      style={styles.input}
+      {...props}
+    />
+  </View>
+));
+
 const LoginView = ({navigation, route}) => {
   const [api, setApi] = useState(getEndpoint());
-  const [phone, setPhone] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const phoneInputRef = useRef(null); // ← Ref untuk password input
-  const passwordInputRef = useRef(null); // ← Ref untuk password input
+  const [showServer, setShowServer] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const passwordInputRef = useRef(null);
 
   const handleLogin = async () => {
     if (api) setEndpoint(api);
-    let response = await loginSeller({phone: phone, password: password});
+    if (!username || !password) return;
+    setLoading(true);
+    let response = await loginSeller({username: username, password: password});
+    setLoading(false);
     if (response) {
       setProfile(response);
       return RootNavigation.navigateReplace('TabView');
     }
   };
+
   useEffect(() => {
     const checkLogin = async () => {
       const profile = await getProfile();
@@ -39,159 +57,189 @@ const LoginView = ({navigation, route}) => {
     };
     checkLogin();
   }, []);
-  return (
-    <View style={{flex: 1, backgroundColor: color.white}}>
-      <StatusBar
-        barStyle={'light-content'}
-        backgroundColor={color.primaryColor}
-      />
-      <ScrollView contentContainerStyle={{flexGrow: 1}}>
-        <View
-          style={{
-            width: '100%',
-            height: Platform.OS === 'ios' ? 300 : 180,
-            backgroundColor: color.primaryColor,
-            paddingHorizontal: 30,
-          }}>
-          {/* Header */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingTop: Platform.OS === 'ios' ? 85 : 5,
-            }}>
-            <View />
-            <TouchableOpacity
-              style={{
-                borderRadius: 15,
-                borderWidth: 1,
-                borderColor: color.white,
-                height: 40,
-                width: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Icon name="circle-help" size={25} color={color.white} />
-            </TouchableOpacity>
-          </View>
 
-          {/* Logo + Title */}
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: 20,
-              marginTop: 10,
-            }}>
-            <View
-              style={{
-                justifyContent: 'center',
-                alignContent: 'center',
-                flexDirection: 'column',
-              }}>
-              <Icon name="baggage-claim" size={80} color={color.white} />
-            </View>
-            <View>
-              <Text
-                style={{fontSize: 22, fontWeight: '700', color: color.white}}>
-                GasTrack
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: '500',
-                  color: '#B1A3D2',
-                  marginTop: 4,
-                }}>
-                By Gesang Aji Seto
-              </Text>
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: '500',
-                  color: '#B1A3D2',
-                  marginTop: 4,
-                }}>
-                Your Warehouse Partner
-              </Text>
-            </View>
+  return (
+    <View style={styles.screen}>
+      <StatusBar
+        barStyle={'dark-content'}
+        backgroundColor={color.white}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}>
+        {/* Tombol server (API endpoint) */}
+        <TouchableOpacity
+          onPress={() => setShowServer(prev => !prev)}
+          style={styles.serverButton}>
+          <Icon name="server" size={18} color="#9A9A9A" />
+        </TouchableOpacity>
+
+        {/* Logo */}
+        <View style={styles.logoBlock}>
+          <View style={styles.logoIcon}>
+            <Icon name="baggage-claim" size={40} color={color.white} />
           </View>
+          <Text style={styles.title}>GasTrack</Text>
+          <Text style={styles.subtitle}>Your Warehouse Partner</Text>
         </View>
 
         {/* Form */}
-        <View style={styles.container}>
-          <TextInput
-            value={api}
-            onChangeText={setApi}
-            placeholder="API"
-            style={styles.input}
-            textAlign="center"
-            onSubmitEditing={() => phoneInputRef.current?.focus()} // ← pindah ke Phone
+        <View style={styles.form}>
+          <Field
+            icon="user"
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Username"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordInputRef.current?.focus()}
           />
-          <TextInput
-            ref={phoneInputRef} // ← set ref
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="Nomor Telepon"
-            keyboardType="phone-pad"
-            textContentType="telephoneNumber"
-            style={styles.input}
-            textAlign="center"
-            onSubmitEditing={() => passwordInputRef.current?.focus()} // ← pindah ke password
-          />
-          <TextInput
-            ref={passwordInputRef} // ← set ref
+          <Field
+            ref={passwordInputRef}
+            icon="lock"
             value={password}
             onChangeText={setPassword}
-            placeholder="Kata Sandi"
+            placeholder="Password"
             secureTextEntry
-            style={styles.input}
-            textAlign="center"
-            onSubmitEditing={handleLogin} // ← ini yang penting
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
           />
-        </View>
 
-        {/* Button */}
-        <View style={{alignItems: 'center', marginTop: 20, padding: 40}}>
-          <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
-            <Text
-              style={{color: color.white, fontSize: 16, fontWeight: 'bold'}}>
-              Login
-            </Text>
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={loading}
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}>
+            {loading ? (
+              <ActivityIndicator size="small" color={color.white} />
+            ) : (
+              <Text style={styles.loginText}>Masuk</Text>
+            )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
+
+        {/* Server endpoint (opsional, untuk development) */}
+        {showServer && (
+          <View style={styles.serverBox}>
+            <Text style={styles.serverLabel}>Server</Text>
+            <Field
+              icon="globe"
+              value={api}
+              onChangeText={setApi}
+              placeholder="http://192.168.0.233:8000"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        )}
+      </KeyboardAvoidingView>
     </View>
   );
 };
+
 export default LoginView;
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: color.white,
-    marginTop: -40,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    padding: 30,
   },
-  input: {
-    width: '100%',
-    height: 50,
-    marginBottom: 15,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
   },
-  loginButton: {
-    backgroundColor: color.primaryColor,
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 10,
+  serverButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 24,
+    right: 24,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: color.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 200,
+  },
+  logoBlock: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  logoIcon: {
+    width: 84,
+    height: 84,
+    borderRadius: 24,
+    backgroundColor: color.primaryColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: color.primaryColor,
+    shadowOpacity: 0.3,
+    shadowOffset: {width: 0, height: 8},
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1F1F1F',
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#9A9A9A',
+    marginTop: 6,
+  },
+  form: {
+    width: '100%',
+  },
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.primaryLight,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+    height: 54,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1F1F1F',
+    marginLeft: 12,
+    height: '100%',
+  },
+  loginButton: {
+    marginTop: 8,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: color.primaryColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: color.primaryColor,
+    shadowOpacity: 0.3,
+    shadowOffset: {width: 0, height: 6},
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
+  loginText: {
+    color: color.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  serverBox: {
+    marginTop: 24,
+  },
+  serverLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9A9A9A',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });
