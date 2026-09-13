@@ -21,7 +21,7 @@ const ItemView = ({navigation, route}) => {
   const [visibleImageViewer, setVisibleImageViewer] = useState(false);
 
   const handlePressDelete = async () => {
-    let response = await cancelItem({barcode: item.barcode});
+    let response = await cancelItem({id: item.id});
     if (response) {
       RootNavigation.goBack();
     }
@@ -67,7 +67,7 @@ const ItemView = ({navigation, route}) => {
           </View>
           {visibleImageViewer && (
             <ImageViewer
-              filename={item?.photo}
+              filename={item?.photo_path || item?.photo}
               onClose={() => setVisibleImageViewer(false)}
             />
           )}
@@ -86,7 +86,7 @@ const ItemView = ({navigation, route}) => {
                 flexDirection: 'column',
                 marginRight: 5,
               }}>
-              <ImageThumbnail filename={item?.photo} />
+              <ImageThumbnail filename={item?.photo_path || item?.photo} />
             </TouchableOpacity>
 
             <View style={{width: 175}}>
@@ -119,7 +119,7 @@ const ItemView = ({navigation, route}) => {
                 {item?.customer_address}
               </Text>
             </View>
-            {item?.status === 'draft' && (
+            {item?.status === 200 && (
               <View
                 style={{
                   flexDirection: 'row',
@@ -161,11 +161,11 @@ const ItemView = ({navigation, route}) => {
                 <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Order Time</Text>
                   <Text style={styles.valueDetail}>
-                    {moment(item?.created_at).format('YYYY-MM-DD HH:mm ')}
+                    {moment(item?.created_date).format('YYYY-MM-DD HH:mm ')}
                   </Text>
                   <Text style={styles.titleDetail}>Last Update</Text>
                   <Text style={styles.valueDetail}>
-                    {moment(item?.updated_at).format('YYYY-MM-DD HH:mm ')}
+                    {moment(item?.modified_date).format('YYYY-MM-DD HH:mm ')}
                   </Text>
                 </View>
                 <View style={styles.containerDetail}>
@@ -174,7 +174,9 @@ const ItemView = ({navigation, route}) => {
                 </View>
                 <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Item Name</Text>
-                  <Text style={styles.valueDetail}>{item?.item_name}</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.product_name || item?.item_name}
+                  </Text>
                 </View>
                 <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Batch No</Text>
@@ -184,7 +186,9 @@ const ItemView = ({navigation, route}) => {
                 </View>
                 <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Status</Text>
-                  <Text style={styles.valueDetail}>{item?.status}</Text>
+                  <Text style={styles.valueDetail}>
+                    {item?.status_name || item?.status}
+                  </Text>
                 </View>
                 <View style={styles.containerDetail}>
                   <Text style={styles.titleDetail}>Location Transit</Text>

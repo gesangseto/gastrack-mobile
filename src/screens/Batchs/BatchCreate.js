@@ -10,11 +10,11 @@ import ListViewItem from '../../components/ListViewItem';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {createItem, getListItem} from '../../resource/Item';
-import {getProfile} from '../../storage';
+import {getListItem} from '../../resource/Item';
 import {createBatch} from '../../resource/Batch';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {getListMstWarehouse} from '../../resource/MstWarehouse';
+import InputText from '../../components/InputText';
 const BatchCreate = ({navigation, route}) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(null);
@@ -23,7 +23,7 @@ const BatchCreate = ({navigation, route}) => {
   const [formData, setFormData] = useState({
     items: [],
     warehouse_id: null,
-    seller_phone: getProfile()?.phone,
+    weight: null,
   });
 
   useEffect(() => {
@@ -31,13 +31,13 @@ const BatchCreate = ({navigation, route}) => {
     loadWarehouse();
   }, []);
   const loadItems = async () => {
-    let response = await getListItem({status: 'draft'});
+    let response = await getListItem({status: 200});
     if (response) {
       setFormData({...formData, items: response});
     }
   };
   const loadWarehouse = async () => {
-    let response = await getListMstWarehouse({status: 'active'});
+    let response = await getListMstWarehouse({status: 'Active'});
     if (response) {
       let arr = [];
       for (const it of response) {
@@ -67,6 +67,15 @@ const BatchCreate = ({navigation, route}) => {
           marginTop: -40,
           backgroundColor: color.primaryColor,
         }}>
+        <InputText
+          label="Weight (kg)"
+          required={true}
+          showError={true}
+          keyboardType="numeric"
+          value={formData.weight}
+          onChangeText={value => setFormData({...formData, weight: value})}
+          placeholder="Masukkan berat total"
+        />
         <DropDownPicker
           open={open}
           value={formData.warehouse_id}

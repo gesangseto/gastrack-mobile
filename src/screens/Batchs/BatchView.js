@@ -10,20 +10,24 @@ import {
   View,
 } from 'react-native';
 import ListViewItem from '../../components/ListViewItem';
+import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
-import {cancelBatch, getListBatch} from '../../resource/Batch';
+import {cancelBatch, getListBatch, shippingBatch} from '../../resource/Batch';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};
   const [data, setData] = useState(null);
   const [list, setList] = useState([]);
+  const [shipmentNumber, setShipmentNumber] = useState('');
+  const [shipmentPrice, setShipmentPrice] = useState('');
   useEffect(() => {
     loadData();
   }, [item]);
 
   const loadData = async () => {
-    let response = await getListBatch({batch_no: item.batch_no});
+    // Backend hanya mengisi items saat query memakai id
+    let response = await getListBatch({id: item.id});
     if (response && response[0]) {
       setData(response[0]);
       setList(response[0].items);
@@ -31,16 +35,31 @@ const BatchView = ({navigation, route}) => {
   };
 
   const handlePressDelete = async () => {
-    let response = await cancelBatch({batch_no: item.batch_no});
+    let response = await cancelBatch({id: item.id});
+    if (response) {
+      RootNavigation.goBack();
+    }
+  };
+
+  const handlePressShip = async () => {
+    if (!shipmentNumber || !shipmentPrice) {
+      return;
+    }
+    let response = await shippingBatch({
+      id: data.id,
+      shipment_number: shipmentNumber,
+      shipment_price: shipmentPrice,
+      warehouse_id: data.warehouse_id,
+    });
     if (response) {
       RootNavigation.goBack();
     }
   };
 
   const renderIncon = (item, index) => {
-    if (item?.status == 'draft') {
+    if (item?.status == 'Draft') {
       return <Icon name="file-clock" size={80} color={color.warning} />;
-    } else if (item?.status == 'on-progress') {
+    } else if (item?.status == 'Shipping') {
       return <Icon name="plane" size={80} color={color.white} />;
     } else {
       return <Icon name="baggage-claim" size={80} color={color.success} />;
@@ -131,7 +150,7 @@ const BatchView = ({navigation, route}) => {
                   color: color.white,
                   marginTop: 4,
                 }}>
-                Quantity: {data?.total_quantity}, {data?.status}
+                Quantity: {data?.quantity}, {data?.status}
               </Text>
               <Text
                 style={{
@@ -140,10 +159,10 @@ const BatchView = ({navigation, route}) => {
                   color: color.white,
                   marginTop: 4,
                 }}>
-                {moment(item?.created_at).format('YYYY-MM-DD HH:mm')}
+                {moment(item?.created_date).format('YYYY-MM-DD HH:mm')}
               </Text>
             </View>
-            {item?.status === 'draft' && (
+            {item?.status === 'Draft' && (
               <View
                 style={{
                   flex: 1,
@@ -170,6 +189,60 @@ const BatchView = ({navigation, route}) => {
 
         {/* <ListView /> */}
         <ListViewItem list={list} />
+        {/* Form Shipment - tampilkan hanya saat status Draft */}
+        {data?.status === 'Draft' && (
+          <View
+            style={{
+              paddingHorizontal: 30,
+              paddingBottom: 30,
+              backgroundColor: color.white,
+            }}>
+            <Text
+              style={{
+                color: color.primaryColor,
+                fontSize: 20,
+                fontWeight: '700',
+                marginBottom: 10,
+              }}>
+              Shipment
+            </Text>
+            <InputText
+              label="Shipment Number"
+              required={true}
+              value={shipmentNumber}
+              onChangeText={setShipmentNumber}
+              placeholder="Masukkan nomor resi"
+            />
+            <InputText
+              label="Shipment Price"
+              required={true}
+              keyboardType="numeric"
+              value={shipmentPrice}
+              onChangeText={setShipmentPrice}
+              placeholder="Masukkan harga kirim"
+            />
+            <TouchableOpacity
+              onPress={() => handlePressShip()}
+              style={{
+                marginTop: 10,
+                borderRadius: 20,
+                backgroundColor: color.primaryColor,
+                height: 50,
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+              }}>
+              <Text
+                style={{
+                  color: color.white,
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                Ship Batch
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );

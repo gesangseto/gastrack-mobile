@@ -18,7 +18,7 @@ const Batchs = props => {
   }, [refresh]);
 
   const loadData = async () => {
-    let response = await getListBatch({status: ['on-progress', 'draft']});
+    let response = await getListBatch({status: ['Shipping', 'Draft']});
     if (response) setList(response);
   };
   return (

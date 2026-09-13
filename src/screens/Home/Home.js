@@ -16,7 +16,7 @@ import Batchs from './Batchs';
 import Items from './Items';
 import Toast from 'react-native-toast-message';
 import {getListBatch} from '../../resource/Batch';
-import {getListItem} from '../../resource/Item';
+import {getItemByBarcode} from '../../resource/Item';
 import UnfinishBatchs from './UnfinishBatchs';
 
 const Home = ({param}) => {
@@ -51,7 +51,7 @@ const Home = ({param}) => {
         RootNavigation.navigate('BatchView', {item: find[0]});
       }
     } else if (string.length == 13) {
-      let find = await getListItem({batch_no: string}, true);
+      let find = await getItemByBarcode(string, true);
       if (find) {
         RootNavigation.navigate('ItemView', {item: find[0]});
       }

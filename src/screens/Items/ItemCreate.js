@@ -8,35 +8,37 @@ import {
   View,
 } from 'react-native';
 import InputText from '../../components/InputText';
-import InputTextArea from '../../components/InputTextArea';
 import UploadImage from '../../components/UploadImage';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {createItem, updateItem} from '../../resource/Item';
-import {getEndpoint, getProfile} from '../../storage';
+import {getEndpoint} from '../../storage';
 import {getMimeType} from '../../helper/helper';
 
 const ItemCreate = ({navigation, route}) => {
   const [formData, setFormData] = useState({
     id: null,
     item_name: null,
-    phone: null,
-    name: null,
-    address: null,
+    customer_phone: null,
+    quantity: null,
+    cost_price: null,
+    selling_price: null,
     photo: null,
-    seller_phone: getProfile()?.phone,
   });
   useEffect(() => {
     if (route && route?.params && route?.params?.item) {
       let item = route?.params?.item;
       let param = {};
       param.id = item.id || null;
-      param.phone = item.customer_phone || null;
-      param.name = item.customer_name || null;
-      param.item_name = item.item_name || null;
-      param.address = item.customer_address || null;
-      param.photo = getImageObject(item.photo);
+      param.customer_phone = item.customer_phone || null;
+      param.item_name = item.product_name || item.item_name || null;
+      param.quantity = item.quantity != null ? String(item.quantity) : null;
+      param.cost_price =
+        item.cost_price != null ? String(item.cost_price) : null;
+      param.selling_price =
+        item.selling_price != null ? String(item.selling_price) : null;
+      param.photo = getImageObject(item.photo_path || item.photo);
       setFormData({...formData, ...param});
     }
   }, []);
@@ -44,9 +46,8 @@ const ItemCreate = ({navigation, route}) => {
   const getImageObject = filename => {
     if (!filename) return null;
     const time = new Date().getTime(); // 👈 cache buster
-    const url = `${getEndpoint()}/api/v1/helper/image/normal?filename=${encodeURIComponent(
-      filename,
-    )}&t=${time}`;
+    // Backend menyimpan foto di public/uploads/jastip (di-serve statis)
+    const url = `${getEndpoint()}/${filename.replace(/^public\//, '')}?t=${time}`;
     let photo = {
       uri: url,
       filename: filename,
@@ -63,12 +64,17 @@ const ItemCreate = ({navigation, route}) => {
         const value = formData[key];
         // Jika value adalah file (misal gambar dari picker)
         if (value && typeof value === 'object' && value.uri) {
-          form.append(key, {
-            uri: value.uri,
-            name: value.name || 'file.jpg',
-            type: value.type || 'image/jpeg',
-          });
-        } else if (value) {
+          if (value.uri.startsWith('http')) {
+            // Foto lama dari server — kirim path-nya saja, jangan upload ulang
+            form.append('photo_path', value.filename);
+          } else {
+            form.append(key, {
+              uri: value.uri,
+              name: value.name || 'file.jpg',
+              type: value.type || 'image/jpeg',
+            });
+          }
+        } else if (value !== null && value !== undefined && value !== '') {
           // Jika value bukan null
           form.append(key, value);
         }
@@ -107,15 +113,11 @@ const ItemCreate = ({navigation, route}) => {
                 label="Phone No."
                 required={true}
                 showError={true}
-                value={formData.phone}
-                onChangeText={value => setFormData({...formData, phone: value})}
+                value={formData.customer_phone}
+                onChangeText={value =>
+                  setFormData({...formData, customer_phone: value})
+                }
                 placeholder="Masukkan nomor telp customer"
-              />
-              <InputText
-                label="Name"
-                value={formData.name}
-                onChangeText={value => setFormData({...formData, name: value})}
-                placeholder="Masukkan nama customer"
               />
               <InputText
                 label="Item Name"
@@ -125,13 +127,38 @@ const ItemCreate = ({navigation, route}) => {
                 }
                 placeholder="Masukkan nama barang"
               />
-              <InputTextArea
-                label="Alamat"
-                value={formData.address}
+              <InputText
+                label="Quantity"
+                required={true}
+                showError={true}
+                keyboardType="numeric"
+                value={formData.quantity}
                 onChangeText={value =>
-                  setFormData({...formData, address: value})
+                  setFormData({...formData, quantity: value})
                 }
-                placeholder="Biarkan kosong maka menggunakan alamat terakhir"
+                placeholder="Masukkan jumlah barang"
+              />
+              <InputText
+                label="Cost Price"
+                required={true}
+                showError={true}
+                keyboardType="numeric"
+                value={formData.cost_price}
+                onChangeText={value =>
+                  setFormData({...formData, cost_price: value})
+                }
+                placeholder="Masukkan harga modal"
+              />
+              <InputText
+                label="Selling Price"
+                required={true}
+                showError={true}
+                keyboardType="numeric"
+                value={formData.selling_price}
+                onChangeText={value =>
+                  setFormData({...formData, selling_price: value})
+                }
+                placeholder="Masukkan harga jual"
               />
               <UploadImage
                 label="Foto Barang"

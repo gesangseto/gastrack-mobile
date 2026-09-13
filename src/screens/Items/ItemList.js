@@ -16,7 +16,7 @@ const ItemList = ({navigation, route}) => {
   );
 
   const loadData = async () => {
-    let response = await getListItem({status: ['draft']});
+    let response = await getListItem({status: [200]});
     if (response) {
       setList(response);
     }

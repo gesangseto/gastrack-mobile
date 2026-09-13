@@ -13,7 +13,6 @@ import {
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {printBarcode} from '../helper/helper';
-import {shippingBatch} from '../resource/Batch';
 
 const ListViewBatch = props => {
   const {list, refresh} = props;
@@ -24,21 +23,14 @@ const ListViewBatch = props => {
     setIsLoading(null);
   };
   const handlePressSubmit = async item => {
-    try {
-      let response = await shippingBatch(item);
-      if (response && refresh) {
-        refresh();
-      }
-    } catch (err) {
-      //error handling
-      console.log(err);
-    }
+    // Shipment butuh shipment_number + shipment_price → isi di BatchView
+    RootNavigation.navigate('BatchView', {item: item});
   };
 
   const renderIncon = (item, index) => {
-    if (item?.status == 'draft') {
+    if (item?.status == 'Draft') {
       return <Icon name="file-clock" size={55} color={color.warning} />;
-    } else if (item?.status == 'on-progress') {
+    } else if (item?.status == 'Shipping') {
       return <Icon name="plane" size={55} color={color.primaryColor} />;
     } else {
       return <Icon name="baggage-claim" size={55} color={color.success} />;
@@ -55,10 +47,10 @@ const ListViewBatch = props => {
           <View>
             <Text style={styles.h1}>{item?.batch_no}</Text>
             <Text style={styles.h3}>
-              Quantity: {item?.total_quantity}, {item?.status}
+              Quantity: {item?.quantity}, {item?.status}
             </Text>
             <Text style={styles.h2}>
-              {moment(item?.created_at).format('YY-MM-DD HH:mm')}
+              {moment(item?.created_date).format('YY-MM-DD HH:mm')}
             </Text>
           </View>
         </View>
@@ -69,7 +61,7 @@ const ListViewBatch = props => {
             justifyContent: 'flex-end',
             gap: 5,
           }}>
-          {item?.status === 'draft' && (
+          {item?.status === 'Draft' && (
             <TouchableOpacity
               onPress={() => handlePressSubmit(item)}
               style={styles.rightIcon}>

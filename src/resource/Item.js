@@ -1,14 +1,43 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 // import {Toaster} from '../utils';
-let url = `/api/v1/warehouse-tracking/transaction/stock-item`;
+let url = `/api/v1/jastip/item-registry`;
 
 export const getListItem = async (property = {}, useAlert = true) => {
-  var defaultParam = {status: 'draft', ...property};
+  var defaultParam = {status: 200, ...property};
   var query_string = new URLSearchParams(defaultParam).toString();
   return new Promise(resolve => {
     $axios
       .get(`${url}?${query_string}`)
+      .then(result => {
+        let data = result.data;
+        if (data.error && useAlert) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(data.data);
+      })
+      .catch(e => {
+        if (useAlert)
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });
+        return resolve(false);
+      });
+  });
+};
+
+// Cari item berdasarkan barcode (endpoint item-stock, GET only)
+export const getItemByBarcode = async (barcode, useAlert = true) => {
+  return new Promise(resolve => {
+    $axios
+      .get(`/api/v1/jastip/item-stock?barcode=${encodeURIComponent(barcode)}`)
       .then(result => {
         let data = result.data;
         if (data.error && useAlert) {

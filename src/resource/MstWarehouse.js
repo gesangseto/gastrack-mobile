@@ -1,10 +1,10 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 // import {Toaster} from '../utils';
-let url = `/api/v1/warehouse-tracking/master/warehouse`;
+let url = `/api/v1/master/warehouse`;
 
 export const getListMstWarehouse = async (property = {}, useAlert = true) => {
-  var defaultParam = {status: 'draft', ...property};
+  var defaultParam = {status: 'Active', ...property};
   var query_string = new URLSearchParams(defaultParam).toString();
   return new Promise(resolve => {
     $axios

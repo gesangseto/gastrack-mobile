@@ -33,17 +33,21 @@ const ListViewItem = props => {
         key={index}
         style={styles.containerList2}>
         <View style={styles.leftIcon}>
-          <ImageThumbnail filename={item?.photo} />
+          <ImageThumbnail
+            filename={item?.photo_thumbnail || item?.photo_path}
+          />
 
           <View>
             <Text style={styles.h2}>{item?.barcode}</Text>
             <Text style={styles.h3}>{item?.customer_name}</Text>
-            <Text style={styles.h3}>{item?.item_name}</Text>
-            <Text style={styles.h3}>{item?.status}</Text>
+            <Text style={styles.h3}>
+              {item?.product_name || item?.item_name}
+            </Text>
+            <Text style={styles.h3}>{item?.status_name || item?.status}</Text>
           </View>
         </View>
         <View style={{flexDirection: 'row'}}>
-          {item.status == 'draft' ? (
+          {item.status == 200 ? (
             <TouchableOpacity
               onPress={() => handlePressEdit(item)}
               style={styles.rightIcon}>

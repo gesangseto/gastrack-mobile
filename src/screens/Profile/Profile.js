@@ -99,7 +99,7 @@ const Profile = ({navigation, route}) => {
                   fontWeight: '700',
                   color: color.white,
                 }}>
-                {profile?.account || 'account not set'}
+                {profile?.username || 'account not set'}
               </Text>
               <Text
                 style={{
@@ -108,7 +108,7 @@ const Profile = ({navigation, route}) => {
                   color: '#B1A3D2',
                   marginTop: 4,
                 }}>
-                {profile?.name}
+                {profile?.full_name}
               </Text>
               <Text
                 style={{

@@ -1,21 +1,13 @@
 import axios from 'axios';
-import moment from 'moment';
 import DeviceInfo from 'react-native-device-info';
 import * as RootNavigation from './RootNavigation';
-import {encryptData} from '../helper/helper';
 import {getEndpoint, getProfile, removeProfile} from '../storage';
 import Toast from 'react-native-toast-message';
 
 const generateToken = () => {
   let profile = getProfile();
-  let token = null;
-  if (profile) {
-    token = {phone: profile.phone, expired: moment().add(60, 'minutes')};
-    token = encryptData(token);
-  } else {
-    token = 'OY0TC9T7iyCbHGtixotgyXzDbXR4cnMP';
-  }
-  return token;
+  // Token berasal dari respons login Backend (sys_authentication)
+  return profile?.token || 'ax771p65T5CykAeTWXD4Js0pLr2lyDSz';
 };
 
 const $axios = axios.create();
@@ -30,6 +22,8 @@ $axios.interceptors.request.use(
       token: generateToken(),
       'User-Type': deviceProfile,
     };
+    console.log(config);
+
     return config;
   },
   error => {

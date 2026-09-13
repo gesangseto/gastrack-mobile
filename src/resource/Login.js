@@ -2,17 +2,19 @@ import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 // import {Toaster} from '../utils';
 
-let url = `/api/v1/warehouse-tracking/master/seller`;
+let url = `/api/v1/authentication/login`;
 
 export const loginSeller = async (Params = {}) => {
   if (Object.keys(Params).length == 0) {
     // Toaster(error.need_param);
     return false;
   }
+  // Backend login memakai username+password (tabel mst_user)
+  Params = {username: Params.username, password: Params.password};
 
   return new Promise(resolve => {
     $axios
-      .post(url + '/login', Params)
+      .post(url, Params)
       .then(result => {
         let _data = result.data;
         if (_data.error) {
@@ -23,12 +25,13 @@ export const loginSeller = async (Params = {}) => {
           });
           return resolve(false);
         } else {
+          let user = _data.data[0];
           Toast.show({
             type: 'success',
             text1: 'Berhasil Login',
-            text2: `Selamat datang ${_data.data[0].name}`,
+            text2: `Selamat datang ${user.full_name}`,
           });
-          return resolve(_data.data[0]);
+          return resolve(user);
         }
       })
       .catch(e => {

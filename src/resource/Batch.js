@@ -1,7 +1,7 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 // import {Toaster} from '../utils';
-let url = `/api/v1/warehouse-tracking/transaction/inbound`;
+let url = `/api/v1/jastip/outbound-manifest`;
 
 export const getListBatch = async (property = {}, useAlert = true) => {
   var defaultParam = {status: [], ...property};
@@ -39,8 +39,8 @@ export const getListBatch = async (property = {}, useAlert = true) => {
 };
 
 export const getListUnfinishBatch = async (property = {}, useAlert = true) => {
-  let thisUrl = '/api/v1/warehouse-tracking/transaction/batch/unfinish';
-  var defaultParam = {status: [], ...property};
+  let thisUrl = url;
+  var defaultParam = {status: ['Draft', 'Shipping'], ...property};
   if (defaultParam.status.length > 0) {
     defaultParam.status = JSON.stringify(defaultParam.status);
   }
@@ -105,7 +105,7 @@ export const createBatch = async (Params = {}) => {
 export const shippingBatch = async (Params = {}) => {
   return new Promise(resolve => {
     $axios
-      .post(url + '/shipping', Params)
+      .post(url + '/shipment', Params)
       .then(result => {
         let data = result.data;
         Toast.show({
