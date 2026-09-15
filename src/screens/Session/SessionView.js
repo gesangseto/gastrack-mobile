@@ -290,6 +290,8 @@ const SessionView = () => {
                     {activeSession.symbol_currency || '-'}
                   </Text>
                 </View>
+              </View>
+              <View style={styles.activeMetaRow}>
                 <View style={styles.activeMetaItem}>
                   <Text style={styles.activeMetaLabel}>Rate (1 = X IDR)</Text>
                   <View style={styles.rateEditRow}>
