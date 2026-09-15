@@ -51,12 +51,13 @@ const BatchItemPicker = ({navigation, route}) => {
       return;
     }
     // Navigate ke BatchView yang sudah ada di stack: React Navigation otomatis
-    // pop BatchItemPicker + set params sekaligus. Dengan begini saat BatchView
-    // fokus kembali, route.params.pickedItems sudah terisi (useFocusEffect
-    // langsung membaca & merge item). goBack() dulu TIDAK boleh — karena
-    // useFocusEffect sudah terlanjur jalan sebelum params di-set.
-    RootNavigation.navigate('BatchView', {
-      pickedItems: items,
+    // pop BatchItemPicker + set params sekaligus. merge:true SANGAT PENTING —
+    // tanpa itu params BatchView (item) akan DIGANTI total, item.id hilang,
+    // dan loadData() memanggil API tanpa id → daftar item batch jadi kosong.
+    RootNavigation.navigate({
+      name: 'BatchView',
+      params: {pickedItems: items},
+      merge: true,
     });
   };
 

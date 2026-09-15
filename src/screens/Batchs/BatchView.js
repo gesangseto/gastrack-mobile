@@ -65,6 +65,11 @@ const BatchView = ({navigation, route}) => {
   };
 
   const loadData = async () => {
+    // Guard: tanpa id, backend tidak mengisi items → list jadi kosong.
+    // (Terjadi jika params route kehilangan `item`, mis. navigate tanpa merge)
+    if (!item?.id) {
+      return;
+    }
     // Backend hanya mengisi items saat query memakai id
     let response = await getListBatch({id: item.id});
     if (response && response[0]) {
@@ -85,9 +90,10 @@ const BatchView = ({navigation, route}) => {
     loadData();
     loadWarehouse();
     loadSessionCurrency();
-    // loadData/loadWarehouse/loadSessionCurrency sengaja tidak dijadikan dep
+    // Dep pakai item?.id (bukan item) agar tidak re-run saat referensi objek
+    // berubah tapi id sama (mis. kembali dari BatchItemPicker dengan merge).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item]);
+  }, [item?.id]);
 
   // Terima item yang dipilih dari BatchItemPicker
   useFocusEffect(
@@ -197,6 +203,7 @@ const BatchView = ({navigation, route}) => {
         key={index}
         item={item}
         size={44}
+        onPress={() => RootNavigation.navigate('ItemView', {item: item})}
         onRemove={data?.status === 'Draft' ? handleRemoveItem : null}
       />
     );
