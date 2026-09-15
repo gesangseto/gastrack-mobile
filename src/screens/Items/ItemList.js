@@ -21,6 +21,8 @@ const ItemList = ({navigation, route}) => {
       } else {
         loadData();
       }
+      // route stabil seumur hidup screen; loadData sengaja tidak dijadikan dep
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
@@ -38,7 +40,7 @@ const ItemList = ({navigation, route}) => {
         backgroundColor={color.primaryColor}
       />
       <Header title={`${title} (${list.length})`} />
-      <ListViewItem list={list} />
+      <ListViewItem list={list} refresh={loadData} />
     </View>
   );
 };

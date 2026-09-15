@@ -20,6 +20,7 @@ const InputText = React.forwardRef((props = {}, ref) => {
     errorMessage,
     showError,
     prefix,
+    suffix,
     rightIcon,
     onPressRightIcon,
     onFocus,
@@ -66,6 +67,7 @@ const InputText = React.forwardRef((props = {}, ref) => {
           onBlur={handleBlur}
           {...rest}
         />
+        {suffix ? <View style={styles.suffix}>{suffix}</View> : null}
         {rightIcon ? (
           <TouchableOpacity
             onPress={onPressRightIcon}
@@ -125,6 +127,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#333',
+  },
+  suffix: {
+    paddingRight: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,

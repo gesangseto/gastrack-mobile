@@ -4,9 +4,11 @@ import {useCallback, useState} from 'react';
 import {
   FlatList,
   Pressable,
+  RefreshControl,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -18,6 +20,8 @@ import {getListCustomer} from '../../resource/Customer';
 const CustomerList = ({navigation, route}) => {
   const [list, setList] = useState([]);
   const [title, setTitle] = useState('List Customer');
+  const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -41,6 +45,24 @@ const CustomerList = ({navigation, route}) => {
       setList(response);
     }
   };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  // Filter client-side: nama, phone, email, status
+  const filteredList = list.filter(item => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (item?.name || '').toLowerCase().includes(q) ||
+      (item?.phone || '').toLowerCase().includes(q) ||
+      (item?.email || '').toLowerCase().includes(q) ||
+      (item?.status || '').toLowerCase().includes(q)
+    );
+  });
 
   const renderItem = (item, index) => {
     return (
@@ -95,12 +117,42 @@ const CustomerList = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title={`${title} (${list.length})`} />
+      <Header title={`${title} (${filteredList.length})`} />
       <View style={styles.container}>
+        {/* Pencarian */}
+        <View style={styles.searchBox}>
+          <Icon name="search" size={16} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Cari nama / nomor / email..."
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholderTextColor="#B0B0B0"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+              <Icon name="x" size={16} color="#999" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        {filteredList.length === 0 && (
+          <Text style={styles.emptyText}>
+            {search ? 'Tidak ditemukan.' : 'Belum ada data customer.'}
+          </Text>
+        )}
         <FlatList
-          data={list}
+          data={filteredList}
           renderItem={({item, index}) => renderItem(item, index)}
           keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[color.primaryColor]}
+            />
+          }
         />
       </View>
     </View>
@@ -118,6 +170,27 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 35,
     paddingHorizontal: 20,
     paddingVertical: 15,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F4F8',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    paddingVertical: 10,
+    marginLeft: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 13,
+    paddingVertical: 24,
   },
   card: {
     flexDirection: 'row',

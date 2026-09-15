@@ -1,9 +1,11 @@
 import {useEffect, useRef, useState} from 'react';
 import {
+  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,6 +18,7 @@ import Header from '../../layouts/Header';
 import {createItem, updateItem} from '../../resource/Item';
 import {createCustomer, getListCustomer} from '../../resource/Customer';
 import {fetchDashboard} from '../../resource/Dashboard';
+import {fetchCountries} from '../../resource/Country';
 import {getEndpoint, getSysConfig} from '../../storage';
 import {getMimeType} from '../../helper/helper';
 import {normalizePhone} from '../../helper/contactSync';
@@ -68,12 +71,20 @@ const ItemCreate = ({navigation, route}) => {
   const sellingPriceRef = useRef(null);
   // Session aktif (untuk info mata uang/unit cost saat create)
   const [sessionInfo, setSessionInfo] = useState(null);
+  // Unit harga per item: null = pakai default (cost ← session, selling ← config)
+  const [costUnit, setCostUnit] = useState(null);
+  const [sellingUnit, setSellingUnit] = useState(null);
+  // Picker unit harga: 'cost' | 'selling' | null
+  const [unitPickerFor, setUnitPickerFor] = useState(null);
+  // Daftar negara untuk symbol mata uang selling
+  const [countries, setCountries] = useState([]);
 
   useEffect(() => {
     // Ambil session aktif untuk menampilkan mata uang/unit cost (read-only)
     fetchDashboard(false).then(d => {
       if (d?.active_session) setSessionInfo(d.active_session);
     });
+    fetchCountries().then(list => setCountries(list || []));
   }, []);
 
 useEffect(() => {
@@ -89,6 +100,9 @@ useEffect(() => {
       param.selling_code = item.selling_code || null;
       param.photo = getImageObject(item.photo_path || item.photo);
       setFormData(f => ({...f, ...param}));
+      // Unit harga snapshot item (fallback ke default session/config)
+      if (item.cost_unit) setCostUnit(item.cost_unit);
+      if (item.selling_unit) setSellingUnit(item.selling_unit);
       // Jangan trigger pencarian ulang untuk nomor yang sudah ada
       if (item.customer_phone) {
         setSelectedCustomer({
@@ -266,6 +280,9 @@ useEffect(() => {
       } else {
         form.append('customer_phone', normalizePhone(formData.customer_phone));
       }
+      // Unit harga per item (override default session/config)
+      form.append('cost_unit', effectiveCostUnit);
+      form.append('selling_unit', effectiveSellingUnit);
       let submit = null;
       if (formData.id) {
         submit = await updateItem(form);
@@ -277,20 +294,30 @@ useEffect(() => {
       console.log(error);
     }
   };
-  // Info mata uang & unit (read-only): snapshot item saat edit; session aktif
-  // (cost) & sys_configuration (selling) saat create.
+  // Mata uang & unit: snapshot item saat edit; session aktif (cost) &
+  // sys_configuration (selling) saat create. Unit bisa di-override per item.
   const sysCfg = getSysConfig() || {};
   const editItem = route?.params?.item;
   const costCurrency =
     editItem?.cost_currency || sessionInfo?.currency_code || 'IDR';
-  const costUnit =
-    editItem?.cost_unit || sessionInfo?.price_code_unit || 'none';
   const sellingCurrency = editItem?.selling_currency || sysCfg.currency || 'IDR';
-  const sellingUnit =
-    editItem?.selling_unit || sysCfg.price_unit_code || 'none';
+  const effectiveCostUnit =
+    costUnit || editItem?.cost_unit || sessionInfo?.price_code_unit || 'none';
+  const effectiveSellingUnit =
+    sellingUnit || editItem?.selling_unit || sysCfg.price_unit_code || 'none';
+  // Symbol mata uang: cost ← session.symbol_currency; selling ← lookup negara
+  const costSymbol = sessionInfo?.symbol_currency || costCurrency;
+  const sellingCountry = countries.find(
+    c => c.currency_code === sellingCurrency,
+  );
+  const sellingSymbol = sellingCountry?.currency_symbol || sellingCurrency;
   const unitLabel = unit => {
     const u = PRICE_UNIT_LIST.find(x => x.value === unit);
     return u ? `${u.label} (${u.multiplier || '1'})` : unit;
+  };
+  const unitShort = unit => {
+    const u = PRICE_UNIT_LIST.find(x => x.value === unit);
+    return u ? u.label : unit;
   };
 
   return (
@@ -449,6 +476,17 @@ useEffect(() => {
                 label="Cost Price"
                 required={true}
                 showError={true}
+                prefix={costSymbol}
+                suffix={
+                  <TouchableOpacity
+                    onPress={() => setUnitPickerFor('cost')}
+                    style={styles.unitSuffix}>
+                    <Text style={styles.unitSuffixText}>
+                      {unitShort(effectiveCostUnit)}
+                    </Text>
+                    <Icon name="chevron-down" size={14} color="#999" />
+                  </TouchableOpacity>
+                }
                 value={formData.cost_code}
                 onChangeText={value =>
                   setFormData({...formData, cost_code: value})
@@ -458,14 +496,22 @@ useEffect(() => {
                 returnKeyType="next"
                 onSubmitEditing={() => sellingPriceRef.current?.focus()}
               />
-              <Text style={styles.priceInfo}>
-                Mata uang: {costCurrency} • Unit: {unitLabel(costUnit)}
-              </Text>
               <InputText
                 ref={sellingPriceRef}
                 label="Selling Price"
                 required={true}
                 showError={true}
+                prefix={sellingSymbol}
+                suffix={
+                  <TouchableOpacity
+                    onPress={() => setUnitPickerFor('selling')}
+                    style={styles.unitSuffix}>
+                    <Text style={styles.unitSuffixText}>
+                      {unitShort(effectiveSellingUnit)}
+                    </Text>
+                    <Icon name="chevron-down" size={14} color="#999" />
+                  </TouchableOpacity>
+                }
                 value={formData.selling_code}
                 onChangeText={value =>
                   setFormData({...formData, selling_code: value})
@@ -475,9 +521,6 @@ useEffect(() => {
                 returnKeyType="done"
                 onSubmitEditing={() => save()}
               />
-              <Text style={styles.priceInfo}>
-                Mata uang: {sellingCurrency} • Unit: {unitLabel(sellingUnit)}
-              </Text>
               <UploadImage
                 label="Foto Barang"
                 image={formData.photo}
@@ -511,6 +554,61 @@ useEffect(() => {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* Modal pilih unit harga (cost / selling) */}
+      <Modal
+        visible={!!unitPickerFor}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setUnitPickerFor(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Pilih Unit Harga ({unitPickerFor === 'cost' ? 'Cost' : 'Selling'})
+              </Text>
+              <TouchableOpacity onPress={() => setUnitPickerFor(null)}>
+                <Icon name="x" size={22} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {PRICE_UNIT_LIST.map(u => {
+              const active =
+                (unitPickerFor === 'cost'
+                  ? effectiveCostUnit
+                  : effectiveSellingUnit) === u.value;
+              return (
+                <TouchableOpacity
+                  key={u.value}
+                  style={[styles.unitItem, active && styles.unitItemActive]}
+                  onPress={() => {
+                    if (unitPickerFor === 'cost') {
+                      setCostUnit(u.value);
+                    } else {
+                      setSellingUnit(u.value);
+                    }
+                    setUnitPickerFor(null);
+                  }}>
+                  <View style={styles.unitItemLeft}>
+                    <Text
+                      style={[
+                        styles.unitItemLabel,
+                        active && styles.unitItemLabelActive,
+                      ]}>
+                      {u.label}
+                    </Text>
+                    <Text style={styles.unitItemSub}>
+                      Pengali: {u.multiplier || '1'}
+                    </Text>
+                  </View>
+                  {active && (
+                    <Icon name="check" size={18} color={color.primaryColor} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -530,11 +628,71 @@ const styles = StyleSheet.create({
   rowItem: {
     flex: 1,
   },
-  priceInfo: {
-    fontSize: 11,
-    color: '#9A9A9A',
-    marginTop: -8,
+  unitSuffix: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F4F4F8',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  unitSuffixText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: color.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  unitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f2f2',
+  },
+  unitItemActive: {
+    backgroundColor: color.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+  },
+  unitItemLeft: {
+    flex: 1,
+  },
+  unitItemLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  unitItemLabelActive: {
+    color: color.primaryColor,
+  },
+  unitItemSub: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    marginTop: 2,
   },
   suggestionBox: {
     backgroundColor: color.white,

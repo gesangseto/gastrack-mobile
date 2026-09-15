@@ -4,6 +4,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Modal,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -29,6 +30,7 @@ const SessionView = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Edit rate konversi session aktif
   const [rateDraft, setRateDraft] = useState('');
@@ -80,6 +82,12 @@ const SessionView = () => {
       setLoading(false);
     }
   }, [fetchHome]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -238,7 +246,15 @@ const SessionView = () => {
       />
       <Header title="Session Jastip" />
       <View style={styles.body}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[color.primaryColor]}
+            />
+          }>
           {activeSession ? (
             <View style={styles.activeCard}>
               <View style={styles.activeHeader}>

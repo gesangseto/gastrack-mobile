@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,10 +18,19 @@ import {printBarcode} from '../helper/helper';
 const ListViewBatch = props => {
   const {list, refresh} = props;
   const [isLoading, setIsLoading] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const handlePressPrint = async item => {
     setIsLoading(item.id);
     await printBarcode(item);
     setIsLoading(null);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (refresh) {
+      await refresh();
+    }
+    setRefreshing(false);
   };
   const handlePressSubmit = async item => {
     // Shipment butuh shipment_number + shipment_price → isi di BatchView
@@ -82,6 +92,13 @@ const ListViewBatch = props => {
         data={list}
         renderItem={({item, index}) => renderItem(item, index)}
         keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[color.primaryColor]}
+          />
+        }
       />
     </View>
   );

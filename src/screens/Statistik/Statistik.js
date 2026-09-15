@@ -1,4 +1,4 @@
-import {useCallback} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
   Platform,
   RefreshControl,
@@ -13,6 +13,9 @@ import {useFocusEffect} from '@react-navigation/native';
 import color from '../../constant/color';
 import Icon from '@react-native-vector-icons/lucide';
 import {useHomeStore} from '../../store/homeStore';
+import {fetchSessionStats} from '../../resource/Dashboard';
+import {getSessionList} from '../../resource/Session';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 // ===== Mapping status =====
 // Item stock: 200 Draft, 201 Manifesting, 202 In-Transit, 203 GRN,
@@ -26,23 +29,10 @@ const ITEM_STATUS = [
   {code: 205, label: 'Sold', color: '#10B981'},
   {code: 206, label: 'Disposed', color: '#EF4444'},
 ];
-// Picking: -1 Canceled, 0 Waiting, 1 Done, 2 In Courier
-const PICKING_STATUS = [
-  {code: 0, label: 'Waiting', color: '#F59E0B'},
-  {code: 2, label: 'In Courier', color: '#3B82F6'},
-  {code: 1, label: 'Done', color: '#10B981'},
-  {code: -1, label: 'Canceled', color: '#EF4444'},
-];
-// Invoice: -1 Canceled, 0 Waiting, 1 Done
-const INVOICE_STATUS = [
-  {code: 0, label: 'Waiting', color: '#F59E0B'},
-  {code: 1, label: 'Done', color: '#10B981'},
-  {code: -1, label: 'Canceled', color: '#EF4444'},
-];
 
-const formatRupiah = value => {
-  const n = Number(value || 0);
-  return 'Rp ' + n.toLocaleString('id-ID');
+const fmt = v => {
+  const n = Number(v || 0);
+  return n.toLocaleString('id-ID');
 };
 
 const sumBy = (arr, key) =>
@@ -55,14 +45,47 @@ const Statistik = ({navigation, route}) => {
   const offline = useHomeStore(s => s.offline);
   const fetchHome = useHomeStore(s => s.fetchHome);
 
+  // Session dropdown
+  const [sessionList, setSessionList] = useState([]);
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [sessionValue, setSessionValue] = useState(null); // null = semua
+  // Statistik per session (grafik)
+  const [sessionStats, setSessionStats] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       fetchHome(false);
+      loadSessions();
     }, [fetchHome]),
   );
 
+  const loadSessions = async () => {
+    const list = await getSessionList({}, false);
+    if (list) {
+      setSessionList(list);
+      // Default: session aktif
+      const active = list.find(s => s.status === 'Active');
+      setSessionValue(active ? active.id : null);
+    }
+  };
+
+  // Muat statistik per session (grafik 6 terakhir)
+  const loadSessionStats = async () => {
+    setChartLoading(true);
+    const stats = await fetchSessionStats({limit: 6}, false);
+    setSessionStats(stats || []);
+    setChartLoading(false);
+  };
+
+  useEffect(() => {
+    loadSessionStats();
+  }, []);
+
   const onRefresh = () => {
     fetchHome(true);
+    loadSessions();
+    loadSessionStats();
   };
 
   // ===== Turunan data =====
@@ -73,8 +96,6 @@ const Statistik = ({navigation, route}) => {
   const totalProfit = totalSelling - totalCost;
 
   const totalBatch = sumBy(data?.batch_by_status || [], 'total');
-  const totalPicking = sumBy(data?.picking_by_status || [], 'total');
-  const totalInvoice = sumBy(data?.invoice_by_status || [], 'total');
   const totalCustomer = data?.total_customer || 0;
 
   const sold = data?.total_sales || {};
@@ -85,19 +106,18 @@ const Statistik = ({navigation, route}) => {
     return row ? Number(row.total || 0) : 0;
   };
 
-  const invoiceAmount = code => {
-    const row = (data?.invoice_by_status || []).find(
-      it => Number(it.status) === code,
-    );
-    return row ? Number(row.total_selling || 0) : 0;
-  };
+  // Session terpilih → statistik detail
+  const selectedSession = sessionValue
+    ? sessionList.find(s => s.id === sessionValue)
+    : null;
 
-  const pickingCount = code => {
-    const row = (data?.picking_by_status || []).find(
-      it => Number(it.status) === code,
-    );
-    return row ? Number(row.total || 0) : 0;
-  };
+  // ===== Grafik: pengeluaran & keuntungan per session =====
+  const chartData = sessionStats.slice(0, 6).reverse(); // urut lama → baru
+  const maxVal = Math.max(
+    1,
+    ...chartData.map(d => Math.max(Number(d.total_cost || 0), Number(d.total_profit || 0))),
+  );
+  const barHeight = v => (maxVal > 0 ? (Number(v || 0) / maxVal) * 100 : 0);
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -132,27 +152,66 @@ const Statistik = ({navigation, route}) => {
             colors={[color.primaryColor]}
           />
         }>
-        {/* Hero: Total Penjualan */}
+        {/* Dropdown pilih session */}
+        <View style={styles.dropdownWrap}>
+          <DropDownPicker
+            open={sessionOpen}
+            value={sessionValue}
+            items={[
+              {label: 'Semua Session', value: null},
+              ...sessionList.map(s => ({
+                label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
+                value: s.id,
+              })),
+            ]}
+            setOpen={setSessionOpen}
+            setValue={setSessionValue}
+            setItems={setSessionList}
+            placeholder="Pilih session jastip"
+            style={styles.picker}
+            dropDownContainerStyle={styles.pickerDropdown}
+            listMode="MODAL"
+            modalProps={{animationType: 'slide'}}
+            modalTitle="Pilih Session Jastip"
+            modalContentContainerStyle={styles.pickerModal}
+            textStyle={{fontSize: 13}}
+            labelStyle={{fontWeight: '600', color: '#333'}}
+            zIndex={1000}
+          />
+        </View>
+
+        {/* Hero: Total Penjualan (compact) */}
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
             <View style={styles.heroIcon}>
-              <Icon name="wallet" size={22} color={color.white} />
+              <Icon name="wallet" size={20} color={color.white} />
             </View>
-            <Text style={styles.heroLabel}>Total Penjualan</Text>
+            <Text style={styles.heroLabel}>
+              {selectedSession
+                ? `Session ${selectedSession.session_no}`
+                : 'Total Penjualan'}
+            </Text>
           </View>
-          <Text style={styles.heroValue}>{formatRupiah(totalSelling)}</Text>
+          <Text style={styles.heroValue}>
+            Rp {fmt(selectedSession ? selectedSession.total_selling : totalSelling)}
+          </Text>
           <View style={styles.heroDivider} />
           <View style={styles.heroStats}>
             <View style={{flex: 1}}>
               <Text style={styles.heroStatLabel}>Modal</Text>
               <Text style={styles.heroStatValue}>
-                {formatRupiah(totalCost)}
+                Rp {fmt(selectedSession ? selectedSession.total_cost : totalCost)}
               </Text>
             </View>
             <View style={{flex: 1}}>
               <Text style={styles.heroStatLabel}>Profit</Text>
               <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                {formatRupiah(totalProfit)}
+                Rp{' '}
+                {fmt(
+                  selectedSession
+                    ? selectedSession.total_profit
+                    : totalProfit,
+                )}
               </Text>
             </View>
           </View>
@@ -161,23 +220,84 @@ const Statistik = ({navigation, route}) => {
         {/* Mini stat cards */}
         <View style={styles.miniRow}>
           <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
-            <Icon name="package" size={20} color={color.primaryColor} />
-            <Text style={styles.miniValue}>{totalItems}</Text>
+            <Icon name="package" size={18} color={color.primaryColor} />
+            <Text style={styles.miniValue}>
+              {selectedSession ? selectedSession.total_items : totalItems}
+            </Text>
             <Text style={styles.miniLabel}>Item</Text>
           </View>
           <View style={[styles.miniCard, {backgroundColor: '#E0F2FE'}]}>
-            <Icon name="users" size={20} color="#0EA5E9" />
+            <Icon name="users" size={18} color="#0EA5E9" />
             <Text style={styles.miniValue}>{totalCustomer}</Text>
             <Text style={styles.miniLabel}>Customer</Text>
           </View>
           <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
-            <Icon name="layers" size={20} color="#10B981" />
-            <Text style={styles.miniValue}>{totalBatch}</Text>
-            <Text style={styles.miniLabel}>Batch</Text>
+            <Icon name="layers" size={18} color="#10B981" />
+            <Text style={styles.miniValue}>
+              {selectedSession ? selectedSession.total_shipment : totalBatch}
+            </Text>
+            <Text style={styles.miniLabel}>
+              {selectedSession ? 'Shipment' : 'Batch'}
+            </Text>
           </View>
         </View>
 
-        {/* Status Item */}
+        {/* Grafik: Pengeluaran & Keuntungan per Session */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Pengeluaran & Keuntungan</Text>
+            <Text style={styles.cardTotal}>6 session terakhir</Text>
+          </View>
+          {chartLoading ? (
+            <Text style={styles.emptyText}>Memuat grafik...</Text>
+          ) : chartData.length === 0 ? (
+            <Text style={styles.emptyText}>Belum ada data session</Text>
+          ) : (
+            <View>
+              <View style={styles.chartRow}>
+                {chartData.map(d => (
+                  <View key={d.session_id} style={styles.chartCol}>
+                    <View style={styles.chartBars}>
+                      <View style={styles.chartBarWrap}>
+                        <View
+                          style={[
+                            styles.chartBar,
+                            styles.chartBarCost,
+                            {height: `${Math.max(barHeight(d.total_cost), 2)}%`},
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.chartBarWrap}>
+                        <View
+                          style={[
+                            styles.chartBar,
+                            styles.chartBarProfit,
+                            {height: `${Math.max(barHeight(d.total_profit), 2)}%`},
+                          ]}
+                        />
+                      </View>
+                    </View>
+                    <Text style={styles.chartLabel} numberOfLines={1}>
+                      {d.session_no}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.chartLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, {backgroundColor: '#F59E0B'}]} />
+                  <Text style={styles.legendText}>Pengeluaran (Modal)</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, {backgroundColor: '#10B981'}]} />
+                  <Text style={styles.legendText}>Keuntungan</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Status Item (compact) */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Status Item</Text>
@@ -194,7 +314,7 @@ const Statistik = ({navigation, route}) => {
                     style={{
                       flex: count,
                       backgroundColor: s.color,
-                      height: 12,
+                      height: 10,
                     }}
                   />
                 );
@@ -221,67 +341,7 @@ const Statistik = ({navigation, route}) => {
           </View>
         </View>
 
-        {/* Invoice */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Invoice</Text>
-            <Text style={styles.cardTotal}>{totalInvoice} tagihan</Text>
-          </View>
-          <View style={styles.chipRow}>
-            {INVOICE_STATUS.map(s => {
-              const count = (data?.invoice_by_status || []).find(
-                it => Number(it.status) === s.code,
-              )?.total;
-              if (!count) {return null;}
-              return (
-                <View
-                  key={s.code}
-                  style={[styles.chip, {backgroundColor: s.color + '1A'}]}>
-                  <View
-                    style={[styles.chipDot, {backgroundColor: s.color}]}
-                  />
-                  <Text style={[styles.chipLabel, {color: s.color}]}>
-                    {s.label}
-                  </Text>
-                  <Text style={[styles.chipValue, {color: s.color}]}>
-                    {formatRupiah(invoiceAmount(s.code))}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Picking */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Picking</Text>
-            <Text style={styles.cardTotal}>{totalPicking} pengiriman</Text>
-          </View>
-          <View style={styles.chipRow}>
-            {PICKING_STATUS.map(s => {
-              const count = pickingCount(s.code);
-              if (!count) {return null;}
-              return (
-                <View
-                  key={s.code}
-                  style={[styles.chip, {backgroundColor: s.color + '1A'}]}>
-                  <View
-                    style={[styles.chipDot, {backgroundColor: s.color}]}
-                  />
-                  <Text style={[styles.chipLabel, {color: s.color}]}>
-                    {s.label}
-                  </Text>
-                  <Text style={[styles.chipValue, {color: s.color}]}>
-                    {count}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Sold summary */}
+        {/* Item Terjual */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Item Terjual</Text>
@@ -293,13 +353,13 @@ const Statistik = ({navigation, route}) => {
             <View style={styles.soldBox}>
               <Text style={styles.soldLabel}>Pendapatan</Text>
               <Text style={styles.soldValue}>
-                {formatRupiah(sold.total_selling)}
+                Rp {fmt(sold.total_selling)}
               </Text>
             </View>
             <View style={styles.soldBox}>
               <Text style={styles.soldLabel}>Profit</Text>
               <Text style={[styles.soldValue, {color: '#10B981'}]}>
-                {formatRupiah(soldProfit)}
+                Rp {fmt(soldProfit)}
               </Text>
             </View>
           </View>
@@ -344,11 +404,28 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
+  dropdownWrap: {
+    marginTop: -30,
+    marginBottom: 14,
+    zIndex: 1000,
+  },
+  picker: {
+    borderRadius: 14,
+    borderColor: '#E0E0E8',
+    backgroundColor: color.white,
+    minHeight: 46,
+  },
+  pickerDropdown: {
+    borderRadius: 14,
+    borderColor: '#E0E0E8',
+  },
+  pickerModal: {
+    backgroundColor: color.white,
+  },
   heroCard: {
     backgroundColor: color.primaryColor,
     borderRadius: 22,
-    padding: 20,
-    marginTop: -30,
+    padding: 18,
     shadowColor: color.primaryColor,
     shadowOpacity: 0.3,
     shadowOffset: {width: 0, height: 8},
@@ -361,8 +438,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   heroIcon: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
@@ -374,15 +451,15 @@ const styles = StyleSheet.create({
     color: '#B1A3D2',
   },
   heroValue: {
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: '800',
     color: color.white,
-    marginTop: 12,
+    marginTop: 10,
   },
   heroDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    marginVertical: 14,
+    marginVertical: 12,
   },
   heroStats: {
     flexDirection: 'row',
@@ -392,7 +469,7 @@ const styles = StyleSheet.create({
     color: '#B1A3D2',
   },
   heroStatValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: color.white,
     marginTop: 2,
@@ -400,59 +477,91 @@ const styles = StyleSheet.create({
   miniRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
+    marginTop: 14,
   },
   miniCard: {
     flex: 1,
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 16,
+    padding: 12,
     alignItems: 'center',
   },
   miniValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#333',
-    marginTop: 6,
+    marginTop: 5,
   },
   miniLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#888',
     marginTop: 2,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#f0f0f0',
-    padding: 16,
-    marginTop: 16,
+    padding: 14,
+    marginTop: 14,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#333',
   },
   cardTotal: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999',
   },
-  progressTrack: {
+  /* ---- Chart ---- */
+  chartRow: {
     flexDirection: 'row',
-    borderRadius: 6,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
+    alignItems: 'flex-end',
+    height: 130,
   },
-  legendWrap: {
+  chartCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  chartBars: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 12,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 3,
+    height: 110,
+  },
+  chartBarWrap: {
+    width: 12,
+    height: 110,
+    justifyContent: 'flex-end',
+  },
+  chartBar: {
+    width: 12,
+    borderRadius: 4,
+  },
+  chartBarCost: {
+    backgroundColor: '#F59E0B',
+  },
+  chartBarProfit: {
+    backgroundColor: '#10B981',
+  },
+  chartLabel: {
+    fontSize: 9,
+    color: '#999',
+    marginTop: 6,
+    maxWidth: 44,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 10,
   },
   legendItem: {
     flexDirection: 'row',
@@ -465,34 +574,20 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   legendText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
   },
-  chipRow: {
+  progressTrack: {
+    flexDirection: 'row',
+    borderRadius: 5,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  legendWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  chipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chipLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  chipValue: {
-    fontSize: 12,
-    fontWeight: '800',
+    marginTop: 10,
   },
   soldRow: {
     flexDirection: 'row',
@@ -501,15 +596,15 @@ const styles = StyleSheet.create({
   soldBox: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 12,
+    padding: 12,
   },
   soldLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#888',
   },
   soldValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#333',
     marginTop: 4,

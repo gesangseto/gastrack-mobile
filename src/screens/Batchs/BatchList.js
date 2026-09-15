@@ -20,6 +20,8 @@ const BatchList = ({navigation, route}) => {
       } else {
         loadData();
       }
+      // route stabil seumur hidup screen; loadData sengaja tidak dijadikan dep
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 

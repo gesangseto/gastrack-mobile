@@ -4,13 +4,13 @@ import {useCallback, useEffect, useState} from 'react';
 import {
   FlatList,
   Platform,
+  RefreshControl,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import ImageThumbnail from '../../components/ImageThumbnail';
 import InputText from '../../components/InputText';
 import ItemCard from '../../components/ItemCard';
 import * as RootNavigation from '../../config/RootNavigation';
@@ -24,6 +24,7 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {getListMstWarehouse} from '../../resource/MstWarehouse';
+import {fetchDashboard} from '../../resource/Dashboard';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};
@@ -32,6 +33,7 @@ const BatchView = ({navigation, route}) => {
   const [weight, setWeight] = useState('');
   const [shipmentNumber, setShipmentNumber] = useState('');
   const [shipmentPrice, setShipmentPrice] = useState('');
+  const [shipmentCurrency, setShipmentCurrency] = useState('IDR');
   const [showShipForm, setShowShipForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shipping, setShipping] = useState(false);
@@ -39,6 +41,7 @@ const BatchView = ({navigation, route}) => {
   const [open, setOpen] = useState(false);
   const [warehouseList, setWarehouseList] = useState([]);
   const [warehouseId, setWarehouseId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadWarehouse = async () => {
     let response = await getListMstWarehouse({status: 'Active'}, false);
@@ -48,6 +51,15 @@ const BatchView = ({navigation, route}) => {
         arr.push({value: it.id, label: it.address, ...it});
       }
       setWarehouseList(arr);
+    }
+  };
+
+  // Default shipment currency dari session jastip aktif
+  const loadSessionCurrency = async () => {
+    const d = await fetchDashboard(false);
+    const cur = d?.active_session?.currency_code;
+    if (cur) {
+      setShipmentCurrency(cur);
     }
   };
 
@@ -62,9 +74,18 @@ const BatchView = ({navigation, route}) => {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
     loadData();
     loadWarehouse();
+    loadSessionCurrency();
+    // loadData/loadWarehouse/loadSessionCurrency sengaja tidak dijadikan dep
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item]);
 
   // Terima item yang dipilih dari BatchItemPicker
@@ -86,6 +107,8 @@ const BatchView = ({navigation, route}) => {
         // Bersihkan params agar tidak ter-merge dua kali
         navigation.setParams({pickedItems: undefined});
       }
+      // navigation stabil; sengaja tidak dijadikan dep
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [route.params?.pickedItems]),
   );
 
@@ -127,6 +150,7 @@ const BatchView = ({navigation, route}) => {
       weight: weight,
       shipment_number: shipmentNumber,
       shipment_price: shipmentPrice,
+      shipment_currency: shipmentCurrency,
       warehouse_id: warehouseId,
     });
     setShipping(false);
@@ -216,6 +240,13 @@ const BatchView = ({navigation, route}) => {
           data={list}
           renderItem={({item, index}) => renderItem(item, index)}
           keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[color.primaryColor]}
+            />
+          }
           ListEmptyComponent={
             <Text style={styles.empty}>Belum ada item dalam batch</Text>
           }
@@ -283,6 +314,17 @@ const BatchView = ({navigation, route}) => {
                 onChangeText={setShipmentPrice}
                 placeholder="Masukkan harga kirim"
               />
+              <InputText
+                label="Shipment Currency"
+                required={true}
+                value={shipmentCurrency}
+                onChangeText={setShipmentCurrency}
+                placeholder="cth: IDR / THB"
+                autoCapitalize="characters"
+              />
+              <Text style={styles.currencyHint}>
+                Default dari session jastip aktif ({shipmentCurrency}).
+              </Text>
               <View style={styles.formActions}>
                 <TouchableOpacity
                   onPress={() => setShowShipForm(false)}
@@ -420,6 +462,12 @@ const styles = StyleSheet.create({
   pickerDropdown: {
     borderRadius: 15,
     borderColor: '#E0E0E8',
+  },
+  currencyHint: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    marginTop: -4,
+    marginBottom: 8,
   },
   formActions: {
     flexDirection: 'row',

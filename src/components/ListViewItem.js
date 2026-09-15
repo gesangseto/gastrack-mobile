@@ -3,6 +3,7 @@ import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,6 +20,7 @@ import ItemCard from './ItemCard';
 const ListViewItem = props => {
   const {list, refresh} = props;
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   // Data untuk siklus harga di ItemCard (titik 2 & 3)
   const [session, setSession] = useState(null);
   const [config, setConfig] = useState(getSysConfig() || {});
@@ -51,6 +53,14 @@ const ListViewItem = props => {
     setIsLoading(true);
     await printBarcode(item);
     setIsLoading(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (refresh) {
+      await refresh();
+    }
+    setRefreshing(false);
   };
   const handlePressEdit = async item => {
     RootNavigation.navigate('ItemCreate', {item: item});
@@ -98,6 +108,13 @@ const ListViewItem = props => {
         data={list}
         renderItem={({item, index}) => renderItem(item, index)}
         keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[color.primaryColor]}
+          />
+        }
       />
     </View>
   );
