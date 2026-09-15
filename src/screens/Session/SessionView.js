@@ -51,6 +51,7 @@ const SessionView = () => {
   // Form buka session
   const [countries, setCountries] = useState([]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const [rateLoading, setRateLoading] = useState(false);
   const [form, setForm] = useState({
     country: getSysConfig()?.country || 'Indonesia',
@@ -68,7 +69,7 @@ const SessionView = () => {
   // Sinkronkan draft rate dengan session aktif (misal setelah load/refresh)
   useEffect(() => {
     if (activeSession?.currency) {
-      setRateDraft(String(activeSession.currency));
+      setRateDraft(String(Math.ceil(Number(activeSession.currency))));
     }
   }, [activeSession?.currency]);
 
@@ -120,7 +121,7 @@ const SessionView = () => {
         if (def.code && def.code !== 'IDR') {
           fetchExchangeRate(def.code).then(rate => {
             if (rate && !rateTouchedRef.current) {
-              setForm(prev => ({...prev, currency: String(rate)}));
+              setForm(prev => ({...prev, currency: String(Math.ceil(rate))}));
             }
           });
         }
@@ -157,7 +158,7 @@ const SessionView = () => {
       fetchExchangeRate(c.code).then(rate => {
         setRateLoading(false);
         if (rate) {
-          setForm(prev => ({...prev, currency: String(rate)}));
+          setForm(prev => ({...prev, currency: String(Math.ceil(rate))}));
         }
       });
     } else {
@@ -166,7 +167,7 @@ const SessionView = () => {
   };
 
   const handleStart = async () => {
-    const rate = Number(form.currency);
+    const rate = Math.ceil(Number(form.currency));
     if (!(rate > 0)) {
       Toast.show({
         type: 'error',
@@ -201,7 +202,7 @@ const SessionView = () => {
   };
 
   const handleSaveRate = async () => {
-    const rate = Number(rateDraft);
+    const rate = Math.ceil(Number(rateDraft));
     if (!(rate > 0)) {
       Toast.show({
         type: 'error',
@@ -235,6 +236,17 @@ const SessionView = () => {
     const u = PRICE_UNIT_LIST.find(it => it.value === value);
     return u ? `${u.label} (${u.multiplier})` : value;
   };
+
+  // Filter negara untuk pencarian di modal
+  const filteredCountries = countries.filter(it => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (it.country || '').toLowerCase().includes(q) ||
+      (it.name || '').toLowerCase().includes(q) ||
+      (it.code || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -287,6 +299,12 @@ const SessionView = () => {
                       onChangeText={v =>
                         setRateDraft(v.replace(/[^0-9.]/g, ''))
                       }
+                      onEndEditing={() => {
+                        const n = Number(rateDraft);
+                        if (Number.isFinite(n) && n > 0) {
+                          setRateDraft(String(Math.ceil(n)));
+                        }
+                      }}
                       keyboardType="decimal-pad"
                       placeholder="cth: 530"
                     />
@@ -368,7 +386,10 @@ const SessionView = () => {
               <Text style={styles.fieldLabel}>Negara</Text>
               <TouchableOpacity
                 style={styles.pickerBox}
-                onPress={() => setCountryPickerOpen(true)}>
+                onPress={() => {
+                  setCountrySearch('');
+                  setCountryPickerOpen(true);
+                }}>
                 <Text style={styles.pickerValue}>{form.country}</Text>
                 <Icon name="chevron-down" size={18} color="#999" />
               </TouchableOpacity>
@@ -393,6 +414,15 @@ const SessionView = () => {
                     rateTouchedRef.current = true;
                     setForm({...form, currency: value.replace(/[^0-9.]/g, '')});
                   }}
+                  onEndEditing={() => {
+                    const n = Number(form.currency);
+                    if (Number.isFinite(n) && n > 0) {
+                      setForm(prev => ({
+                        ...prev,
+                        currency: String(Math.ceil(n)),
+                      }));
+                    }
+                  }}
                   keyboardType="decimal-pad"
                   placeholder="cth: 530"
                 />
@@ -411,7 +441,7 @@ const SessionView = () => {
                           if (rate) {
                             setForm(prev => ({
                               ...prev,
-                              currency: String(rate),
+                              currency: String(Math.ceil(rate)),
                             }));
                           }
                         });
@@ -423,6 +453,7 @@ const SessionView = () => {
               </View>
               <Text style={styles.fieldHint}>
                 Otomatis dari API kurs saat negara dipilih; bisa diedit manual.
+                Dibulatkan ke atas (tanpa koma).
               </Text>
 
               {/* Unit kode harga */}
@@ -537,13 +568,27 @@ const SessionView = () => {
                 <Icon name="x" size={22} color="#666" />
               </TouchableOpacity>
             </View>
+            <View style={styles.searchBox}>
+              <Icon name="search" size={16} color="#999" />
+              <TextInput
+                style={styles.searchInput}
+                value={countrySearch}
+                onChangeText={setCountrySearch}
+                placeholder="Cari negara / mata uang..."
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
             <ScrollView style={{maxHeight: 400}}>
               {countries.length === 0 && (
                 <Text style={styles.modalEmpty}>
                   Tidak ada data negara. Cek endpoint backend (Local Setting).
                 </Text>
               )}
-              {countries.map(item => (
+              {countries.length > 0 && filteredCountries.length === 0 && (
+                <Text style={styles.modalEmpty}>Tidak ditemukan.</Text>
+              )}
+              {filteredCountries.map(item => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.countryItem}
@@ -943,6 +988,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F4F8',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    paddingVertical: 10,
+    marginLeft: 8,
   },
   modalEmpty: {
     fontSize: 13,

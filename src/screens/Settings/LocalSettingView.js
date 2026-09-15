@@ -5,6 +5,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -27,6 +28,7 @@ const LocalSettingView = ({navigation, route}) => {
   const [currencies, setCurrencies] = useState([]);
   const [currencyTo, setCurrencyTo] = useState(local.currency_to || 'IDR');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,16 @@ const LocalSettingView = ({navigation, route}) => {
     return c ? `${c.code} · ${c.symbol}` : code;
   };
 
+  const filteredCurrencies = currencies.filter(it => {
+    const q = currencySearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (it.code || '').toLowerCase().includes(q) ||
+      (it.name || '').toLowerCase().includes(q) ||
+      (it.country || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -113,7 +125,10 @@ const LocalSettingView = ({navigation, route}) => {
 
           <TouchableOpacity
             style={styles.currencyBox}
-            onPress={() => setPickerOpen(true)}>
+            onPress={() => {
+              setCurrencySearch('');
+              setPickerOpen(true);
+            }}>
             <View>
               <Text style={styles.currencyLabel}>Currency Tujuan</Text>
               <Text style={styles.currencyValue}>
@@ -139,13 +154,27 @@ const LocalSettingView = ({navigation, route}) => {
                 <Icon name="x" size={22} color="#666" />
               </TouchableOpacity>
             </View>
+            <View style={styles.searchBox}>
+              <Icon name="search" size={16} color="#999" />
+              <TextInput
+                style={styles.searchInput}
+                value={currencySearch}
+                onChangeText={setCurrencySearch}
+                placeholder="Cari kode / nama / negara..."
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
             <ScrollView style={{maxHeight: 400}}>
               {currencies.length === 0 && (
                 <Text style={styles.modalEmpty}>
                   Tidak ada data currency. Cek endpoint backend di atas.
                 </Text>
               )}
-              {currencies.map(item => (
+              {currencies.length > 0 && filteredCurrencies.length === 0 && (
+                <Text style={styles.modalEmpty}>Tidak ditemukan.</Text>
+              )}
+              {filteredCurrencies.map(item => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.currencyItem}
@@ -251,6 +280,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F4F8',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    paddingVertical: 10,
+    marginLeft: 8,
   },
   modalEmpty: {
     textAlign: 'center',
