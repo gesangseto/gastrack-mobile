@@ -15,9 +15,11 @@ import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {createItem, updateItem} from '../../resource/Item';
 import {createCustomer, getListCustomer} from '../../resource/Customer';
+import {fetchDashboard} from '../../resource/Dashboard';
 import {getEndpoint, getSysConfig} from '../../storage';
 import {getMimeType} from '../../helper/helper';
 import {normalizePhone} from '../../helper/contactSync';
+import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Toast from 'react-native-toast-message';
 
 // Ubah nomor penuh (+62812... / 0812...) menjadi digit lokal (812...)
@@ -64,9 +66,18 @@ const ItemCreate = ({navigation, route}) => {
   const phoneRef = useRef(null);
   const costPriceRef = useRef(null);
   const sellingPriceRef = useRef(null);
+  // Session aktif (untuk info mata uang/unit cost saat create)
+  const [sessionInfo, setSessionInfo] = useState(null);
 
   useEffect(() => {
-    if (route && route?.params && route?.params?.item) {
+    // Ambil session aktif untuk menampilkan mata uang/unit cost (read-only)
+    fetchDashboard(false).then(d => {
+      if (d?.active_session) setSessionInfo(d.active_session);
+    });
+  }, []);
+
+useEffect(() => {
+    if (route && route?.params?.item) {
       let item = route?.params?.item;
       let param = {};
       param.id = item.id || null;
@@ -77,7 +88,7 @@ const ItemCreate = ({navigation, route}) => {
       param.cost_code = item.cost_code || null;
       param.selling_code = item.selling_code || null;
       param.photo = getImageObject(item.photo_path || item.photo);
-      setFormData({...formData, ...param});
+      setFormData(f => ({...f, ...param}));
       // Jangan trigger pencarian ulang untuk nomor yang sudah ada
       if (item.customer_phone) {
         setSelectedCustomer({
@@ -87,6 +98,8 @@ const ItemCreate = ({navigation, route}) => {
         });
       }
     }
+    // route stabil seumur hidup screen — cukup jalankan sekali saat mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Pencarian otomatis customer saat nomor sudah >= 3 digit (debounce 500ms)
@@ -107,6 +120,9 @@ const ItemCreate = ({navigation, route}) => {
     }
     const timer = setTimeout(() => searchCustomer(phone), 500);
     return () => clearTimeout(timer);
+    // searchCustomer dibuat ulang tiap render — sengaja tidak dijadikan dep
+    // agar debounce tidak ter-reset oleh render lain
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.customer_phone, selectedCustomer]);
 
   // Ref untuk membatalkan hasil pencarian yang sudah basi (stale)
@@ -261,6 +277,22 @@ const ItemCreate = ({navigation, route}) => {
       console.log(error);
     }
   };
+  // Info mata uang & unit (read-only): snapshot item saat edit; session aktif
+  // (cost) & sys_configuration (selling) saat create.
+  const sysCfg = getSysConfig() || {};
+  const editItem = route?.params?.item;
+  const costCurrency =
+    editItem?.cost_currency || sessionInfo?.currency_code || 'IDR';
+  const costUnit =
+    editItem?.cost_unit || sessionInfo?.price_code_unit || 'none';
+  const sellingCurrency = editItem?.selling_currency || sysCfg.currency || 'IDR';
+  const sellingUnit =
+    editItem?.selling_unit || sysCfg.price_unit_code || 'none';
+  const unitLabel = unit => {
+    const u = PRICE_UNIT_LIST.find(x => x.value === unit);
+    return u ? `${u.label} (${u.multiplier || '1'})` : unit;
+  };
+
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -426,6 +458,9 @@ const ItemCreate = ({navigation, route}) => {
                 returnKeyType="next"
                 onSubmitEditing={() => sellingPriceRef.current?.focus()}
               />
+              <Text style={styles.priceInfo}>
+                Mata uang: {costCurrency} • Unit: {unitLabel(costUnit)}
+              </Text>
               <InputText
                 ref={sellingPriceRef}
                 label="Selling Price"
@@ -440,6 +475,9 @@ const ItemCreate = ({navigation, route}) => {
                 returnKeyType="done"
                 onSubmitEditing={() => save()}
               />
+              <Text style={styles.priceInfo}>
+                Mata uang: {sellingCurrency} • Unit: {unitLabel(sellingUnit)}
+              </Text>
               <UploadImage
                 label="Foto Barang"
                 image={formData.photo}
@@ -491,6 +529,12 @@ const styles = StyleSheet.create({
   },
   rowItem: {
     flex: 1,
+  },
+  priceInfo: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    marginTop: -8,
+    marginBottom: 12,
   },
   suggestionBox: {
     backgroundColor: color.white,

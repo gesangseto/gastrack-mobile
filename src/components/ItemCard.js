@@ -17,6 +17,9 @@ import ImageThumbnail from './ImageThumbnail';
 //   1. kode harga + unit (nol): "BCD (000) → FED (000)"
 //   2. konversi ke mata uang session jastip: "(P) 123 → (P) 417"
 //   3. konversi ke mata uang sys_configuration: "(Rp) 160023 → (Rp) 543000"
+// Konversi memakai snapshot item: cost_currency/cost_unit (dari session),
+// selling_currency/selling_unit (dari sys_configuration), exchange_rate
+// (1 unit cost_currency = X IDR).
 const ItemCard = ({
   item,
   onPress,
@@ -52,21 +55,37 @@ const ItemCard = ({
     const u = PRICE_UNIT_LIST.find(x => x.value === unit);
     return u ? u.multiplier : '';
   };
-  const rate = Number(session?.currency) || 1;
+  // Snapshot kolom item_stock (fallback ke session/config untuk item lama)
+  const costCurrency = item?.cost_currency || session?.currency_code || 'IDR';
+  const sellingCurrency = item?.selling_currency || 'IDR';
+  const configCurrency = config?.currency || 'IDR';
+  const exchangeRate = Number(item?.exchange_rate) || Number(session?.currency) || 1;
   const sessionSymbol = session?.symbol_currency || '';
-  const costUnitZ = unitZeros(session?.price_code_unit);
-  const sellingUnitZ = unitZeros(config?.price_unit_code);
+  const costUnitZ = unitZeros(item?.cost_unit || session?.price_code_unit);
+  const sellingUnitZ = unitZeros(item?.selling_unit || config?.price_unit_code);
   const canCycle = priceCycle && !!session && !!configSymbol;
+
+  // Konversi nilai dari mata uang asal ke tujuan, lewat IDR sebagai jembatan.
+  // exchangeRate = 1 unit cost_currency = X IDR; configRate = 1 unit
+  // config_currency = X IDR.
+  const convert = (value, from, to) => {
+    if (value == null || value === '') return null;
+    const num = Number(value);
+    if (from === to) return num;
+    const inIdr = from === 'IDR' ? num : num * exchangeRate;
+    if (to === 'IDR') return inIdr;
+    return inIdr / configRate;
+  };
+  const fmt = v => (v == null || isNaN(v) ? '-' : Math.round(v));
 
   // Titik 1: kode harga + unit (nol) — "code(unit)"
   const codeText = `${costCode ?? '-'}${costUnitZ ? ` (${costUnitZ})` : ''} → ${sellingCode ?? '-'}${sellingUnitZ ? ` (${sellingUnitZ})` : ''}`;
-  // Titik 2: konversi ke mata uang session jastip (cost sudah dalam mata uang
-  // session; selling_price dalam IDR → dibagi rate session)
-  const sessionText = `(${sessionSymbol}) ${cost ?? '-'} → (${sessionSymbol}) ${Math.round((selling ?? 0) / rate)}`;
-  // Titik 3: konversi ke mata uang sys_configuration (cost_price_idr sudah IDR;
-  // selling_price sudah IDR; dibagi configRate bila mata uang bukan IDR)
-  const costIdr = item?.cost_price_idr ?? Math.round((cost ?? 0) * rate);
-  const configText = `(${configSymbol}) ${Math.round(costIdr / configRate)} → (${configSymbol}) ${Math.round((selling ?? 0) / configRate)}`;
+  // Titik 2: konversi ke mata uang session jastip (cost sudah dalam
+  // cost_currency = mata uang session; selling dikonversi dari selling_currency)
+  const sessionText = `(${sessionSymbol}) ${fmt(cost)} → (${sessionSymbol}) ${fmt(convert(selling, sellingCurrency, costCurrency))}`;
+  // Titik 3: konversi ke mata uang sys_configuration (cost & selling
+  // dikonversi dari masing-masing mata uang snapshot)
+  const configText = `(${configSymbol}) ${fmt(convert(cost, costCurrency, configCurrency))} → (${configSymbol}) ${fmt(convert(selling, sellingCurrency, configCurrency))}`;
 
   const cycleViews = [codeText, sessionText, configText];
   const cyclePrice = () => setPriceView(v => (v + 1) % cycleViews.length);
