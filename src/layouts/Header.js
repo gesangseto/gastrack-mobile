@@ -29,7 +29,10 @@ const styles = StyleSheet.create({
     backgroundColor: color.primaryColor,
     paddingHorizontal: 15,
     flexDirection: 'row',
-    alignItems: 'center',
+    // Konten header harus top-aligned: layar memakai marginTop: -40 sehingga
+    // 40px bawah header tertutup content — jika di-center, back button &
+    // judul akan terpotong oleh content.
+    alignItems: 'flex-start',
     paddingTop: Platform.OS === 'ios' ? 50 : 5,
   },
   backBtn: {
@@ -43,5 +46,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: color.white,
     marginLeft: 4,
+    paddingTop: 10,
   },
 });
