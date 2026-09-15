@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Icon from '@react-native-vector-icons/lucide';
 import InputText from '../../components/InputText';
-import PriceCodeInput from '../../components/PriceCodeInput';
 import UploadImage from '../../components/UploadImage';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
@@ -46,9 +46,8 @@ const ItemCreate = ({navigation, route}) => {
     item_name: null,
     customer_phone: null,
     quantity: '1',
-    cost_price: null,
-    selling_price: null,
-    price_code: null,
+    cost_code: null,
+    selling_code: null,
     photo: null,
   });
   // Autocomplete customer
@@ -74,10 +73,9 @@ const ItemCreate = ({navigation, route}) => {
       param.customer_phone = toLocalDigits(item.customer_phone);
       param.item_name = item.product_name || item.item_name || null;
       param.quantity = item.quantity != null ? String(item.quantity) : null;
-      // Harga dikirim sebagai kode (alphabet) — tampilkan price_code jika ada
-      param.cost_price = item.price_code || null;
-      param.selling_price = item.price_code || null;
-      param.price_code = item.price_code || null;
+      // Harga dikirim sebagai kode (alphabet) — tampilkan cost_code/selling_code
+      param.cost_code = item.cost_code || null;
+      param.selling_code = item.selling_code || null;
       param.photo = getImageObject(item.photo_path || item.photo);
       setFormData({...formData, ...param});
       // Jangan trigger pencarian ulang untuk nomor yang sudah ada
@@ -91,15 +89,16 @@ const ItemCreate = ({navigation, route}) => {
     }
   }, []);
 
-  // Pencarian otomatis customer saat nomor sudah >= 4 digit (debounce 500ms)
+  // Pencarian otomatis customer saat nomor sudah >= 3 digit (debounce 500ms)
   useEffect(() => {
     const phone = formData.customer_phone;
-    const selectedPhone =
-      selectedCustomer && normalizePhone(selectedCustomer.phone);
+    // Bandingkan dalam format yang sama (local digits) agar guard akurat
+    const selectedLocal =
+      selectedCustomer && toLocalDigits(selectedCustomer.phone);
     if (
       !phone ||
-      phone.length < 4 ||
-      (selectedPhone && selectedPhone === normalizePhone(phone))
+      phone.length < 3 ||
+      (selectedLocal && selectedLocal === phone)
     ) {
       setCustomerSuggestions([]);
       setShowSuggestions(false);
@@ -123,10 +122,8 @@ const ItemCreate = ({navigation, route}) => {
     if (seq !== searchSeqRef.current) return;
     if (result) {
       // Jika ada kecocokan persis, langsung pilih customer tsb
-      const normalized = normalizePhone(phone);
-      const exact = result.find(
-        c => normalizePhone(c.phone) === normalized,
-      );
+      // (bandingkan dalam local digits agar format +62 vs 8xx cocok)
+      const exact = result.find(c => toLocalDigits(c.phone) === phone);
       if (exact) {
         selectCustomer(exact);
         return;
@@ -155,6 +152,17 @@ const ItemCreate = ({navigation, route}) => {
     setCustomerSuggestions([]);
     setShowSuggestions(false);
     setShowAddCustomer(false);
+  };
+
+  // Hapus pilihan customer (icon close di field Phone No.)
+  const clearCustomer = () => {
+    searchSeqRef.current++; // batalkan pencarian yang sedang berjalan
+    setSelectedCustomer(null);
+    setFormData({...formData, customer_phone: ''});
+    setCustomerSuggestions([]);
+    setShowSuggestions(false);
+    setShowAddCustomer(false);
+    phoneRef.current?.focus();
   };
 
   const saveNewCustomer = async () => {
@@ -191,7 +199,10 @@ const ItemCreate = ({navigation, route}) => {
     if (!filename) return null;
     const time = new Date().getTime(); // 👈 cache buster
     // Backend menyimpan foto di public/uploads/jastip (di-serve statis)
-    const url = `${getEndpoint()}/${filename.replace(/^public\//, '')}?t=${time}`;
+    const url = `${getEndpoint()}/${filename.replace(
+      /^public\//,
+      '',
+    )}?t=${time}`;
     let photo = {
       uri: url,
       filename: filename,
@@ -312,12 +323,17 @@ const ItemCreate = ({navigation, route}) => {
                 placeholder="81234567890"
                 returnKeyType="next"
                 onSubmitEditing={() => costPriceRef.current?.focus()}
+                rightIcon={
+                  selectedCustomer ? (
+                    <Icon name="x" size={18} color="#999" />
+                  ) : null
+                }
+                onPressRightIcon={clearCustomer}
               />
 
               {/* Chip customer terpilih */}
               {selectedCustomer && (
                 <View style={styles.selectedCustomerBox}>
-                  <Text style={styles.selectedCustomerLabel}>✓ Customer terpilih</Text>
                   <Text style={styles.selectedCustomerName}>
                     {selectedCustomer.name || '—'}
                   </Text>
@@ -390,41 +406,37 @@ const ItemCreate = ({navigation, route}) => {
                       savingCustomer && styles.addCustomerButtonDisabled,
                     ]}>
                     <Text style={styles.addCustomerButtonText}>
-                      {savingCustomer
-                        ? 'Menyimpan...'
-                        : 'Simpan Customer Baru'}
+                      {savingCustomer ? 'Menyimpan...' : 'Simpan Customer Baru'}
                     </Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              <PriceCodeInput
+              <InputText
                 ref={costPriceRef}
                 label="Cost Price"
                 required={true}
                 showError={true}
-                value={formData.cost_price}
+                value={formData.cost_code}
                 onChangeText={value =>
-                  setFormData({...formData, cost_price: value})
+                  setFormData({...formData, cost_code: value})
                 }
                 placeholder="Kode harga (misal: ADB)"
+                autoCapitalize="characters"
                 returnKeyType="next"
                 onSubmitEditing={() => sellingPriceRef.current?.focus()}
               />
-              <PriceCodeInput
+              <InputText
                 ref={sellingPriceRef}
                 label="Selling Price"
                 required={true}
                 showError={true}
-                value={formData.selling_price}
+                value={formData.selling_code}
                 onChangeText={value =>
-                  setFormData({
-                    ...formData,
-                    selling_price: value,
-                    price_code: value,
-                  })
+                  setFormData({...formData, selling_code: value})
                 }
                 placeholder="Kode harga (misal: ADB)"
+                autoCapitalize="characters"
                 returnKeyType="done"
                 onSubmitEditing={() => save()}
               />

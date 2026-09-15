@@ -1,4 +1,5 @@
 import Icon from '@react-native-vector-icons/lucide';
+import React, {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import color from '../constant/color';
 import ImageThumbnail from './ImageThumbnail';
@@ -18,13 +19,24 @@ const ItemCard = ({
   right,
   size = 40,
 }) => {
+  const [showNumbers, setShowNumbers] = useState(false);
+  // Reset toggle saat item berubah (list di-refresh / item diganti)
+  useEffect(() => {
+    setShowNumbers(false);
+  }, [item?.id]);
+
   const handlePress = onPress || (onToggle ? () => onToggle(item) : undefined);
 
   const cost = item?.cost_price;
   const selling = item?.selling_price;
-  const priceCode = item?.price_code;
-  const priceText = priceCode
-    ? `${priceCode} (${cost ?? '-'} → ${selling ?? '-'})`
+  const costCode = item?.cost_code;
+  const sellingCode = item?.selling_code;
+  const hasCode = !!(costCode || sellingCode);
+  // Default tampil cost_code → selling_code; tap icon eye → tampil angka
+  const priceText = hasCode
+    ? showNumbers
+      ? `${cost ?? '-'} → ${selling ?? '-'}`
+      : `${costCode ?? '-'} → ${sellingCode ?? '-'}`
     : `${cost ?? '-'} → ${selling ?? '-'}`;
 
   return (
@@ -44,9 +56,22 @@ const ItemCard = ({
           {item?.customer_phone}
         </Text>
         <View style={styles.bottomRow}>
-          <Text style={styles.price} numberOfLines={1}>
-            {priceText}
-          </Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.price} numberOfLines={1}>
+              {priceText}
+            </Text>
+            {hasCode && (
+              <TouchableOpacity
+                onPress={() => setShowNumbers(v => !v)}
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                <Icon
+                  name={showNumbers ? 'eye-off' : 'eye'}
+                  size={14}
+                  color={color.primaryColor}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
             <Text style={styles.statusText} numberOfLines={1}>
@@ -113,6 +138,12 @@ const styles = StyleSheet.create({
     color: color.primaryColor,
     fontSize: 11,
     fontWeight: '600',
+    flexShrink: 1,
+    marginRight: 6,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flexShrink: 1,
     marginRight: 8,
   },
