@@ -2,6 +2,7 @@ import Icon from '@react-native-vector-icons/lucide';
 import React, {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import color from '../constant/color';
+import {PRICE_UNIT_LIST} from '../constant/priceUnit';
 import ImageThumbnail from './ImageThumbnail';
 
 // Card item seragam untuk semua list item:
@@ -10,6 +11,12 @@ import ImageThumbnail from './ImageThumbnail';
 // - BatchView (item dalam batch + tombol hapus)
 // - BatchItemPicker (pilih item + checkbox)
 // Info yang ditampilkan: Photo, Nama, Phone, Price code (cost->selling), Status
+//
+// Mode priceCycle (dipakai List Item): bagian bawah harga bisa diklik dan
+// berputar 3 titik:
+//   1. kode harga + unit (nol): "BCD (000) → FED (000)"
+//   2. konversi ke mata uang session jastip: "(P) 123 → (P) 417"
+//   3. konversi ke mata uang sys_configuration: "(Rp) 160023 → (Rp) 543000"
 const ItemCard = ({
   item,
   onPress,
@@ -18,11 +25,18 @@ const ItemCard = ({
   onToggle,
   right,
   size = 40,
+  priceCycle = false,
+  session = null,
+  config = null,
+  configSymbol = '',
+  configRate = 1,
 }) => {
   const [showNumbers, setShowNumbers] = useState(false);
+  const [priceView, setPriceView] = useState(0);
   // Reset toggle saat item berubah (list di-refresh / item diganti)
   useEffect(() => {
     setShowNumbers(false);
+    setPriceView(0);
   }, [item?.id]);
 
   const handlePress = onPress || (onToggle ? () => onToggle(item) : undefined);
@@ -32,12 +46,39 @@ const ItemCard = ({
   const costCode = item?.cost_code;
   const sellingCode = item?.selling_code;
   const hasCode = !!(costCode || sellingCode);
+
+  // ===== Mode siklus harga (List Item) =====
+  const unitZeros = unit => {
+    const u = PRICE_UNIT_LIST.find(x => x.value === unit);
+    return u ? u.multiplier : '';
+  };
+  const rate = Number(session?.currency) || 1;
+  const sessionSymbol = session?.symbol_currency || '';
+  const costUnitZ = unitZeros(session?.price_code_unit);
+  const sellingUnitZ = unitZeros(config?.price_unit_code);
+  const canCycle = priceCycle && !!session && !!configSymbol;
+
+  // Titik 1: kode harga + unit (nol) — "code(unit)"
+  const codeText = `${costCode ?? '-'}${costUnitZ ? ` (${costUnitZ})` : ''} → ${sellingCode ?? '-'}${sellingUnitZ ? ` (${sellingUnitZ})` : ''}`;
+  // Titik 2: konversi ke mata uang session jastip (cost sudah dalam mata uang
+  // session; selling_price dalam IDR → dibagi rate session)
+  const sessionText = `(${sessionSymbol}) ${cost ?? '-'} → (${sessionSymbol}) ${Math.round((selling ?? 0) / rate)}`;
+  // Titik 3: konversi ke mata uang sys_configuration (cost_price_idr sudah IDR;
+  // selling_price sudah IDR; dibagi configRate bila mata uang bukan IDR)
+  const costIdr = item?.cost_price_idr ?? Math.round((cost ?? 0) * rate);
+  const configText = `(${configSymbol}) ${Math.round(costIdr / configRate)} → (${configSymbol}) ${Math.round((selling ?? 0) / configRate)}`;
+
+  const cycleViews = [codeText, sessionText, configText];
+  const cyclePrice = () => setPriceView(v => (v + 1) % cycleViews.length);
+
   // Default tampil cost_code → selling_code; tap icon eye → tampil angka
-  const priceText = hasCode
-    ? showNumbers
-      ? `${cost ?? '-'} → ${selling ?? '-'}`
-      : `${costCode ?? '-'} → ${sellingCode ?? '-'}`
-    : `${cost ?? '-'} → ${selling ?? '-'}`;
+  const priceText = canCycle
+    ? cycleViews[priceView % cycleViews.length]
+    : hasCode
+      ? showNumbers
+        ? `${cost ?? '-'} → ${selling ?? '-'}`
+        : `${costCode ?? '-'} → ${sellingCode ?? '-'}`
+      : `${cost ?? '-'} → ${selling ?? '-'}`;
 
   return (
     <Pressable
@@ -57,19 +98,32 @@ const ItemCard = ({
         </Text>
         <View style={styles.bottomRow}>
           <View style={styles.priceRow}>
-            <Text style={styles.price} numberOfLines={1}>
-              {priceText}
-            </Text>
-            {hasCode && (
+            {canCycle ? (
               <TouchableOpacity
-                onPress={() => setShowNumbers(v => !v)}
+                onPress={cyclePrice}
+                style={styles.priceTouch}
                 hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                <Icon
-                  name={showNumbers ? 'eye-off' : 'eye'}
-                  size={14}
-                  color={color.primaryColor}
-                />
+                <Text style={styles.price} numberOfLines={1}>
+                  {priceText}
+                </Text>
               </TouchableOpacity>
+            ) : (
+              <>
+                <Text style={styles.price} numberOfLines={1}>
+                  {priceText}
+                </Text>
+                {hasCode && (
+                  <TouchableOpacity
+                    onPress={() => setShowNumbers(v => !v)}
+                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <Icon
+                      name={showNumbers ? 'eye-off' : 'eye'}
+                      size={14}
+                      color={color.primaryColor}
+                    />
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
           <View style={styles.statusRow}>
@@ -146,6 +200,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 1,
     marginRight: 8,
+  },
+  priceTouch: {
+    flexShrink: 1,
   },
   statusRow: {
     flexDirection: 'row',

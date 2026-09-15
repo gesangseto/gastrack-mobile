@@ -1,5 +1,5 @@
 import Icon from '@react-native-vector-icons/lucide';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,11 +11,42 @@ import {
 import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {printBarcode} from '../helper/helper';
+import {fetchCountries, fetchExchangeRate} from '../resource/Country';
+import {fetchDashboard} from '../resource/Dashboard';
+import {getSysConfig} from '../storage';
 import ItemCard from './ItemCard';
 
 const ListViewItem = props => {
   const {list, refresh} = props;
   const [isLoading, setIsLoading] = useState(false);
+  // Data untuk siklus harga di ItemCard (titik 2 & 3)
+  const [session, setSession] = useState(null);
+  const [config, setConfig] = useState(getSysConfig() || {});
+  const [configSymbol, setConfigSymbol] = useState('');
+  const [configRate, setConfigRate] = useState(1);
+
+  useEffect(() => {
+    // Session aktif → simbol & rate mata uang (titik 2)
+    fetchDashboard(false).then(d => {
+      setSession(d?.active_session || null);
+    });
+    // Sys_configuration → unit selling & mata uang (titik 1 & 3)
+    const cfg = getSysConfig() || {};
+    setConfig(cfg);
+    fetchCountries().then(countries => {
+      const c = (countries || []).find(
+        x => x.currency_code === cfg.currency,
+      );
+      setConfigSymbol(c?.currency_symbol || cfg.currency || '');
+    });
+    // Rate mata uang sys_configuration bila bukan IDR (titik 3)
+    if (cfg.currency && cfg.currency !== 'IDR') {
+      fetchExchangeRate(cfg.currency).then(r => setConfigRate(r || 1));
+    } else {
+      setConfigRate(1);
+    }
+  }, []);
+
   const handlePressPrint = async item => {
     setIsLoading(true);
     await printBarcode(item);
@@ -32,6 +63,11 @@ const ListViewItem = props => {
         item={item}
         size={44}
         onPress={() => RootNavigation.navigate('ItemView', {item: item})}
+        priceCycle
+        session={session}
+        config={config}
+        configSymbol={configSymbol}
+        configRate={configRate}
         right={
           <View style={styles.actions}>
             {item.status == 200 ? (
