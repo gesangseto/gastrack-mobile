@@ -8,16 +8,18 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {closeSession, createSession, getSessionList} from '../../resource/Session';
-import {fetchCurrencies} from '../../resource/Currency';
+import {fetchCurrencies, fetchExchangeRate} from '../../resource/Currency';
 import {fetchSysConfig} from '../../resource/Configuration';
 import {getSysConfig} from '../../storage';
 import {useHomeStore} from '../../store/homeStore';
+import Toast from 'react-native-toast-message';
 
 // Unit pengali kode harga (harus sinkron dengan backend price-code-unit.js)
 export const PRICE_UNIT_LIST = [
@@ -42,9 +44,11 @@ const SessionView = () => {
   // Form buka session
   const [countries, setCountries] = useState([]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const [rateLoading, setRateLoading] = useState(false);
   const [form, setForm] = useState({
     country: getSysConfig()?.country || 'Indonesia',
-    currency: getSysConfig()?.currency || 'IDR',
+    symbol_currency: 'Rp',
+    currency: '1', // rate: 1 unit mata uang tujuan = X IDR
     price_code_unit: getSysConfig()?.price_unit_code || 'none',
   });
 
@@ -83,35 +87,74 @@ const SessionView = () => {
         return true;
       });
       setCountries(uniq);
+      // Default: symbol + rate untuk negara awal (dari sys_config)
+      const def = uniq.find(it => it.country === getSysConfig()?.country);
+      if (def) {
+        setForm(prev => ({
+          ...prev,
+          symbol_currency: def.symbol || prev.symbol_currency,
+        }));
+        if (def.code && def.code !== 'IDR') {
+          fetchExchangeRate(def.code).then(rate => {
+            if (rate) {
+              setForm(prev => ({...prev, currency: String(rate)}));
+            }
+          });
+        }
+      }
     });
     fetchSysConfig().then(conf => {
       if (conf) {
         setForm(prev => ({
           ...prev,
           country: conf.country || prev.country,
-          currency: conf.currency || prev.currency,
           price_code_unit: conf.price_unit_code || prev.price_code_unit,
         }));
       }
     });
   }, []);
 
-  // Currency otomatis dari negara yang dipilih (mst_currency → symbol)
+  // Symbol + rate otomatis dari negara yang dipilih (mst_currency → symbol, API kurs → rate)
   const selectCountry = country => {
     const c = countries.find(it => it.country === country);
+    setCountryPickerOpen(false);
+    if (!c) {
+      setForm(prev => ({...prev, country}));
+      return;
+    }
     setForm(prev => ({
       ...prev,
       country,
-      currency: c ? c.symbol : prev.currency,
+      symbol_currency: c.symbol || prev.symbol_currency,
     }));
-    setCountryPickerOpen(false);
+    if (c.code && c.code !== 'IDR') {
+      setRateLoading(true);
+      fetchExchangeRate(c.code).then(rate => {
+        setRateLoading(false);
+        if (rate) {
+          setForm(prev => ({...prev, currency: String(rate)}));
+        }
+      });
+    } else {
+      setForm(prev => ({...prev, currency: '1'}));
+    }
   };
 
   const handleStart = async () => {
+    const rate = Number(form.currency);
+    if (!(rate > 0)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Rate konversi (currency) harus lebih dari 0',
+      });
+      return;
+    }
     setBusy(true);
     const ok = await createSession({
       country: form.country,
-      currency: form.currency,
+      symbol_currency: form.symbol_currency,
+      currency: rate,
       price_code_unit: form.price_code_unit,
     });
     setBusy(false);
@@ -193,7 +236,13 @@ const SessionView = () => {
                   </Text>
                 </View>
                 <View style={styles.activeMetaItem}>
-                  <Text style={styles.activeMetaLabel}>Currency</Text>
+                  <Text style={styles.activeMetaLabel}>Symbol</Text>
+                  <Text style={styles.activeMetaValue}>
+                    {activeSession.symbol_currency || '-'}
+                  </Text>
+                </View>
+                <View style={styles.activeMetaItem}>
+                  <Text style={styles.activeMetaLabel}>Rate (1 = X IDR)</Text>
                   <Text style={styles.activeMetaValue}>
                     {activeSession.currency || '-'}
                   </Text>
@@ -266,14 +315,55 @@ const SessionView = () => {
                 <Icon name="chevron-down" size={18} color="#999" />
               </TouchableOpacity>
 
-              {/* Currency (otomatis dari negara) */}
-              <Text style={styles.fieldLabel}>Currency</Text>
+              {/* Symbol mata uang (otomatis dari negara) */}
+              <Text style={styles.fieldLabel}>Symbol Mata Uang</Text>
               <View style={styles.currencyBox}>
-                <Text style={styles.pickerValue}>{form.currency}</Text>
+                <Text style={styles.pickerValue}>{form.symbol_currency}</Text>
                 <Icon name="badge-dollar-sign" size={18} color={color.primaryColor} />
               </View>
               <Text style={styles.fieldHint}>
-                Currency otomatis dari negara terpilih (mst_currency).
+                Symbol otomatis dari negara terpilih (mst_currency).
+              </Text>
+
+              {/* Rate konversi (otomatis dari API kurs, bisa diedit) */}
+              <Text style={styles.fieldLabel}>Rate Konversi (1 unit = X IDR)</Text>
+              <View style={styles.rateBox}>
+                <TextInput
+                  style={styles.rateInput}
+                  value={form.currency}
+                  onChangeText={value =>
+                    setForm({...form, currency: value.replace(/[^0-9.]/g, '')})
+                  }
+                  keyboardType="decimal-pad"
+                  placeholder="cth: 530"
+                />
+                {rateLoading ? (
+                  <ActivityIndicator size="small" color={color.primaryColor} />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const c = countries.find(
+                        it => it.country === form.country,
+                      );
+                      if (c && c.code && c.code !== 'IDR') {
+                        setRateLoading(true);
+                        fetchExchangeRate(c.code).then(rate => {
+                          setRateLoading(false);
+                          if (rate) {
+                            setForm(prev => ({
+                              ...prev,
+                              currency: String(rate),
+                            }));
+                          }
+                        });
+                      }
+                    }}>
+                    <Icon name="refresh-cw" size={18} color={color.primaryColor} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.fieldHint}>
+                Otomatis dari API kurs saat negara dipilih; bisa diedit manual.
               </Text>
 
               {/* Unit kode harga */}
@@ -348,8 +438,8 @@ const SessionView = () => {
                         : ''}
                     </Text>
                     <Text style={styles.historyMeta}>
-                      {s.country || '-'} · {s.currency || '-'} ·{' '}
-                      {unitLabel(s.price_code_unit)}
+                      {s.country || '-'} · {s.symbol_currency || '-'} · Rate{' '}
+                      {s.currency || '-'} · {unitLabel(s.price_code_unit)}
                     </Text>
                   </View>
                   <Text
@@ -619,6 +709,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: color.white,
     marginBottom: 4,
+  },
+  rateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#D9D9E3',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    backgroundColor: color.white,
+    marginBottom: 4,
+  },
+  rateInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F1F1F',
+    paddingVertical: 12,
   },
   unitWrap: {
     flexDirection: 'row',
