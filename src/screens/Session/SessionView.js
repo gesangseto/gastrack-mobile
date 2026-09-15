@@ -1,6 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
 import {useFocusEffect} from '@react-navigation/native';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -45,6 +45,9 @@ const SessionView = () => {
   const [rateDraft, setRateDraft] = useState('');
   const [rateSaving, setRateSaving] = useState(false);
 
+  // Flag: user sudah mengetik rate manual → auto-fetch API kurs TIDAK menimpa input
+  const rateTouchedRef = useRef(false);
+
   // Form buka session
   const [countries, setCountries] = useState([]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
@@ -71,12 +74,21 @@ const SessionView = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    await fetchHome(false);
-    const list = await getSessionList({}, false);
-    if (list) {
-      setHistory(list);
+    // Safety: form harus selalu tampil, jangan sampai loading selamanya
+    // (misal request menggantung karena endpoint tidak terjangkau).
+    const timer = setTimeout(() => setLoading(false), 10000);
+    try {
+      await fetchHome(false);
+      const list = await getSessionList({}, false);
+      if (list) {
+        setHistory(list);
+      }
+    } catch (e) {
+      console.log('load session error', e);
+    } finally {
+      clearTimeout(timer);
+      setLoading(false);
     }
-    setLoading(false);
   }, [fetchHome]);
 
   useFocusEffect(
@@ -107,7 +119,7 @@ const SessionView = () => {
         }));
         if (def.code && def.code !== 'IDR') {
           fetchExchangeRate(def.code).then(rate => {
-            if (rate) {
+            if (rate && !rateTouchedRef.current) {
               setForm(prev => ({...prev, currency: String(rate)}));
             }
           });
@@ -133,6 +145,8 @@ const SessionView = () => {
       setForm(prev => ({...prev, country}));
       return;
     }
+    // Negara baru → reset flag, auto-fetch boleh mengisi rate
+    rateTouchedRef.current = false;
     setForm(prev => ({
       ...prev,
       country,
@@ -231,13 +245,7 @@ const SessionView = () => {
       <Header title="Session Jastip" />
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {loading ? (
-            <ActivityIndicator
-              size="large"
-              color={color.primaryColor}
-              style={{marginTop: 40}}
-            />
-          ) : activeSession ? (
+          {activeSession ? (
             <View style={styles.activeCard}>
               <View style={styles.activeHeader}>
                 <View style={styles.activeIcon}>
@@ -381,9 +389,10 @@ const SessionView = () => {
                 <TextInput
                   style={styles.rateInput}
                   value={form.currency}
-                  onChangeText={value =>
-                    setForm({...form, currency: value.replace(/[^0-9.]/g, '')})
-                  }
+                  onChangeText={value => {
+                    rateTouchedRef.current = true;
+                    setForm({...form, currency: value.replace(/[^0-9.]/g, '')});
+                  }}
                   keyboardType="decimal-pad"
                   placeholder="cth: 530"
                 />
@@ -465,43 +474,51 @@ const SessionView = () => {
             </View>
           )}
 
-          {history.length > 0 && (
-            <View style={styles.historySection}>
-              <Text style={styles.historyTitle}>Riwayat Session</Text>
-              {history.map((s, i) => (
-                <View key={s.id || i} style={styles.historyItem}>
-                  <View style={styles.historyIcon}>
-                    <Icon
-                      name={s.status === 'Active' ? 'play' : 'check'}
-                      size={16}
-                      color={
-                        s.status === 'Active' ? color.success : '#9A9A9A'
-                      }
-                    />
-                  </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.historyNo}>{s.session_no}</Text>
-                    <Text style={styles.historyDate}>
-                      {formatDate(s.start_session_date)}
-                      {s.finish_session_date
-                        ? ` → ${formatDate(s.finish_session_date)}`
-                        : ''}
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={color.primaryColor}
+              style={{marginTop: 24}}
+            />
+          ) : (
+            history.length > 0 && (
+              <View style={styles.historySection}>
+                <Text style={styles.historyTitle}>Riwayat Session</Text>
+                {history.map((s, i) => (
+                  <View key={s.id || i} style={styles.historyItem}>
+                    <View style={styles.historyIcon}>
+                      <Icon
+                        name={s.status === 'Active' ? 'play' : 'check'}
+                        size={16}
+                        color={
+                          s.status === 'Active' ? color.success : '#9A9A9A'
+                        }
+                      />
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.historyNo}>{s.session_no}</Text>
+                      <Text style={styles.historyDate}>
+                        {formatDate(s.start_session_date)}
+                        {s.finish_session_date
+                          ? ` → ${formatDate(s.finish_session_date)}`
+                          : ''}
+                      </Text>
+                      <Text style={styles.historyMeta}>
+                        {s.country || '-'} · {s.symbol_currency || '-'} · Rate{' '}
+                        {s.currency || '-'} · {unitLabel(s.price_code_unit)}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.historyStatus,
+                        s.status === 'Active' && styles.historyStatusActive,
+                      ]}>
+                      {s.status}
                     </Text>
-                    <Text style={styles.historyMeta}>
-                      {s.country || '-'} · {s.symbol_currency || '-'} · Rate{' '}
-                      {s.currency || '-'} · {unitLabel(s.price_code_unit)}
-                    </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.historyStatus,
-                      s.status === 'Active' && styles.historyStatusActive,
-                    ]}>
-                    {s.status}
-                  </Text>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            )
           )}
         </ScrollView>
       </View>
