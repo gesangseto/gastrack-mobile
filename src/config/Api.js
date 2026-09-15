@@ -6,8 +6,9 @@ import Toast from 'react-native-toast-message';
 
 const generateToken = () => {
   let profile = getProfile();
-  // Token berasal dari respons login Backend (sys_authentication)
-  return profile?.token || 'ax771p65T5CykAeTWXD4Js0pLr2lyDSz';
+  // Token berasal dari respons login Backend (sys_authentication).
+  // Tanpa token → string kosong (request akan ditolak backend dengan 401).
+  return profile?.token || '';
 };
 
 const $axios = axios.create();
@@ -22,7 +23,6 @@ $axios.interceptors.request.use(
       token: generateToken(),
       'User-Type': deviceProfile,
     };
-    console.log(config);
 
     return config;
   },
@@ -35,16 +35,14 @@ $axios.interceptors.response.use(
   response => {
     let res = response.data;
     if (res && res.status_code && res.status_code == '401') {
-      console.log(res);
-
       Toast.show({
         type: 'error',
         text1: '401',
         text2: res.message,
       });
-      // removeProfile();
-      // RootNavigation.navigateReplace('LoginView');
-      // return Promise.resolve(response);
+      // Token invalid/expired → logout & kembali ke halaman login
+      removeProfile();
+      RootNavigation.navigateReplace('LoginView');
     }
     return Promise.resolve(response);
   },

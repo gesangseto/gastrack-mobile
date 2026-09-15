@@ -21,7 +21,6 @@ const buildQueryString = params => {
 export const getListBatch = async (property = {}, useAlert = true) => {
   var defaultParam = {status: [], ...property};
   var query_string = buildQueryString(defaultParam);
-  console.log(query_string);
   return new Promise(resolve => {
     $axios
       .get(`${url}?${query_string}`)
@@ -53,7 +52,6 @@ export const getListUnfinishBatch = async (property = {}, useAlert = true) => {
   let thisUrl = url;
   var defaultParam = {status: ['Draft', 'Shipping'], ...property};
   var query_string = buildQueryString(defaultParam);
-  console.log(query_string);
   return new Promise(resolve => {
     $axios
       .get(`${thisUrl}?${query_string}`)
