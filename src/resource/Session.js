@@ -69,6 +69,42 @@ export const createSession = async (Params = {}, useAlert = true) => {
   });
 };
 
+// Update rate konversi (currency) session aktif — kurs berubah tiap hari
+export const updateSessionRate = async (currency, useAlert = true) => {
+  return new Promise(resolve => {
+    $axios
+      .post(`${url}/rate`, {currency})
+      .then(result => {
+        let data = result.data;
+        if (data.error) {
+          if (useAlert)
+            {Toast.show({
+              type: 'error',
+              text1: 'Error',
+              text2: data.message,
+            });}
+          return resolve(false);
+        }
+        if (useAlert)
+          {Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: 'Rate konversi diperbarui',
+          });}
+        return resolve(true);
+      })
+      .catch(e => {
+        if (useAlert)
+          {Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });}
+        return resolve(false);
+      });
+  });
+};
+
 // Tutup session jastip (validasi: semua item sudah batch & batch sudah Shipping)
 export const closeSession = async (id, Params = {}, useAlert = true) => {
   return new Promise(resolve => {

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {closeSession, createSession, getSessionList} from '../../resource/Session';
+import {closeSession, createSession, getSessionList, updateSessionRate} from '../../resource/Session';
 import {fetchCurrencies, fetchExchangeRate} from '../../resource/Currency';
 import {fetchSysConfig} from '../../resource/Configuration';
 import {getSysConfig} from '../../storage';
@@ -41,6 +41,10 @@ const SessionView = () => {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Edit rate konversi session aktif
+  const [rateDraft, setRateDraft] = useState('');
+  const [rateSaving, setRateSaving] = useState(false);
+
   // Form buka session
   const [countries, setCountries] = useState([]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
@@ -57,6 +61,13 @@ const SessionView = () => {
     items_without_batch: 0,
     batches_not_shipping: 0,
   };
+
+  // Sinkronkan draft rate dengan session aktif (misal setelah load/refresh)
+  useEffect(() => {
+    if (activeSession?.currency) {
+      setRateDraft(String(activeSession.currency));
+    }
+  }, [activeSession?.currency]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,6 +186,24 @@ const SessionView = () => {
     }
   };
 
+  const handleSaveRate = async () => {
+    const rate = Number(rateDraft);
+    if (!(rate > 0)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Rate konversi harus lebih dari 0',
+      });
+      return;
+    }
+    setRateSaving(true);
+    const ok = await updateSessionRate(rate);
+    setRateSaving(false);
+    if (ok) {
+      load();
+    }
+  };
+
   const formatDate = d => {
     if (!d) {
       return '-';
@@ -243,9 +272,30 @@ const SessionView = () => {
                 </View>
                 <View style={styles.activeMetaItem}>
                   <Text style={styles.activeMetaLabel}>Rate (1 = X IDR)</Text>
-                  <Text style={styles.activeMetaValue}>
-                    {activeSession.currency || '-'}
-                  </Text>
+                  <View style={styles.rateEditRow}>
+                    <TextInput
+                      style={styles.rateEditInput}
+                      value={rateDraft}
+                      onChangeText={v =>
+                        setRateDraft(v.replace(/[^0-9.]/g, ''))
+                      }
+                      keyboardType="decimal-pad"
+                      placeholder="cth: 530"
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.rateSaveBtn,
+                        rateSaving && styles.btnDisabled,
+                      ]}
+                      onPress={handleSaveRate}
+                      disabled={rateSaving}>
+                      {rateSaving ? (
+                        <ActivityIndicator size="small" color={color.white} />
+                      ) : (
+                        <Icon name="check" size={16} color={color.white} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.activeMetaItem}>
                   <Text style={styles.activeMetaLabel}>Unit Harga</Text>
@@ -583,6 +633,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
+  },
+  rateEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  rateEditInput: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
+    color: color.white,
+    fontSize: 13,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 80,
+    marginRight: 6,
+  },
+  rateSaveBtn: {
+    backgroundColor: color.primaryColor,
+    borderRadius: 8,
+    padding: 6,
   },
   summaryRow: {
     flexDirection: 'row',
