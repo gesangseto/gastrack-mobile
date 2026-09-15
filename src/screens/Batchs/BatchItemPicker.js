@@ -50,9 +50,12 @@ const BatchItemPicker = ({navigation, route}) => {
     if (items.length === 0) {
       return;
     }
-    RootNavigation.goBack();
-    // Kirim hasil pilihan ke BatchView via params (dibaca useFocusEffect)
-    navigation.navigate('BatchView', {
+    // Navigate ke BatchView yang sudah ada di stack: React Navigation otomatis
+    // pop BatchItemPicker + set params sekaligus. Dengan begini saat BatchView
+    // fokus kembali, route.params.pickedItems sudah terisi (useFocusEffect
+    // langsung membaca & merge item). goBack() dulu TIDAK boleh — karena
+    // useFocusEffect sudah terlanjur jalan sebelum params di-set.
+    RootNavigation.navigate('BatchView', {
       pickedItems: items,
     });
   };
