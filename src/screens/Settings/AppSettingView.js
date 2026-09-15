@@ -170,6 +170,11 @@ const AppSettingView = ({navigation, route}) => {
               </TouchableOpacity>
             </View>
             <ScrollView style={{maxHeight: 400}}>
+              {currencies.length === 0 && (
+                <Text style={styles.modalEmpty}>
+                  Tidak ada data currency. Cek endpoint backend (Local Setting).
+                </Text>
+              )}
               {currencies.map(item => (
                 <TouchableOpacity
                   key={item.id}
@@ -279,6 +284,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
+  },
+  modalEmpty: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 13,
+    paddingVertical: 24,
   },
   currencyItem: {
     flexDirection: 'row',

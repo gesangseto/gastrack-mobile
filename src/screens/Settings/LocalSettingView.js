@@ -88,7 +88,7 @@ const LocalSettingView = ({navigation, route}) => {
             showError={true}
             value={endpoint}
             onChangeText={setEndpointState}
-            placeholder="http://192.168.0.233:8000"
+            placeholder="http://192.168.2.199:8001"
             autoCapitalize="none"
             keyboardType="url"
           />
@@ -137,6 +137,11 @@ const LocalSettingView = ({navigation, route}) => {
               </TouchableOpacity>
             </View>
             <ScrollView style={{maxHeight: 400}}>
+              {currencies.length === 0 && (
+                <Text style={styles.modalEmpty}>
+                  Tidak ada data currency. Cek endpoint backend di atas.
+                </Text>
+              )}
               {currencies.map(item => (
                 <TouchableOpacity
                   key={item.id}
@@ -243,6 +248,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
+  },
+  modalEmpty: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 13,
+    paddingVertical: 24,
   },
   currencyItem: {
     flexDirection: 'row',

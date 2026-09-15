@@ -18,7 +18,7 @@ export const getProfile = () => {
 export const getEndpoint = () => {
   try {
     let endpoint = storage.getString('endpoint');
-    if (!endpoint) endpoint = 'http://192.168.0.233:8000';
+    if (!endpoint) endpoint = 'http://192.168.2.199:8001';
     return endpoint;
   } catch (error) {
     return null;
@@ -26,7 +26,7 @@ export const getEndpoint = () => {
 };
 export const setEndpoint = string => {
   try {
-    if (!string) string = 'http://192.168.0.233:8000';
+    if (!string) string = 'http://192.168.2.199:8001';
     storage.set('endpoint', string);
     return string;
   } catch (error) {

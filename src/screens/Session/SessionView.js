@@ -540,7 +540,7 @@ const SessionView = () => {
             <ScrollView style={{maxHeight: 400}}>
               {countries.length === 0 && (
                 <Text style={styles.modalEmpty}>
-                  Tidak ada data negara (mst_currency kosong).
+                  Tidak ada data negara. Cek endpoint backend (Local Setting).
                 </Text>
               )}
               {countries.map(item => (
