@@ -5,7 +5,6 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -50,9 +49,9 @@ const ListViewItem = props => {
   }, []);
 
   const handlePressPrint = async item => {
-    setIsLoading(true);
+    setIsLoading(item.id);
     await printBarcode(item);
-    setIsLoading(false);
+    setIsLoading(null);
   };
 
   const onRefresh = async () => {

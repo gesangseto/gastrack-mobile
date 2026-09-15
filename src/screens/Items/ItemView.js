@@ -23,7 +23,7 @@ import ImageViewer from '../../components/ImageViewer';
  * Contoh: 125000 → "125.000"
  */
 const fmt = v => {
-  const n = Number(v || 0);
+  const n = Math.round(Number(v || 0));
   return n.toLocaleString('id-ID');
 };
 

@@ -412,7 +412,10 @@ const SessionView = () => {
                   value={form.currency}
                   onChangeText={value => {
                     rateTouchedRef.current = true;
-                    setForm({...form, currency: value.replace(/[^0-9.]/g, '')});
+                    setForm(prev => ({
+                      ...prev,
+                      currency: value.replace(/[^0-9.]/g, ''),
+                    }));
                   }}
                   onEndEditing={() => {
                     const n = Number(form.currency);
