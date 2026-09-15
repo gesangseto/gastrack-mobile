@@ -125,8 +125,10 @@ const Home = ({param}) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Halo, {greetingName}!</Text>
+        <View style={{flexShrink: 1}}>
+          <Text style={styles.greeting} numberOfLines={1} ellipsizeMode="tail">
+            Halo, {greetingName}!
+          </Text>
           <Text style={styles.subGreeting}>
             Jasa Titip Belanja — kami yang urus
           </Text>

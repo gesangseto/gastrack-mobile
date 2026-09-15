@@ -35,7 +35,7 @@ const DetailsProfile = ({doctor}) => {
           4.5 <Icon name="star" size={15} color={color.white} />{' '}
         </Text>
       </View>
-      <View>
+      <View style={{flexShrink: 1}}>
         <Text
           style={{
             fontSize: 22,

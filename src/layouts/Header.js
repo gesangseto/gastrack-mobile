@@ -5,47 +5,17 @@ import color from '../constant/color';
 
 const Header = ({title}) => {
   return (
-    <View
-      style={{
-        width: '100%',
-        height: Platform.OS === 'ios' ? 140 : 90,
-        backgroundColor: color.primaryColor,
-        paddingHorizontal: 15,
-      }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingTop: Platform.OS === 'ios' ? 50 : 5,
-        }}>
-        <View />
-        <View style={{flex: 1}}>
-          <TouchableOpacity
-            onPress={() => {
-              RootNavigation.goBack();
-            }}
-            style={{
-              padding: 10,
-              alignItems: 'left',
-              justifyContent: 'center',
-            }}>
-            <Icon name="arrow-left" size={25} color={color.white} />
-          </TouchableOpacity>
-        </View>
-        <View style={{flex: 1}}>
-          <Text
-            style={{
-              padding: 10,
-              fontSize: 18,
-              fontWeight: '700',
-              color: color.white,
-              textAlign: 'right',
-            }}>
-            {title ? title : 'No Title'}
-          </Text>
-        </View>
-      </View>
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={() => {
+          RootNavigation.goBack();
+        }}
+        style={styles.backBtn}>
+        <Icon name="arrow-left" size={25} color={color.white} />
+      </TouchableOpacity>
+      <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+        {title ? title : 'No Title'}
+      </Text>
     </View>
   );
 };
@@ -53,9 +23,25 @@ const Header = ({title}) => {
 export default Header;
 
 const styles = StyleSheet.create({
+  header: {
+    width: '100%',
+    height: Platform.OS === 'ios' ? 140 : 90,
+    backgroundColor: color.primaryColor,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 50 : 5,
+  },
+  backBtn: {
+    padding: 10,
+    marginLeft: -10,
+    justifyContent: 'center',
+  },
   title: {
-    color: color.primaryColor,
-    fontSize: 20,
+    flex: 1,
+    fontSize: 18,
     fontWeight: '700',
+    color: color.white,
+    marginLeft: 4,
   },
 });

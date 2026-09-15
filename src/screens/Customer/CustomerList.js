@@ -29,6 +29,9 @@ const CustomerList = ({navigation, route}) => {
       } else {
         loadData();
       }
+      // route stabil seumur hidup screen; loadData sengaja tidak dijadikan dep
+      // agar useFocusEffect tidak re-run tiap render (mencegah loop loadData)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
@@ -66,7 +69,10 @@ const CustomerList = ({navigation, route}) => {
                   : styles.statusDotInactive,
               ]}
             />
-            <Text style={styles.statusText}>
+            <Text
+              style={styles.statusText}
+              numberOfLines={1}
+              ellipsizeMode="tail">
               {item?.status}
               {item?.email ? ` • ${item.email}` : ''}
             </Text>
