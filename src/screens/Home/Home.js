@@ -33,6 +33,9 @@ const Home = ({param}) => {
   const lastUpdated = useHomeStore(s => s.lastUpdated);
   const fetchHome = useHomeStore(s => s.fetchHome);
   const initFromCache = useHomeStore(s => s.initFromCache);
+  // Session jastip aktif (dari dashboard)
+  const activeSession = useHomeStore(s => s.dashboard?.active_session);
+  const sessionSummary = useHomeStore(s => s.dashboard?.session_summary);
 
   useEffect(() => {
     setProfile(getProfile() || {});
@@ -177,6 +180,51 @@ const Home = ({param}) => {
         contentContainerStyle={styles.scrollViewContent}
         style={{width: '100%', marginTop: Platform.OS === 'ios' ? 0 : 10}}
         showsVerticalScrollIndicator={false}>
+        {/* Session banner */}
+        {activeSession ? (
+          <TouchableOpacity
+            style={styles.sessionBanner}
+            onPress={() => RootNavigation.navigate('SessionView')}>
+            <View style={styles.sessionBannerIcon}>
+              <Icon name="play" size={18} color={color.white} />
+            </View>
+            <View style={{flex: 1}}>
+              <Text style={styles.sessionBannerTitle}>
+                Session aktif: {activeSession.session_no}
+              </Text>
+              <Text style={styles.sessionBannerSub}>
+                {sessionSummary?.items_without_batch > 0
+                  ? `${sessionSummary.items_without_batch} item belum batch`
+                  : 'Semua item sudah batch'}
+                {' • '}
+                {sessionSummary?.batches_not_shipping > 0
+                  ? `${sessionSummary.batches_not_shipping} batch belum kirim`
+                  : 'Semua batch sudah kirim'}
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={18} color={color.white} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.sessionBannerEmpty}
+            onPress={() => RootNavigation.navigate('SessionView')}>
+            <View style={styles.sessionBannerIconEmpty}>
+              <Icon name="calendar-plus" size={18} color={color.primaryColor} />
+            </View>
+            <View style={{flex: 1}}>
+              <Text style={styles.sessionBannerTitleEmpty}>
+                Belum ada session aktif
+              </Text>
+              <Text style={styles.sessionBannerSubEmpty}>
+                Buka session untuk mulai mencatat item titipan
+              </Text>
+            </View>
+            <View style={styles.sessionBannerCta}>
+              <Text style={styles.sessionBannerCtaText}>Mulai</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
@@ -309,6 +357,75 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
     paddingBottom: 80,
+  },
+  sessionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.primaryColor,
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 16,
+  },
+  sessionBannerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  sessionBannerTitle: {
+    color: color.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sessionBannerSub: {
+    color: '#C9BCE8',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  sessionBannerEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.primaryLight,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: color.primaryLighter,
+    padding: 14,
+    marginTop: 16,
+  },
+  sessionBannerIconEmpty: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: color.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  sessionBannerTitleEmpty: {
+    color: '#1F1F1F',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sessionBannerSubEmpty: {
+    color: '#6B6B6B',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  sessionBannerCta: {
+    backgroundColor: color.primaryColor,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  sessionBannerCtaText: {
+    color: color.white,
+    fontSize: 12,
+    fontWeight: '700',
   },
   hero: {
     marginTop: 18,
