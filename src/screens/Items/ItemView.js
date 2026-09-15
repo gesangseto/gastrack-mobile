@@ -2,6 +2,7 @@ import Icon from '@react-native-vector-icons/lucide';
 import moment from 'moment';
 import {useState} from 'react';
 import {
+  Alert,
   Platform,
   RefreshControl,
   ScrollView,
@@ -58,11 +59,24 @@ const ItemView = ({navigation, route}) => {
       : item?.selling_currency || 'IDR';
   const profitColor = profit >= 0 ? '#10B981' : color.danger;
 
-  const handlePressDelete = async () => {
-    let response = await cancelItem({id: item.id});
-    if (response) {
-      RootNavigation.goBack();
-    }
+  const handlePressDelete = () => {
+    Alert.alert(
+      'Hapus Item',
+      'Apakah anda yakin ingin menghapus item ini?',
+      [
+        {text: 'Batal', style: 'cancel'},
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            let response = await cancelItem({id: item.id});
+            if (response) {
+              RootNavigation.goBack();
+            }
+          },
+        },
+      ],
+    );
   };
   const handlePressEdit = async () => {
     RootNavigation.navigate('ItemCreate', {item});

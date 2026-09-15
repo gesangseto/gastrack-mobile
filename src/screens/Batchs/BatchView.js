@@ -2,6 +2,7 @@ import Icon from '@react-native-vector-icons/lucide';
 import moment from 'moment';
 import {useCallback, useEffect, useState} from 'react';
 import {
+  Alert,
   FlatList,
   Platform,
   RefreshControl,
@@ -116,28 +117,53 @@ const BatchView = ({navigation, route}) => {
     setList(prev => prev.filter(i => i.id !== item.id));
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (list.length === 0) {
       return;
     }
-    setSaving(true);
-    let response = await updateBatch({
-      id: item.id,
-      items: list.map(i => ({id: i.id})),
-      weight: data?.weight,
-      modified_by: 0,
-    });
-    setSaving(false);
-    if (response) {
-      loadData();
-    }
+    Alert.alert(
+      'Simpan Perubahan',
+      'Apakah anda yakin ingin menyimpan perubahan batch ini?',
+      [
+        {text: 'Batal', style: 'cancel'},
+        {
+          text: 'Simpan',
+          onPress: async () => {
+            setSaving(true);
+            let response = await updateBatch({
+              id: item.id,
+              items: list.map(i => ({id: i.id})),
+              weight: data?.weight,
+              modified_by: 0,
+            });
+            setSaving(false);
+            if (response) {
+              loadData();
+            }
+          },
+        },
+      ],
+    );
   };
 
-  const handlePressDelete = async () => {
-    let response = await cancelBatch({id: item.id});
-    if (response) {
-      RootNavigation.goBack();
-    }
+  const handlePressDelete = () => {
+    Alert.alert(
+      'Hapus Batch',
+      'Apakah anda yakin ingin menghapus batch ini?',
+      [
+        {text: 'Batal', style: 'cancel'},
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            let response = await cancelBatch({id: item.id});
+            if (response) {
+              RootNavigation.goBack();
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handlePressShip = async () => {

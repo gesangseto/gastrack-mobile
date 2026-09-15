@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {
+  Alert,
   Modal,
   ScrollView,
   StatusBar,
@@ -251,47 +252,62 @@ useEffect(() => {
       });
       return;
     }
-    const form = new FormData();
-    // Isi FormData dengan semua properti dari Params
-    try {
-      for (let key in formData) {
-        const value = formData[key];
-        if (key === 'customer_phone') continue; // ditangani khusus di bawah
-        // Jika value adalah file (misal gambar dari picker)
-        if (value && typeof value === 'object' && value.uri) {
-          if (value.uri.startsWith('http')) {
-            // Foto lama dari server — kirim path-nya saja, jangan upload ulang
-            form.append('photo_path', value.filename);
-          } else {
-            form.append(key, {
-              uri: value.uri,
-              name: value.name || 'file.jpg',
-              type: value.type || 'image/jpeg',
-            });
+    const doSubmit = async () => {
+      const form = new FormData();
+      // Isi FormData dengan semua properti dari Params
+      try {
+        for (let key in formData) {
+          const value = formData[key];
+          if (key === 'customer_phone') continue; // ditangani khusus di bawah
+          // Jika value adalah file (misal gambar dari picker)
+          if (value && typeof value === 'object' && value.uri) {
+            if (value.uri.startsWith('http')) {
+              // Foto lama dari server — kirim path-nya saja, jangan upload ulang
+              form.append('photo_path', value.filename);
+            } else {
+              form.append(key, {
+                uri: value.uri,
+                name: value.name || 'file.jpg',
+                type: value.type || 'image/jpeg',
+              });
+            }
+          } else if (value !== null && value !== undefined && value !== '') {
+            // Jika value bukan null
+            form.append(key, value);
           }
-        } else if (value !== null && value !== undefined && value !== '') {
-          // Jika value bukan null
-          form.append(key, value);
         }
+        // customer_id diambil dari database berdasarkan nomor telpon yang dipilih
+        if (selectedCustomer?.id) {
+          form.append('customer_id', selectedCustomer.id);
+        } else {
+          form.append('customer_phone', normalizePhone(formData.customer_phone));
+        }
+        // Unit harga per item (override default session/config)
+        form.append('cost_unit', effectiveCostUnit);
+        form.append('selling_unit', effectiveSellingUnit);
+        let submit = null;
+        if (formData.id) {
+          submit = await updateItem(form);
+        } else {
+          submit = await createItem(form);
+        }
+        if (submit) RootNavigation.goBack();
+      } catch (error) {
+        console.log(error);
       }
-      // customer_id diambil dari database berdasarkan nomor telpon yang dipilih
-      if (selectedCustomer?.id) {
-        form.append('customer_id', selectedCustomer.id);
-      } else {
-        form.append('customer_phone', normalizePhone(formData.customer_phone));
-      }
-      // Unit harga per item (override default session/config)
-      form.append('cost_unit', effectiveCostUnit);
-      form.append('selling_unit', effectiveSellingUnit);
-      let submit = null;
-      if (formData.id) {
-        submit = await updateItem(form);
-      } else {
-        submit = await createItem(form);
-      }
-      if (submit) RootNavigation.goBack();
-    } catch (error) {
-      console.log(error);
+    };
+    // Saat edit: konfirmasi dulu sebelum perubahan disimpan
+    if (formData.id) {
+      Alert.alert(
+        'Simpan Perubahan',
+        'Apakah anda yakin ingin menyimpan perubahan item ini?',
+        [
+          {text: 'Batal', style: 'cancel'},
+          {text: 'Simpan', onPress: doSubmit},
+        ],
+      );
+    } else {
+      doSubmit();
     }
   };
   // Mata uang & unit: snapshot item saat edit; session aktif (cost) &
