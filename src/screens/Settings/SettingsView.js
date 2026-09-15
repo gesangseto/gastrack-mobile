@@ -76,11 +76,11 @@ const SettingsView = ({navigation, route}) => {
           style: 'destructive',
           onPress: async () => {
             setLoggingOut(true);
-            // Kirim ke Backend: hapus token sesi (sys_authentication)
-            await logoutUser();
+            RootNavigation.navigateReplace('LoginView');
             removeProfile();
             setLoggingOut(false);
-            RootNavigation.navigateReplace('LoginView');
+            // Kirim ke Backend: hapus token sesi (sys_authentication)
+            await logoutUser();
           },
         },
       ],
@@ -106,9 +106,7 @@ const SettingsView = ({navigation, route}) => {
             <Text style={styles.userName}>
               {profile?.full_name || profile?.username || 'User'}
             </Text>
-            <Text style={styles.userEmail}>
-              {profile?.email || '—'}
-            </Text>
+            <Text style={styles.userEmail}>{profile?.email || '—'}</Text>
           </View>
         </View>
 
