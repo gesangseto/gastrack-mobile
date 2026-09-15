@@ -36,6 +36,13 @@ const Field = React.forwardRef(({icon, ...props}, ref) => (
   </View>
 ));
 
+// Normalisasi endpoint: trim spasi, buang trailing slash, tambah http:// bila kurang
+const normalizeEndpoint = url => {
+  let u = (url || '').trim().replace(/\/+$/, '');
+  if (u && !/^https?:\/\//i.test(u)) u = 'http://' + u;
+  return u;
+};
+
 const LoginView = ({navigation, route}) => {
   const [api, setApi] = useState(getEndpoint());
   const [username, setUsername] = useState('');
@@ -45,7 +52,8 @@ const LoginView = ({navigation, route}) => {
   const passwordInputRef = useRef(null);
 
   const handleLogin = async () => {
-    if (api) setEndpoint(api);
+    const ep = normalizeEndpoint(api);
+    if (ep) setEndpoint(ep);
     if (!username || !password) return;
     setLoading(true);
     let response = await loginSeller({username: username, password: password});

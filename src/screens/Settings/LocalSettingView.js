@@ -34,7 +34,8 @@ const LocalSettingView = ({navigation, route}) => {
   }, []);
 
   const saveEndpoint = () => {
-    if (!endpoint) {
+    const ep = (endpoint || '').trim().replace(/\/+$/, '');
+    if (!ep) {
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -42,8 +43,10 @@ const LocalSettingView = ({navigation, route}) => {
       });
       return;
     }
+    const normalized = /^https?:\/\//i.test(ep) ? ep : 'http://' + ep;
     setSaving(true);
-    setEndpoint(endpoint);
+    setEndpoint(normalized);
+    setEndpointState(normalized);
     setSaving(false);
     Toast.show({
       type: 'success',
