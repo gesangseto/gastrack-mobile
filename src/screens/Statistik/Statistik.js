@@ -1,5 +1,6 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
   Platform,
   RefreshControl,
   ScrollView,
@@ -31,12 +32,17 @@ const ITEM_STATUS = [
 ];
 
 const fmt = v => {
-  const n = Number(v || 0);
+  const n = Math.round(Number(v || 0));
   return n.toLocaleString('id-ID');
 };
 
 const sumBy = (arr, key) =>
   (arr || []).reduce((acc, it) => acc + Number(it[key] || 0), 0);
+
+// Icon close untuk modal dropdown (minimalis, konsisten dgn ikon lucide)
+const CloseIcon = ({style}) => (
+  <Icon name="x" size={20} color="#9CA3AF" style={style} />
+);
 
 const Statistik = ({navigation, route}) => {
   // Data dashboard dibagi via Zustand store (sama dengan Home)
@@ -52,6 +58,18 @@ const Statistik = ({navigation, route}) => {
   // Statistik per session (grafik)
   const [sessionStats, setSessionStats] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
+  // Detail statistik session terpilih (hero + mini card)
+  const [sessionDetail, setSessionDetail] = useState(null);
+  const [sessionDetailLoading, setSessionDetailLoading] = useState(false);
+
+  // Cegah setState setelah screen unmount (stale response saat ganti screen cepat)
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,6 +80,9 @@ const Statistik = ({navigation, route}) => {
 
   const loadSessions = async () => {
     const list = await getSessionList({}, false);
+    if (!mountedRef.current) {
+      return;
+    }
     if (list) {
       setSessionList(list);
       // Default: session aktif
@@ -74,6 +95,9 @@ const Statistik = ({navigation, route}) => {
   const loadSessionStats = async () => {
     setChartLoading(true);
     const stats = await fetchSessionStats({limit: 6}, false);
+    if (!mountedRef.current) {
+      return;
+    }
     setSessionStats(stats || []);
     setChartLoading(false);
   };
@@ -81,6 +105,24 @@ const Statistik = ({navigation, route}) => {
   useEffect(() => {
     loadSessionStats();
   }, []);
+
+  // Saat session dipilih di dropdown → ambil detail statistik session tsb
+  // (total_items, total_selling, total_cost, total_profit, total_batch)
+  // agar card per-session ikut ter-update. null = Semua Session → pakai total.
+  useEffect(() => {
+    if (!sessionValue) {
+      setSessionDetail(null);
+      return;
+    }
+    setSessionDetailLoading(true);
+    fetchSessionStats({session_id: sessionValue}, false).then(stats => {
+      if (!mountedRef.current) {
+        return;
+      }
+      setSessionDetail(stats && stats[0] ? stats[0] : null);
+      setSessionDetailLoading(false);
+    });
+  }, [sessionValue]);
 
   const onRefresh = () => {
     fetchHome(true);
@@ -106,16 +148,21 @@ const Statistik = ({navigation, route}) => {
     return row ? Number(row.total || 0) : 0;
   };
 
-  // Session terpilih → statistik detail
+  // Session terpilih → info header (session_no, country, status)
   const selectedSession = sessionValue
     ? sessionList.find(s => s.id === sessionValue)
     : null;
+  // Detail statistik session terpilih (dari /session-stats?session_id=...)
+  // Berisi total_items, total_selling, total_cost, total_profit, total_batch.
+  const sessionData = sessionDetail || null;
 
   // ===== Grafik: pengeluaran & keuntungan per session =====
   const chartData = sessionStats.slice(0, 6).reverse(); // urut lama → baru
   const maxVal = Math.max(
     1,
-    ...chartData.map(d => Math.max(Number(d.total_cost || 0), Number(d.total_profit || 0))),
+    ...chartData.map(d =>
+      Math.max(Number(d.total_cost || 0), Number(d.total_profit || 0)),
+    ),
   );
   const barHeight = v => (maxVal > 0 ? (Number(v || 0) / maxVal) * 100 : 0);
 
@@ -152,215 +199,291 @@ const Statistik = ({navigation, route}) => {
             colors={[color.primaryColor]}
           />
         }>
-        {/* Dropdown pilih session */}
-        <View style={styles.dropdownWrap}>
-          <DropDownPicker
-            open={sessionOpen}
-            value={sessionValue}
-            items={[
-              {label: 'Semua Session', value: null},
-              ...sessionList.map(s => ({
-                label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
-                value: s.id,
-              })),
-            ]}
-            setOpen={setSessionOpen}
-            setValue={setSessionValue}
-            setItems={setSessionList}
-            placeholder="Pilih session jastip"
-            style={styles.picker}
-            dropDownContainerStyle={styles.pickerDropdown}
-            listMode="MODAL"
-            modalProps={{animationType: 'slide'}}
-            modalTitle="Pilih Session Jastip"
-            modalContentContainerStyle={styles.pickerModal}
-            textStyle={{fontSize: 13}}
-            labelStyle={{fontWeight: '600', color: '#333'}}
-            zIndex={1000}
-          />
-        </View>
-
-        {/* Hero: Total Penjualan (compact) */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroTop}>
-            <View style={styles.heroIcon}>
-              <Icon name="wallet" size={20} color={color.white} />
-            </View>
-            <Text style={styles.heroLabel}>
-              {selectedSession
-                ? `Session ${selectedSession.session_no}`
-                : 'Total Penjualan'}
-            </Text>
-          </View>
-          <Text style={styles.heroValue}>
-            Rp {fmt(selectedSession ? selectedSession.total_selling : totalSelling)}
-          </Text>
-          <View style={styles.heroDivider} />
-          <View style={styles.heroStats}>
-            <View style={{flex: 1}}>
-              <Text style={styles.heroStatLabel}>Modal</Text>
-              <Text style={styles.heroStatValue}>
-                Rp {fmt(selectedSession ? selectedSession.total_cost : totalCost)}
-              </Text>
+        {/* ===== Section: Per Session Jastip ===== */}
+        <View style={styles.sessionSection}>
+          <View style={styles.sectionHeader}>
+            <View
+              style={[
+                styles.sectionIcon,
+                {backgroundColor: color.primaryColor},
+              ]}>
+              <Icon name="calendar-range" size={18} color={color.white} />
             </View>
             <View style={{flex: 1}}>
-              <Text style={styles.heroStatLabel}>Profit</Text>
-              <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                Rp{' '}
-                {fmt(
-                  selectedSession
-                    ? selectedSession.total_profit
-                    : totalProfit,
-                )}
+              <Text style={styles.sectionTitle}>Per Session Jastip</Text>
+              <Text style={styles.sectionSub}>
+                Ringkasan berdasarkan session terpilih
               </Text>
             </View>
           </View>
+
+          {/* Dropdown pilih session */}
+          <View style={styles.dropdownWrap}>
+            <DropDownPicker
+              open={sessionOpen}
+              value={sessionValue}
+              items={[
+                {label: 'Semua Session', value: null},
+                ...sessionList.map(s => ({
+                  label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
+                  value: s.id,
+                })),
+              ]}
+              setOpen={setSessionOpen}
+              setValue={setSessionValue}
+              setItems={setSessionList}
+              placeholder="Pilih session jastip"
+              style={styles.picker}
+              dropDownContainerStyle={styles.pickerDropdown}
+              listMode="MODAL"
+              modalAnimationType="slide"
+              modalContentContainerStyle={styles.pickerModal}
+              searchable
+              searchPlaceholder="Cari session..."
+              searchContainerStyle={styles.pickerSearchContainer}
+              searchTextInputStyle={styles.pickerSearchInput}
+              searchPlaceholderTextColor="#9CA3AF"
+              CloseIconComponent={CloseIcon}
+              closeIconStyle={styles.pickerCloseIcon}
+              closeIconContainerStyle={styles.pickerCloseIconContainer}
+              textStyle={styles.pickerText}
+              labelStyle={styles.pickerLabel}
+              placeholderStyle={styles.pickerPlaceholder}
+              arrowIconStyle={styles.pickerArrow}
+              tickIconStyle={styles.pickerTick}
+              customArrowIcon={() => (
+                <Icon name="chevron-down" size={18} color="#9CA3AF" />
+              )}
+              customTickIcon={() => (
+                <Icon name="check" size={16} color={color.primaryColor} />
+              )}
+              listItemContainerStyle={styles.pickerListItem}
+              listItemLabelStyle={styles.pickerListItemLabel}
+              selectedItemContainerStyle={styles.pickerSelectedItem}
+              selectedItemLabelStyle={styles.pickerSelectedLabel}
+              itemSeparatorStyle={styles.pickerItemSeparator}
+              listMessageContainerStyle={styles.pickerEmptyContainer}
+              listMessageTextStyle={styles.pickerEmptyText}
+              closeOnBackPressed
+              zIndex={1000}
+            />
+          </View>
+
+          {/* Hero: Total Penjualan (compact) */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroTop}>
+              <View style={styles.heroIcon}>
+                <Icon name="wallet" size={20} color={color.white} />
+              </View>
+              <Text style={styles.heroLabel}>
+                {selectedSession
+                  ? `Session ${selectedSession.session_no}`
+                  : 'Total Penjualan'}
+              </Text>
+              {sessionDetailLoading && (
+                <ActivityIndicator size="small" color="#B1A3D2" />
+              )}
+            </View>
+            <Text style={styles.heroValue}>
+              Rp{' '}
+              {fmt(sessionData ? sessionData.total_selling : totalSelling)}
+            </Text>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStats}>
+              <View style={{flex: 1}}>
+                <Text style={styles.heroStatLabel}>Modal</Text>
+                <Text style={styles.heroStatValue}>
+                  Rp {fmt(sessionData ? sessionData.total_cost : totalCost)}
+                </Text>
+              </View>
+              <View style={{flex: 1}}>
+                <Text style={styles.heroStatLabel}>Profit</Text>
+                <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
+                  Rp{' '}
+                  {fmt(sessionData ? sessionData.total_profit : totalProfit)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Mini stat cards */}
+          <View style={styles.miniRow}>
+            <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
+              <Icon name="package" size={18} color={color.primaryColor} />
+              <Text style={styles.miniValue}>
+                {sessionData
+                  ? sessionData.total_items || 0
+                  : totalItems || 0}
+              </Text>
+              <Text style={styles.miniLabel}>Item</Text>
+            </View>
+            <View style={[styles.miniCard, {backgroundColor: '#E0F2FE'}]}>
+              <Icon name="users" size={18} color="#0EA5E9" />
+              <Text style={styles.miniValue}>{totalCustomer || 0}</Text>
+              <Text style={styles.miniLabel}>Customer</Text>
+            </View>
+            <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
+              <Icon name="layers" size={18} color="#10B981" />
+              <Text style={styles.miniValue}>
+                {sessionData
+                  ? sessionData.total_batch || 0
+                  : totalBatch || 0}
+              </Text>
+              <Text style={styles.miniLabel}>Batch</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Mini stat cards */}
-        <View style={styles.miniRow}>
-          <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
-            <Icon name="package" size={18} color={color.primaryColor} />
-            <Text style={styles.miniValue}>
-              {selectedSession ? selectedSession.total_items : totalItems}
-            </Text>
-            <Text style={styles.miniLabel}>Item</Text>
+        {/* ===== Section: Total Keseluruhan ===== */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, {backgroundColor: '#E8EDF3'}]}>
+              <Icon name="chart-column" size={18} color="#64748B" />
+            </View>
+            <View style={{flex: 1}}>
+              <Text style={styles.sectionTitle}>Total Keseluruhan</Text>
+              <Text style={styles.sectionSub}>
+                Akumulasi semua session jastip
+              </Text>
+            </View>
           </View>
-          <View style={[styles.miniCard, {backgroundColor: '#E0F2FE'}]}>
-            <Icon name="users" size={18} color="#0EA5E9" />
-            <Text style={styles.miniValue}>{totalCustomer}</Text>
-            <Text style={styles.miniLabel}>Customer</Text>
-          </View>
-          <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
-            <Icon name="layers" size={18} color="#10B981" />
-            <Text style={styles.miniValue}>
-              {selectedSession ? selectedSession.total_shipment : totalBatch}
-            </Text>
-            <Text style={styles.miniLabel}>
-              {selectedSession ? 'Shipment' : 'Batch'}
-            </Text>
-          </View>
-        </View>
 
-        {/* Grafik: Pengeluaran & Keuntungan per Session */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Pengeluaran & Keuntungan</Text>
-            <Text style={styles.cardTotal}>6 session terakhir</Text>
-          </View>
-          {chartLoading ? (
-            <Text style={styles.emptyText}>Memuat grafik...</Text>
-          ) : chartData.length === 0 ? (
-            <Text style={styles.emptyText}>Belum ada data session</Text>
-          ) : (
-            <View>
-              <View style={styles.chartRow}>
-                {chartData.map(d => (
-                  <View key={d.session_id} style={styles.chartCol}>
-                    <View style={styles.chartBars}>
-                      <View style={styles.chartBarWrap}>
-                        <View
-                          style={[
-                            styles.chartBar,
-                            styles.chartBarCost,
-                            {height: `${Math.max(barHeight(d.total_cost), 2)}%`},
-                          ]}
-                        />
+          {/* Grafik: Pengeluaran & Keuntungan per Session */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Pengeluaran & Keuntungan</Text>
+              <Text style={styles.cardTotal}>6 session terakhir</Text>
+            </View>
+            {chartLoading ? (
+              <Text style={styles.emptyText}>Memuat grafik...</Text>
+            ) : chartData.length === 0 ? (
+              <Text style={styles.emptyText}>Belum ada data session</Text>
+            ) : (
+              <View>
+                <View style={styles.chartRow}>
+                  {chartData.map(d => (
+                    <View key={d.session_id} style={styles.chartCol}>
+                      <View style={styles.chartBars}>
+                        <View style={styles.chartBarWrap}>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              styles.chartBarCost,
+                              {
+                                height: `${Math.max(
+                                  barHeight(d.total_cost),
+                                  2,
+                                )}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <View style={styles.chartBarWrap}>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              styles.chartBarProfit,
+                              {
+                                height: `${Math.max(
+                                  barHeight(d.total_profit),
+                                  2,
+                                )}%`,
+                              },
+                            ]}
+                          />
+                        </View>
                       </View>
-                      <View style={styles.chartBarWrap}>
-                        <View
-                          style={[
-                            styles.chartBar,
-                            styles.chartBarProfit,
-                            {height: `${Math.max(barHeight(d.total_profit), 2)}%`},
-                          ]}
-                        />
-                      </View>
+                      <Text style={styles.chartLabel} numberOfLines={1}>
+                        {d.session_no}
+                      </Text>
                     </View>
-                    <Text style={styles.chartLabel} numberOfLines={1}>
-                      {d.session_no}
-                    </Text>
+                  ))}
+                </View>
+                <View style={styles.chartLegend}>
+                  <View style={styles.legendItem}>
+                    <View
+                      style={[styles.legendDot, {backgroundColor: '#F59E0B'}]}
+                    />
+                    <Text style={styles.legendText}>Pengeluaran (Modal)</Text>
                   </View>
-                ))}
-              </View>
-              <View style={styles.chartLegend}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, {backgroundColor: '#F59E0B'}]} />
-                  <Text style={styles.legendText}>Pengeluaran (Modal)</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, {backgroundColor: '#10B981'}]} />
-                  <Text style={styles.legendText}>Keuntungan</Text>
+                  <View style={styles.legendItem}>
+                    <View
+                      style={[styles.legendDot, {backgroundColor: '#10B981'}]}
+                    />
+                    <Text style={styles.legendText}>Keuntungan</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
-        </View>
-
-        {/* Status Item (compact) */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Status Item</Text>
-            <Text style={styles.cardTotal}>{totalItems} item</Text>
+            )}
           </View>
-          {totalItems > 0 ? (
-            <View style={styles.progressTrack}>
+
+          {/* Status Item (compact) */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Status Item</Text>
+              <Text style={styles.cardTotal}>{totalItems} item</Text>
+            </View>
+            {totalItems > 0 ? (
+              <View style={styles.progressTrack}>
+                {ITEM_STATUS.map(s => {
+                  const count = itemCount(s.code);
+                  if (!count) {
+                    return null;
+                  }
+                  return (
+                    <View
+                      key={s.code}
+                      style={{
+                        flex: count,
+                        backgroundColor: s.color,
+                        height: 10,
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.emptyText}>Belum ada item</Text>
+            )}
+            <View style={styles.legendWrap}>
               {ITEM_STATUS.map(s => {
                 const count = itemCount(s.code);
-                if (!count) {return null;}
+                if (!count) {
+                  return null;
+                }
                 return (
-                  <View
-                    key={s.code}
-                    style={{
-                      flex: count,
-                      backgroundColor: s.color,
-                      height: 10,
-                    }}
-                  />
+                  <View key={s.code} style={styles.legendItem}>
+                    <View
+                      style={[styles.legendDot, {backgroundColor: s.color}]}
+                    />
+                    <Text style={styles.legendText}>
+                      {s.label} · {count}
+                    </Text>
+                  </View>
                 );
               })}
             </View>
-          ) : (
-            <Text style={styles.emptyText}>Belum ada item</Text>
-          )}
-          <View style={styles.legendWrap}>
-            {ITEM_STATUS.map(s => {
-              const count = itemCount(s.code);
-              if (!count) {return null;}
-              return (
-                <View key={s.code} style={styles.legendItem}>
-                  <View
-                    style={[styles.legendDot, {backgroundColor: s.color}]}
-                  />
-                  <Text style={styles.legendText}>
-                    {s.label} · {count}
-                  </Text>
-                </View>
-              );
-            })}
           </View>
-        </View>
 
-        {/* Item Terjual */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Item Terjual</Text>
-            <Text style={styles.cardTotal}>
-              {itemCount(205)} item sold
-            </Text>
-          </View>
-          <View style={styles.soldRow}>
-            <View style={styles.soldBox}>
-              <Text style={styles.soldLabel}>Pendapatan</Text>
-              <Text style={styles.soldValue}>
-                Rp {fmt(sold.total_selling)}
-              </Text>
+          {/* Item Terjual */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Item Terjual</Text>
+              <Text style={styles.cardTotal}>{itemCount(205)} item sold</Text>
             </View>
-            <View style={styles.soldBox}>
-              <Text style={styles.soldLabel}>Profit</Text>
-              <Text style={[styles.soldValue, {color: '#10B981'}]}>
-                Rp {fmt(soldProfit)}
-              </Text>
+            <View style={styles.soldRow}>
+              <View style={styles.soldBox}>
+                <Text style={styles.soldLabel}>Pendapatan</Text>
+                <Text style={styles.soldValue}>
+                  Rp {fmt(sold.total_selling)}
+                </Text>
+              </View>
+              <View style={styles.soldBox}>
+                <Text style={styles.soldLabel}>Profit</Text>
+                <Text style={[styles.soldValue, {color: '#10B981'}]}>
+                  Rp {fmt(soldProfit)}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -374,13 +497,13 @@ export default Statistik;
 const styles = StyleSheet.create({
   header: {
     width: '100%',
-    height: Platform.OS === 'ios' ? 140 : 110,
+    height: Platform.OS === 'ios' ? 110 : 90,
     backgroundColor: color.primaryColor,
     paddingHorizontal: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 40 : 10,
+    paddingTop: Platform.OS === 'ios' ? 30 : 5,
   },
   headerTitle: {
     fontSize: 22,
@@ -404,23 +527,145 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
+  /* ---- Section header (pembeda) ---- */
+  section: {
+    marginTop: 18,
+  },
+  sessionSection: {
+    marginTop: 16,
+    backgroundColor: '#FBFAFE',
+    borderWidth: 1,
+    borderColor: color.primaryLighter,
+    borderRadius: 20,
+    padding: 14,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F1F1F',
+  },
+  sectionSub: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    marginTop: 1,
+  },
   dropdownWrap: {
-    marginTop: -30,
     marginBottom: 14,
     zIndex: 1000,
   },
   picker: {
-    borderRadius: 14,
-    borderColor: '#E0E0E8',
+    borderRadius: 12,
+    borderColor: '#E5E7EB',
     backgroundColor: color.white,
     minHeight: 46,
+    paddingHorizontal: 12,
   },
   pickerDropdown: {
-    borderRadius: 14,
-    borderColor: '#E0E0E8',
+    borderRadius: 12,
+    borderColor: '#E5E7EB',
+    backgroundColor: color.white,
   },
   pickerModal: {
+    flexGrow: 1,
     backgroundColor: color.white,
+    paddingBottom: 24,
+  },
+  pickerSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 0,
+  },
+  pickerSearchInput: {
+    flexGrow: 1,
+    flexShrink: 1,
+    margin: 0,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 0,
+    backgroundColor: '#F3F4F6',
+    color: '#1F1F1F',
+    fontSize: 14,
+  },
+  pickerCloseIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#9CA3AF',
+  },
+  pickerCloseIconContainer: {
+    marginLeft: 12,
+    padding: 4,
+  },
+  pickerListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  pickerListItemLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+  },
+  pickerSelectedItem: {
+    backgroundColor: '#F6F4FB',
+  },
+  pickerSelectedLabel: {
+    color: color.primaryColor,
+    fontWeight: '600',
+  },
+  pickerItemSeparator: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginLeft: 16,
+  },
+  pickerEmptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  pickerEmptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  pickerText: {
+    fontSize: 13,
+    color: '#1F1F1F',
+    fontWeight: '500',
+  },
+  pickerLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  pickerPlaceholder: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '400',
+  },
+  pickerArrow: {
+    tintColor: '#9CA3AF',
+  },
+  pickerTick: {
+    tintColor: color.primaryColor,
   },
   heroCard: {
     backgroundColor: color.primaryColor,
