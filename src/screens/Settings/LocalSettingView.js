@@ -12,7 +12,7 @@ import {
 import InputText from '../../components/InputText';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {fetchCurrencies} from '../../resource/Currency';
+import {fetchCountries} from '../../resource/Country';
 import {
   getEndpoint,
   getLocalSetting,
@@ -32,7 +32,18 @@ const LocalSettingView = ({navigation, route}) => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchCurrencies().then(list => setCurrencies(list));
+    fetchCountries().then(list => {
+      // Currency unik (satu mata uang bisa dipakai banyak negara, mis. USD)
+      const seen = {};
+      const cur = (list || []).filter(it => {
+        if (!it.currency_code || seen[it.currency_code]) {
+          return false;
+        }
+        seen[it.currency_code] = true;
+        return true;
+      });
+      setCurrencies(cur);
+    });
   }, []);
 
   const saveEndpoint = () => {
@@ -58,8 +69,8 @@ const LocalSettingView = ({navigation, route}) => {
   };
 
   const selectCurrency = item => {
-    setCurrencyTo(item.code);
-    setLocalSetting({currency_to: item.code});
+    setCurrencyTo(item.currency_code);
+    setLocalSetting({currency_to: item.currency_code});
     setPickerOpen(false);
     Toast.show({
       type: 'success',
@@ -69,17 +80,17 @@ const LocalSettingView = ({navigation, route}) => {
   };
 
   const currencyLabel = code => {
-    const c = currencies.find(it => it.code === code);
-    return c ? `${c.code} · ${c.symbol}` : code;
+    const c = currencies.find(it => it.currency_code === code);
+    return c ? `${c.currency_code} · ${c.currency_symbol}` : code;
   };
 
   const filteredCurrencies = currencies.filter(it => {
     const q = currencySearch.trim().toLowerCase();
     if (!q) return true;
     return (
-      (it.code || '').toLowerCase().includes(q) ||
+      (it.currency_code || '').toLowerCase().includes(q) ||
       (it.name || '').toLowerCase().includes(q) ||
-      (it.country || '').toLowerCase().includes(q)
+      (it.currency_symbol || '').toLowerCase().includes(q)
     );
   });
 
@@ -180,12 +191,14 @@ const LocalSettingView = ({navigation, route}) => {
                   style={styles.currencyItem}
                   onPress={() => selectCurrency(item)}>
                   <View style={styles.currencyItemLeft}>
-                    <Text style={styles.currencyItemCode}>{item.code}</Text>
-                    <Text style={styles.currencyItemName}>
-                      {item.name} · {item.country}
+                    <Text style={styles.currencyItemCode}>
+                      {item.currency_code}
                     </Text>
+                    <Text style={styles.currencyItemName}>{item.name}</Text>
                   </View>
-                  <Text style={styles.currencyItemSymbol}>{item.symbol}</Text>
+                  <Text style={styles.currencyItemSymbol}>
+                    {item.currency_symbol}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

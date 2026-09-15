@@ -1,11 +1,11 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 
-let url = `/api/v1/master/currency`;
+let url = `/api/v1/master/country`;
 
-// Ambil daftar mata uang (mst_currency) yang aktif.
-// Resolve array: [{id, code, name, symbol, country}]
-export const fetchCurrencies = async (useAlert = false) => {
+// Ambil daftar negara (mst_country) yang aktif.
+// Resolve array: [{id, name, code, country_code, currency_code, currency_symbol}]
+export const fetchCountries = async (useAlert = false) => {
   return new Promise(resolve => {
     $axios
       .get(url)

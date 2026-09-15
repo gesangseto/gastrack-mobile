@@ -13,7 +13,7 @@ import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {fetchCurrencies} from '../../resource/Currency';
+import {fetchCountries} from '../../resource/Country';
 import {updateSysConfig} from '../../resource/Configuration';
 import {getSysConfig, setSysConfig} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
@@ -29,13 +29,29 @@ const AppSettingView = ({navigation, route}) => {
     currency: config.currency || 'IDR',
     entity_address: config.entity_address || '',
   });
+  const [countries, setCountries] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [currencySearch, setCurrencySearch] = useState('');
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchCurrencies().then(list => setCurrencies(list));
+    fetchCountries().then(list => {
+      const uniq = (list || []).filter(it => it.name);
+      setCountries(uniq);
+      // Currency unik (satu negara bisa pakai mata uang sama, mis. USD)
+      const seen = {};
+      const cur = uniq.filter(it => {
+        if (!it.currency_code || seen[it.currency_code]) {
+          return false;
+        }
+        seen[it.currency_code] = true;
+        return true;
+      });
+      setCurrencies(cur);
+    });
   }, []);
 
   const save = async () => {
@@ -72,19 +88,40 @@ const AppSettingView = ({navigation, route}) => {
   };
 
   const currencyLabel = code => {
-    const c = currencies.find(it => it.code === code);
-    return c ? `${c.code} · ${c.symbol}` : code;
+    const c = currencies.find(it => it.currency_code === code);
+    return c ? `${c.currency_code} · ${c.currency_symbol}` : code;
   };
 
   const filteredCurrencies = currencies.filter(it => {
     const q = currencySearch.trim().toLowerCase();
     if (!q) return true;
     return (
-      (it.code || '').toLowerCase().includes(q) ||
+      (it.currency_code || '').toLowerCase().includes(q) ||
       (it.name || '').toLowerCase().includes(q) ||
-      (it.country || '').toLowerCase().includes(q)
+      (it.currency_symbol || '').toLowerCase().includes(q)
     );
   });
+
+  const filteredCountries = countries.filter(it => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (it.name || '').toLowerCase().includes(q) ||
+      (it.code || '').toLowerCase().includes(q) ||
+      (it.currency_code || '').toLowerCase().includes(q)
+    );
+  });
+
+  // Pilih negara → isi country (nama), country_code (kode telp), currency (kode mata uang)
+  const selectCountry = item => {
+    setForm(prev => ({
+      ...prev,
+      country: item.name,
+      country_code: item.country_code || prev.country_code,
+      currency: item.currency_code || prev.currency,
+    }));
+    setCountryPickerOpen(false);
+  };
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -117,12 +154,17 @@ const AppSettingView = ({navigation, route}) => {
             }
             placeholder="Nomor identitas perusahaan"
           />
-          <InputText
-            label="Negara"
-            value={form.country}
-            onChangeText={value => setForm({...form, country: value})}
-            placeholder="Indonesia"
-          />
+          {/* Negara */}
+          <Text style={styles.fieldLabel}>Negara</Text>
+          <TouchableOpacity
+            style={styles.currencyBox}
+            onPress={() => {
+              setCountrySearch('');
+              setCountryPickerOpen(true);
+            }}>
+            <Text style={styles.currencyValue}>{form.country}</Text>
+            <Icon name="chevron-down" size={18} color="#999" />
+          </TouchableOpacity>
           <InputText
             label="Kode Negara"
             required={true}
@@ -209,16 +251,75 @@ const AppSettingView = ({navigation, route}) => {
                   key={item.id}
                   style={styles.currencyItem}
                   onPress={() => {
-                    setForm({...form, currency: item.code});
+                    setForm({...form, currency: item.currency_code});
                     setPickerOpen(false);
                   }}>
                   <View style={styles.currencyItemLeft}>
-                    <Text style={styles.currencyItemCode}>{item.code}</Text>
+                    <Text style={styles.currencyItemCode}>
+                      {item.currency_code}
+                    </Text>
                     <Text style={styles.currencyItemName}>
-                      {item.name} · {item.country}
+                      {item.name}
                     </Text>
                   </View>
-                  <Text style={styles.currencyItemSymbol}>{item.symbol}</Text>
+                  <Text style={styles.currencyItemSymbol}>
+                    {item.currency_symbol}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal pilih negara */}
+      <Modal
+        visible={countryPickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCountryPickerOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pilih Negara</Text>
+              <TouchableOpacity onPress={() => setCountryPickerOpen(false)}>
+                <Icon name="x" size={22} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.searchBox}>
+              <Icon name="search" size={16} color="#999" />
+              <TextInput
+                style={styles.searchInput}
+                value={countrySearch}
+                onChangeText={setCountrySearch}
+                placeholder="Cari negara / kode..."
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            <ScrollView style={{maxHeight: 400}}>
+              {countries.length === 0 && (
+                <Text style={styles.modalEmpty}>
+                  Tidak ada data negara. Cek endpoint backend (Local Setting).
+                </Text>
+              )}
+              {countries.length > 0 && filteredCountries.length === 0 && (
+                <Text style={styles.modalEmpty}>Tidak ditemukan.</Text>
+              )}
+              {filteredCountries.map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.currencyItem}
+                  onPress={() => selectCountry(item)}>
+                  <View style={styles.currencyItemLeft}>
+                    <Text style={styles.currencyItemCode}>{item.name}</Text>
+                    <Text style={styles.currencyItemName}>
+                      {item.code} · {item.country_code} · {item.currency_code}
+                    </Text>
+                  </View>
+                  <Text style={styles.currencyItemSymbol}>
+                    {item.currency_symbol}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

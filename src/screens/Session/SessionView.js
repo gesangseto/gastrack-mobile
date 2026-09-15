@@ -15,7 +15,7 @@ import {
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {closeSession, createSession, getSessionList, updateSessionRate} from '../../resource/Session';
-import {fetchCurrencies, fetchExchangeRate} from '../../resource/Currency';
+import {fetchCountries, fetchExchangeRate} from '../../resource/Country';
 import {fetchSysConfig} from '../../resource/Configuration';
 import {getSysConfig} from '../../storage';
 import {useHomeStore} from '../../store/homeStore';
@@ -98,28 +98,21 @@ const SessionView = () => {
     }, [load]),
   );
 
-  // Muat daftar negara (dari mst_currency) + konfigurasi aplikasi
+  // Muat daftar negara (dari mst_country) + konfigurasi aplikasi
   useEffect(() => {
-    fetchCurrencies().then(list => {
-      // Negara unik dari mst_currency (country → symbol)
-      const seen = {};
-      const uniq = (list || []).filter(it => {
-        if (!it.country || seen[it.country]) {
-          return false;
-        }
-        seen[it.country] = true;
-        return true;
-      });
+    fetchCountries().then(list => {
+      // Negara dari mst_country (name → currency_code/currency_symbol)
+      const uniq = (list || []).filter(it => it.name);
       setCountries(uniq);
       // Default: symbol + rate untuk negara awal (dari sys_config)
-      const def = uniq.find(it => it.country === getSysConfig()?.country);
+      const def = uniq.find(it => it.name === getSysConfig()?.country);
       if (def) {
         setForm(prev => ({
           ...prev,
-          symbol_currency: def.symbol || prev.symbol_currency,
+          symbol_currency: def.currency_symbol || prev.symbol_currency,
         }));
-        if (def.code && def.code !== 'IDR') {
-          fetchExchangeRate(def.code).then(rate => {
+        if (def.currency_code && def.currency_code !== 'IDR') {
+          fetchExchangeRate(def.currency_code).then(rate => {
             if (rate && !rateTouchedRef.current) {
               setForm(prev => ({...prev, currency: String(Math.ceil(rate))}));
             }
@@ -138,9 +131,9 @@ const SessionView = () => {
     });
   }, []);
 
-  // Symbol + rate otomatis dari negara yang dipilih (mst_currency → symbol, API kurs → rate)
+  // Symbol + rate otomatis dari negara yang dipilih (mst_country → currency, API kurs → rate)
   const selectCountry = country => {
-    const c = countries.find(it => it.country === country);
+    const c = countries.find(it => it.name === country);
     setCountryPickerOpen(false);
     if (!c) {
       setForm(prev => ({...prev, country}));
@@ -151,11 +144,11 @@ const SessionView = () => {
     setForm(prev => ({
       ...prev,
       country,
-      symbol_currency: c.symbol || prev.symbol_currency,
+      symbol_currency: c.currency_symbol || prev.symbol_currency,
     }));
-    if (c.code && c.code !== 'IDR') {
+    if (c.currency_code && c.currency_code !== 'IDR') {
       setRateLoading(true);
-      fetchExchangeRate(c.code).then(rate => {
+      fetchExchangeRate(c.currency_code).then(rate => {
         setRateLoading(false);
         if (rate) {
           setForm(prev => ({...prev, currency: String(Math.ceil(rate))}));
@@ -242,9 +235,9 @@ const SessionView = () => {
     const q = countrySearch.trim().toLowerCase();
     if (!q) return true;
     return (
-      (it.country || '').toLowerCase().includes(q) ||
       (it.name || '').toLowerCase().includes(q) ||
-      (it.code || '').toLowerCase().includes(q)
+      (it.currency_code || '').toLowerCase().includes(q) ||
+      (it.currency_symbol || '').toLowerCase().includes(q)
     );
   });
 
@@ -434,11 +427,11 @@ const SessionView = () => {
                   <TouchableOpacity
                     onPress={() => {
                       const c = countries.find(
-                        it => it.country === form.country,
+                        it => it.name === form.country,
                       );
-                      if (c && c.code && c.code !== 'IDR') {
+                      if (c && c.currency_code && c.currency_code !== 'IDR') {
                         setRateLoading(true);
-                        fetchExchangeRate(c.code).then(rate => {
+                        fetchExchangeRate(c.currency_code).then(rate => {
                           setRateLoading(false);
                           if (rate) {
                             setForm(prev => ({
@@ -594,12 +587,16 @@ const SessionView = () => {
                 <TouchableOpacity
                   key={item.id}
                   style={styles.countryItem}
-                  onPress={() => selectCountry(item.country)}>
+                  onPress={() => selectCountry(item.name)}>
                   <View style={styles.countryItemLeft}>
-                    <Text style={styles.countryItemName}>{item.country}</Text>
-                    <Text style={styles.countryItemCode}>{item.name}</Text>
+                    <Text style={styles.countryItemName}>{item.name}</Text>
+                    <Text style={styles.countryItemCode}>
+                      {item.currency_code}
+                    </Text>
                   </View>
-                  <Text style={styles.countryItemSymbol}>{item.symbol}</Text>
+                  <Text style={styles.countryItemSymbol}>
+                    {item.currency_symbol}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
