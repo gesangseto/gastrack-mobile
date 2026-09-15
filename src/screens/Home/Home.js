@@ -14,65 +14,75 @@ import {
 } from 'react-native';
 import color from '../../constant/color';
 import Toast from 'react-native-toast-message';
-import {getListBatch, getListUnfinishBatch} from '../../resource/Batch';
-import {getItemByPhone, getItemWithoutBatch, getListItem} from '../../resource/Item';
+import {getItemByPhone, getItemWithoutBatch} from '../../resource/Item';
 import {getProfile, getSysConfig} from '../../storage';
+import {useHomeStore} from '../../store/homeStore';
 
 const Home = ({param}) => {
   const [searchString, setSearchString] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState({});
-  const [stats, setStats] = useState({items: 0, batchs: 0, unfinish: 0});
   const searchInputRef = useRef(null);
+
+  // Zustand store
+  const items = useHomeStore(s => s.items);
+  const batches = useHomeStore(s => s.batches);
+  const unfinish = useHomeStore(s => s.unfinish);
+  const refreshing = useHomeStore(s => s.refreshing);
+  const offline = useHomeStore(s => s.offline);
+  const hasCache = useHomeStore(s => s.hasCache);
+  const lastUpdated = useHomeStore(s => s.lastUpdated);
+  const fetchHome = useHomeStore(s => s.fetchHome);
+  const initFromCache = useHomeStore(s => s.initFromCache);
 
   useEffect(() => {
     setProfile(getProfile() || {});
-  }, []);
+    // Tampilkan data cache terakhir secepatnya (tanpa nunggu network)
+    initFromCache();
+  }, [initFromCache]);
+
+  const handleSearch = useCallback(
+    async (data = null) => {
+      let string = searchString;
+      if (data) {string = data;}
+
+      const digits = String(string || '').replace(/\D/g, '');
+      if (digits.length < 9 || digits.length > 15) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Nomor HP tidak valid (9-15 digit)',
+        });
+        return;
+      }
+      let find = await getItemByPhone(string, true);
+      if (find && find.length > 0) {
+        RootNavigation.navigate('ItemList', {
+          list: find,
+          title: `Item ${find[0]?.customer_name || ''}`.trim(),
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Item tidak ditemukan untuk nomor HP tersebut',
+        });
+      }
+    },
+    [searchString],
+  );
 
   useEffect(() => {
     if (param?.data) {
-      console.log(param?.data);
-
       setSearchString(param?.data);
       handleSearch(param?.data);
     }
-  }, [param]);
+  }, [param, handleSearch]);
 
   useFocusEffect(
     useCallback(() => {
-      onRefresh();
-    }, []),
+      fetchHome(false);
+    }, [fetchHome]),
   );
-
-  const handleSearch = async (data = null) => {
-    let string = searchString;
-    if (data) string = data;
-
-    console.log(string);
-
-    const digits = String(string || '').replace(/\D/g, '');
-    if (digits.length < 9 || digits.length > 15) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Nomor HP tidak valid (9-15 digit)',
-      });
-      return;
-    }
-    let find = await getItemByPhone(string, true);
-    if (find && find.length > 0) {
-      RootNavigation.navigate('ItemList', {
-        list: find,
-        title: `Item ${find[0]?.customer_name || ''}`.trim(),
-      });
-    } else {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Item tidak ditemukan untuk nomor HP tersebut',
-      });
-    }
-  };
 
   const openItemWithoutBatch = async () => {
     let find = await getItemWithoutBatch(true);
@@ -90,23 +100,23 @@ const Home = ({param}) => {
     }
   };
 
-  const loadStats = async () => {
-    let items = await getListItem({}, false);
-    let batchs = await getListBatch({status: ['Shipping', 'Draft']}, false);
-    let unfinish = await getListUnfinishBatch({}, false);
-    setStats({
-      items: items ? items.length : 0,
-      batchs: batchs ? batchs.length : 0,
-      unfinish: unfinish ? unfinish.length : 0,
-    });
-  };
-
   const onRefresh = () => {
-    loadStats();
+    fetchHome(true);
   };
 
   const greetingName = profile?.full_name || profile?.username || 'Pengguna';
   const phonePrefix = getSysConfig()?.country_code || '+62';
+
+  const formatLastUpdated = ts => {
+    if (!ts) {return '';}
+    const d = new Date(ts);
+    return d.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -160,6 +170,8 @@ const Home = ({param}) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => onRefresh()}
+            colors={[color.primaryColor]}
+            tintColor={color.primaryColor}
           />
         }
         contentContainerStyle={styles.scrollViewContent}
@@ -176,19 +188,34 @@ const Home = ({param}) => {
           </Text>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.items}</Text>
+              <Text style={styles.statValue}>{items}</Text>
               <Text style={styles.statLabel}>Item</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.batchs}</Text>
+              <Text style={styles.statValue}>{batches}</Text>
               <Text style={styles.statLabel}>Batch</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stats.unfinish}</Text>
+              <Text style={styles.statValue}>{unfinish}</Text>
               <Text style={styles.statLabel}>Belum Selesai</Text>
             </View>
+          </View>
+          {/* Status data: offline / last updated */}
+          <View style={styles.statusRow}>
+            {offline ? (
+              <View style={styles.offlineBadge}>
+                <Icon name="wifi-off" size={12} color="#FFD166" />
+                <Text style={styles.offlineText}>
+                  Offline — data terakhir {formatLastUpdated(lastUpdated)}
+                </Text>
+              </View>
+            ) : hasCache ? (
+              <Text style={styles.updatedText}>
+                Update {formatLastUpdated(lastUpdated)}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -266,14 +293,6 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     marginTop: 4,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: color.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,6 +364,29 @@ const styles = StyleSheet.create({
     width: 1,
     height: 28,
     backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  statusRow: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  offlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,209,102,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  offlineText: {
+    color: '#FFD166',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  updatedText: {
+    color: '#C9BCE8',
+    fontSize: 11,
+    fontWeight: '500',
   },
   quickActions: {
     flexDirection: 'row',

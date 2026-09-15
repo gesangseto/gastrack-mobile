@@ -1,4 +1,4 @@
-import {useCallback, useState} from 'react';
+import {useCallback} from 'react';
 import {
   Platform,
   RefreshControl,
@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import color from '../../constant/color';
-import {fetchDashboard} from '../../resource/Dashboard';
 import Icon from '@react-native-vector-icons/lucide';
+import {useHomeStore} from '../../store/homeStore';
 
 // ===== Mapping status =====
 // Item stock: 200 Draft, 201 Manifesting, 202 In-Transit, 203 GRN,
@@ -49,24 +49,20 @@ const sumBy = (arr, key) =>
   (arr || []).reduce((acc, it) => acc + Number(it[key] || 0), 0);
 
 const Statistik = ({navigation, route}) => {
-  const [data, setData] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    const res = await fetchDashboard();
-    if (res) setData(res);
-  }, []);
+  // Data dashboard dibagi via Zustand store (sama dengan Home)
+  const data = useHomeStore(s => s.dashboard);
+  const refreshing = useHomeStore(s => s.refreshing);
+  const offline = useHomeStore(s => s.offline);
+  const fetchHome = useHomeStore(s => s.fetchHome);
 
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load]),
+      fetchHome(false);
+    }, [fetchHome]),
   );
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
+  const onRefresh = () => {
+    fetchHome(true);
   };
 
   // ===== Turunan data =====
@@ -114,7 +110,11 @@ const Statistik = ({navigation, route}) => {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Statistik</Text>
-          <Text style={styles.headerSub}>Ringkasan Jasa Titip Belanja</Text>
+          <Text style={styles.headerSub}>
+            {offline
+              ? 'Offline — menampilkan data terakhir'
+              : 'Ringkasan Jasa Titip Belanja'}
+          </Text>
         </View>
         <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
           <Icon name="refresh-cw" size={20} color={color.primaryColor} />
@@ -187,7 +187,7 @@ const Statistik = ({navigation, route}) => {
             <View style={styles.progressTrack}>
               {ITEM_STATUS.map(s => {
                 const count = itemCount(s.code);
-                if (!count) return null;
+                if (!count) {return null;}
                 return (
                   <View
                     key={s.code}
@@ -206,7 +206,7 @@ const Statistik = ({navigation, route}) => {
           <View style={styles.legendWrap}>
             {ITEM_STATUS.map(s => {
               const count = itemCount(s.code);
-              if (!count) return null;
+              if (!count) {return null;}
               return (
                 <View key={s.code} style={styles.legendItem}>
                   <View
@@ -232,7 +232,7 @@ const Statistik = ({navigation, route}) => {
               const count = (data?.invoice_by_status || []).find(
                 it => Number(it.status) === s.code,
               )?.total;
-              if (!count) return null;
+              if (!count) {return null;}
               return (
                 <View
                   key={s.code}
@@ -261,7 +261,7 @@ const Statistik = ({navigation, route}) => {
           <View style={styles.chipRow}>
             {PICKING_STATUS.map(s => {
               const count = pickingCount(s.code);
-              if (!count) return null;
+              if (!count) {return null;}
               return (
                 <View
                   key={s.code}
