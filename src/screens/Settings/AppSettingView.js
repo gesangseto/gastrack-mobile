@@ -12,6 +12,7 @@ import {
 import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
+import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Header from '../../layouts/Header';
 import {fetchCountries} from '../../resource/Country';
 import {updateSysConfig} from '../../resource/Configuration';
@@ -27,6 +28,7 @@ const AppSettingView = ({navigation, route}) => {
     country: config.country || 'Indonesia',
     country_code: config.country_code || '+62',
     currency: config.currency || 'IDR',
+    price_unit_code: config.price_unit_code || 'none',
     entity_address: config.entity_address || '',
   });
   const [countries, setCountries] = useState([]);
@@ -71,6 +73,7 @@ const AppSettingView = ({navigation, route}) => {
       country: form.country,
       country_code: form.country_code,
       currency: form.currency,
+      price_unit_code: form.price_unit_code,
       entity_address: form.entity_address,
     };
     const updated = await updateSysConfig(payload);
@@ -94,7 +97,7 @@ const AppSettingView = ({navigation, route}) => {
 
   const filteredCurrencies = currencies.filter(it => {
     const q = currencySearch.trim().toLowerCase();
-    if (!q) return true;
+    if (!q) {return true;}
     return (
       (it.currency_code || '').toLowerCase().includes(q) ||
       (it.name || '').toLowerCase().includes(q) ||
@@ -104,7 +107,7 @@ const AppSettingView = ({navigation, route}) => {
 
   const filteredCountries = countries.filter(it => {
     const q = countrySearch.trim().toLowerCase();
-    if (!q) return true;
+    if (!q) {return true;}
     return (
       (it.name || '').toLowerCase().includes(q) ||
       (it.code || '').toLowerCase().includes(q) ||
@@ -189,6 +192,41 @@ const AppSettingView = ({navigation, route}) => {
             </Text>
             <Icon name="chevron-down" size={18} color="#999" />
           </TouchableOpacity>
+
+          {/* Unit kode harga (selling) */}
+          <Text style={styles.fieldLabel}>Unit Kode Harga (Selling)</Text>
+          <View style={styles.unitWrap}>
+            {PRICE_UNIT_LIST.map(u => {
+              const active = form.price_unit_code === u.value;
+              return (
+                <TouchableOpacity
+                  key={u.value}
+                  style={[styles.unitChip, active && styles.unitChipActive]}
+                  onPress={() =>
+                    setForm({...form, price_unit_code: u.value})
+                  }>
+                  <Text
+                    style={[
+                      styles.unitChipText,
+                      active && styles.unitChipTextActive,
+                    ]}>
+                    {u.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.unitChipSub,
+                      active && styles.unitChipSubActive,
+                    ]}>
+                    {u.multiplier}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.fieldHint}>
+            Unit selling price global (sys_configuration); cost price memakai
+            unit dari session.
+          </Text>
 
           <InputText
             label="Alamat"
@@ -357,6 +395,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#333',
     fontWeight: '500',
+  },
+  fieldHint: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    marginTop: 4,
+    marginBottom: 10,
+    lineHeight: 15,
+  },
+  unitWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  unitChip: {
+    borderWidth: 1,
+    borderColor: '#D9D9E3',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  unitChipActive: {
+    borderColor: color.primaryColor,
+    backgroundColor: color.primaryColor,
+  },
+  unitChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  unitChipTextActive: {
+    color: color.white,
+  },
+  unitChipSub: {
+    fontSize: 9,
+    color: '#9A9A9A',
+    marginTop: 1,
+  },
+  unitChipSubActive: {
+    color: '#C9BCE8',
   },
   currencyBox: {
     flexDirection: 'row',

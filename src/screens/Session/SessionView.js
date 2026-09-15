@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import color from '../../constant/color';
+import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Header from '../../layouts/Header';
 import {closeSession, createSession, getSessionList, updateSessionRate} from '../../resource/Session';
 import {fetchCountries, fetchExchangeRate} from '../../resource/Country';
@@ -20,18 +21,6 @@ import {fetchSysConfig} from '../../resource/Configuration';
 import {getSysConfig} from '../../storage';
 import {useHomeStore} from '../../store/homeStore';
 import Toast from 'react-native-toast-message';
-
-// Unit pengali kode harga (harus sinkron dengan backend price-code-unit.js)
-export const PRICE_UNIT_LIST = [
-  {value: 'none', label: 'None', multiplier: 'x1'},
-  {value: 'tens', label: 'Tens', multiplier: 'x10'},
-  {value: 'hundreds', label: 'Hundreds', multiplier: 'x100'},
-  {value: 'thousands', label: 'Thousands', multiplier: 'x1.000'},
-  {value: 'ten_thousands', label: 'Ten Thousands', multiplier: 'x10.000'},
-  {value: 'hundred_thousands', label: 'Hundred Thousands', multiplier: 'x100.000'},
-  {value: 'million', label: 'Million', multiplier: 'x1.000.000'},
-  {value: 'billion', label: 'Billion', multiplier: 'x1.000.000.000'},
-];
 
 const SessionView = () => {
   const dashboard = useHomeStore(s => s.dashboard);
