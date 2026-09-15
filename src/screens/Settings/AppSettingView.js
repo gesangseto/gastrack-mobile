@@ -33,8 +33,6 @@ const AppSettingView = ({navigation, route}) => {
   });
   const [countries, setCountries] = useState([]);
   const [currencies, setCurrencies] = useState([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [currencySearch, setCurrencySearch] = useState('');
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [saving, setSaving] = useState(false);
@@ -95,16 +93,6 @@ const AppSettingView = ({navigation, route}) => {
     return c ? `${c.currency_code} · ${c.currency_symbol}` : code;
   };
 
-  const filteredCurrencies = currencies.filter(it => {
-    const q = currencySearch.trim().toLowerCase();
-    if (!q) {return true;}
-    return (
-      (it.currency_code || '').toLowerCase().includes(q) ||
-      (it.name || '').toLowerCase().includes(q) ||
-      (it.currency_symbol || '').toLowerCase().includes(q)
-    );
-  });
-
   const filteredCountries = countries.filter(it => {
     const q = countrySearch.trim().toLowerCase();
     if (!q) {return true;}
@@ -115,7 +103,8 @@ const AppSettingView = ({navigation, route}) => {
     );
   });
 
-  // Pilih negara → isi country (nama), country_code (kode telp), currency (kode mata uang)
+  // Pilih negara → isi country (nama), country_code (kode telp), currency
+  // (kode mata uang) — keduanya non-editable, otomatis mengikuti negara
   const selectCountry = item => {
     setForm(prev => ({
       ...prev,
@@ -168,30 +157,27 @@ const AppSettingView = ({navigation, route}) => {
             <Text style={styles.currencyValue}>{form.country}</Text>
             <Icon name="chevron-down" size={18} color="#999" />
           </TouchableOpacity>
-          <InputText
-            label="Kode Negara"
-            required={true}
-            showError={true}
-            value={form.country_code}
-            onChangeText={value =>
-              setForm({...form, country_code: value})
-            }
-            placeholder="+62"
-          />
 
-          {/* Currency */}
+          {/* Kode Negara — otomatis dari negara, non-editable */}
+          <Text style={styles.fieldLabel}>Kode Negara</Text>
+          <View style={[styles.currencyBox, styles.readOnlyBox]}>
+            <Text style={styles.currencyValue}>
+              {form.country_code || '-'}
+            </Text>
+            <Icon name="lock" size={14} color="#B0B0B0" />
+          </View>
+
+          {/* Currency — otomatis dari negara, non-editable */}
           <Text style={styles.fieldLabel}>Currency</Text>
-          <TouchableOpacity
-            style={styles.currencyBox}
-            onPress={() => {
-              setCurrencySearch('');
-              setPickerOpen(true);
-            }}>
+          <View style={[styles.currencyBox, styles.readOnlyBox]}>
             <Text style={styles.currencyValue}>
               {currencyLabel(form.currency)}
             </Text>
-            <Icon name="chevron-down" size={18} color="#999" />
-          </TouchableOpacity>
+            <Icon name="lock" size={14} color="#B0B0B0" />
+          </View>
+          <Text style={styles.fieldHint}>
+            Kode negara & currency otomatis mengikuti negara yang dipilih.
+          </Text>
 
           {/* Unit kode harga (selling) */}
           <Text style={styles.fieldLabel}>Unit Kode Harga (Selling)</Text>
@@ -249,66 +235,6 @@ const AppSettingView = ({navigation, route}) => {
           </TouchableOpacity>
         </ScrollView>
       </View>
-
-      {/* Modal pilih currency */}
-      <Modal
-        visible={pickerOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPickerOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Pilih Currency</Text>
-              <TouchableOpacity onPress={() => setPickerOpen(false)}>
-                <Icon name="x" size={22} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.searchBox}>
-              <Icon name="search" size={16} color="#999" />
-              <TextInput
-                style={styles.searchInput}
-                value={currencySearch}
-                onChangeText={setCurrencySearch}
-                placeholder="Cari kode / nama / negara..."
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <ScrollView style={{maxHeight: 400}}>
-              {currencies.length === 0 && (
-                <Text style={styles.modalEmpty}>
-                  Tidak ada data currency. Cek endpoint backend (Local Setting).
-                </Text>
-              )}
-              {currencies.length > 0 && filteredCurrencies.length === 0 && (
-                <Text style={styles.modalEmpty}>Tidak ditemukan.</Text>
-              )}
-              {filteredCurrencies.map(item => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.currencyItem}
-                  onPress={() => {
-                    setForm({...form, currency: item.currency_code});
-                    setPickerOpen(false);
-                  }}>
-                  <View style={styles.currencyItemLeft}>
-                    <Text style={styles.currencyItemCode}>
-                      {item.currency_code}
-                    </Text>
-                    <Text style={styles.currencyItemName}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <Text style={styles.currencyItemSymbol}>
-                    {item.currency_symbol}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal pilih negara */}
       <Modal
@@ -454,6 +380,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  readOnlyBox: {
+    backgroundColor: '#F4F4F8',
+    borderColor: '#E5E5E5',
   },
   saveButton: {
     marginTop: 10,
