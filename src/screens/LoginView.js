@@ -2,6 +2,7 @@ import Icon from '@react-native-vector-icons/lucide';
 import React, {useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -101,7 +102,11 @@ const LoginView = ({navigation, route}) => {
         {/* Logo */}
         <View style={styles.logoBlock}>
           <View style={styles.logoIcon}>
-            <Icon name="baggage-claim" size={40} color={color.white} />
+            <Image
+              source={require('../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </View>
           <Text style={styles.title}>GasTrack</Text>
           <Text style={styles.subtitle}>Your Warehouse Partner</Text>
@@ -201,6 +206,12 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 8},
     shadowRadius: 16,
     elevation: 8,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
   },
   title: {
     fontSize: 28,

@@ -1,4 +1,5 @@
 import {
+  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -6,7 +7,6 @@ import {
 } from 'react-native';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import Icon from '@react-native-vector-icons/lucide';
 
 const AboutView = ({navigation, route}) => {
   return (
@@ -18,7 +18,11 @@ const AboutView = ({navigation, route}) => {
       <Header title="About" />
       <View style={styles.body}>
         <View style={styles.logoBox}>
-          <Icon name="package" size={56} color={color.primaryColor} />
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
         </View>
         <Text style={styles.appName}>GasTrack</Text>
         <Text style={styles.appDesc}>
@@ -70,6 +74,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
   },
   appName: {
     fontSize: 22,
