@@ -22,7 +22,10 @@ import {fetchDashboard} from '../../resource/Dashboard';
 import {fetchCountries} from '../../resource/Country';
 import {getEndpoint, getSysConfig} from '../../storage';
 import {getMimeType} from '../../helper/helper';
-import {normalizePhone} from '../../helper/contactSync';
+import {
+  isValidLocalPhone,
+  normalizePhone,
+} from '../../helper/phone';
 import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Toast from 'react-native-toast-message';
 
@@ -197,7 +200,7 @@ useEffect(() => {
   };
 
   const saveNewCustomer = async () => {
-    if (!newCustomerName) {
+    if (!newCustomerName.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -205,24 +208,36 @@ useEffect(() => {
       });
       return;
     }
+    if (!isValidLocalPhone(formData.customer_phone)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Nomor telp tidak valid (9-15 digit)',
+      });
+      return;
+    }
+    if (savingCustomer) return;
     const fullPhone = normalizePhone(formData.customer_phone);
     setSavingCustomer(true);
-    let saved = await createCustomer({
-      name: newCustomerName,
-      phone: fullPhone,
-      address: newCustomerAddress,
-    });
-    setSavingCustomer(false);
-    if (saved) {
-      setSelectedCustomer({
-        id: saved.id,
-        name: saved.name || newCustomerName,
-        phone: saved.phone || fullPhone,
-        address: saved.address || newCustomerAddress,
+    try {
+      const saved = await createCustomer({
+        name: newCustomerName.trim(),
+        phone: fullPhone,
+        address: newCustomerAddress.trim(),
       });
-      setShowAddCustomer(false);
-      setNewCustomerName('');
-      setNewCustomerAddress('');
+      if (saved) {
+        setSelectedCustomer({
+          id: saved.id,
+          name: saved.name || newCustomerName.trim(),
+          phone: saved.phone || fullPhone,
+          address: saved.address || newCustomerAddress.trim(),
+        });
+        setShowAddCustomer(false);
+        setNewCustomerName('');
+        setNewCustomerAddress('');
+      }
+    } finally {
+      setSavingCustomer(false);
     }
   };
 
@@ -293,7 +308,12 @@ useEffect(() => {
         }
         if (submit) RootNavigation.goBack();
       } catch (error) {
-        console.log(error);
+        console.log('Save item error:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error?.message || 'Item gagal disimpan',
+        });
       }
     };
     // Saat edit: konfirmasi dulu sebelum perubahan disimpan

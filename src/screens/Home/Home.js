@@ -79,7 +79,9 @@ const Home = ({param}) => {
       setSearchString(param?.data);
       handleSearch(param?.data);
     }
-  }, [param, handleSearch]);
+    // Search hanya dijalankan saat nilai parameter berubah.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [param?.data]);
 
   useFocusEffect(
     useCallback(() => {

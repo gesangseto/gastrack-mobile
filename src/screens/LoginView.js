@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as RootNavigation from '../config/RootNavigation';
 import color from '../constant/color';
 import {loginSeller} from '../resource/Login';
 import {fetchSysConfig} from '../resource/Configuration';
@@ -57,14 +56,18 @@ const LoginView = ({navigation, route}) => {
     if (ep) setEndpoint(ep);
     if (!username || !password) return;
     setLoading(true);
-    let response = await loginSeller({username: username, password: password});
-    setLoading(false);
-    if (response) {
-      setProfile(response);
-      // Simpan semua data sys_configuration_mst ke MMKV (tanpa logo/password)
-      const config = await fetchSysConfig();
-      if (config) setSysConfig(config);
-      return RootNavigation.navigateReplace('TabView');
+    try {
+      const response = await loginSeller({username, password});
+      if (response) {
+        setProfile(response);
+        const config = await fetchSysConfig();
+        if (config) setSysConfig(config);
+        return navigation.replace('TabView');
+      }
+    } catch (error) {
+      console.log('Login bootstrap error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -77,11 +80,11 @@ const LoginView = ({navigation, route}) => {
           const config = await fetchSysConfig();
           if (config) setSysConfig(config);
         }
-        RootNavigation.navigateReplace('TabView');
+        navigation.replace('TabView');
       }
     };
     checkLogin();
-  }, []);
+  }, [navigation]);
 
   return (
     <View style={styles.screen}>

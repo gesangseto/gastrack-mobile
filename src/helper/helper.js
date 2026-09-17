@@ -3,6 +3,16 @@ const secretKey = 'Initial-G';
 import ThermalPrinterModule from 'react-native-thermal-printer';
 import Toast from 'react-native-toast-message';
 
+const isJsonString = value => {
+  if (typeof value !== 'string') return false;
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Fungsi untuk mengenkripsi data
 export const encryptData = data => {
   if (!data) return;
@@ -47,7 +57,7 @@ export const printBarcode = async item => {
     Toast.show({
       type: 'error',
       text1: 'Error',
-      text2: `Print failed: ${err.message}`,
+      text2: `Print failed: ${error?.message || error}`,
     });
     return false;
   }

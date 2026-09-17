@@ -135,16 +135,20 @@ const BatchView = ({navigation, route}) => {
         {
           text: 'Simpan',
           onPress: async () => {
+            if (saving) return;
             setSaving(true);
-            let response = await updateBatch({
-              id: item.id,
-              items: list.map(i => ({id: i.id})),
-              weight: data?.weight,
-              modified_by: 0,
-            });
-            setSaving(false);
-            if (response) {
-              loadData();
+            try {
+              const response = await updateBatch({
+                id: item.id,
+                items: list.map(i => ({id: i.id})),
+                weight,
+                modified_by: 0,
+              });
+              if (response) {
+                await loadData();
+              }
+            } finally {
+              setSaving(false);
             }
           },
         },
@@ -162,9 +166,13 @@ const BatchView = ({navigation, route}) => {
           text: 'Hapus',
           style: 'destructive',
           onPress: async () => {
-            let response = await cancelBatch({id: item.id});
-            if (response) {
-              RootNavigation.goBack();
+            try {
+              const response = await cancelBatch({id: item.id});
+              if (response) {
+                RootNavigation.goBack();
+              }
+            } catch (error) {
+              console.log('Delete batch error:', error);
             }
           },
         },
@@ -176,18 +184,22 @@ const BatchView = ({navigation, route}) => {
     if (!shipmentNumber || !shipmentPrice || !warehouseId) {
       return;
     }
+    if (shipping) return;
     setShipping(true);
-    let response = await shippingBatch({
-      id: data.id,
-      weight: weight,
-      shipment_number: shipmentNumber,
-      shipment_price: shipmentPrice,
-      shipment_currency: shipmentCurrency,
-      warehouse_id: warehouseId,
-    });
-    setShipping(false);
-    if (response) {
-      RootNavigation.goBack();
+    try {
+      const response = await shippingBatch({
+        id: data.id,
+        weight,
+        shipment_number: shipmentNumber,
+        shipment_price: shipmentPrice,
+        shipment_currency: shipmentCurrency,
+        warehouse_id: warehouseId,
+      });
+      if (response) {
+        RootNavigation.goBack();
+      }
+    } finally {
+      setShipping(false);
     }
   };
 

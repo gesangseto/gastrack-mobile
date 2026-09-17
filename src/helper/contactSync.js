@@ -4,24 +4,11 @@ import Contacts from 'react-native-contacts';
 import Toast from 'react-native-toast-message';
 import {storage} from '../storage';
 import {syncCustomer} from '../resource/Customer';
+import {normalizePhone} from './phone';
+
+export {normalizePhone};
 
 const SYNC_FLAG = 'contact_synced';
-
-/**
- * Normalisasi nomor HP kontak:
- * - Hapus spasi, strip, tanda kurung
- * - Ubah awalan 0 menjadi +62 (Indonesia)
- * - Batasi 18 karakter (sesuai kolom mst_customer.phone)
- */
-export const normalizePhone = raw => {
-  if (!raw) return null;
-  let phone = String(raw).replace(/[\s\-().]/g, '');
-  if (phone.startsWith('0')) phone = `+62${phone.slice(1)}`;
-  else if (phone.startsWith('62') && !phone.startsWith('+')) {
-    phone = `+${phone}`;
-  }
-  return phone.slice(0, 18) || null;
-};
 
 /**
  * Minta permission kontak (Android READ_CONTACTS).
@@ -39,6 +26,7 @@ export const requestContactsPermission = async () => {
   // BLOCKED / UNAVAILABLE — tidak bisa diminta lagi
   return false;
 };
+
 
 /**
  * Baca kontak dari perangkat dan petakan ke format mst_customer.
@@ -77,7 +65,6 @@ export const syncContactsIfNeeded = async () => {
   if (storage.getBoolean(SYNC_FLAG)) return; // sudah pernah sync
   const granted = await requestContactsPermission();
   if (!granted) {
-    storage.set(SYNC_FLAG, true); // jangan tanya lagi
     return;
   }
   try {
@@ -93,10 +80,9 @@ export const syncContactsIfNeeded = async () => {
         text1: 'Kontak Tersinkron',
         text2: `${result.inserted || 0} customer baru ditambahkan`,
       });
+      storage.set(SYNC_FLAG, true);
     }
   } catch (error) {
     console.log('Contact sync error:', error);
-  } finally {
-    storage.set(SYNC_FLAG, true);
   }
 };

@@ -13,9 +13,7 @@ export function goBack() {
 }
 
 export function navigateReplace(name, param) {
-  try {
-    navigationRef.current.dispatch(StackActions.replace(name, param));
-  } catch (error) {
-    console.log(error);
-  }
+  if (!navigationRef.current?.isReady?.()) return false;
+  navigationRef.current.dispatch(StackActions.replace(name, param));
+  return true;
 }

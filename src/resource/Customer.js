@@ -1,5 +1,6 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
+import {normalizePhone} from '../helper/phone';
 let url = `/api/v1/master/customer`;
 
 // List customer dari mst_customer (search = LIKE name/phone/address)
@@ -36,9 +37,16 @@ export const getListCustomer = async (property = {}, useAlert = true) => {
 // Resolve data customer yang baru dibuat (berisi id) agar bisa dipakai
 // sebagai customer_id saat menyimpan item.
 export const createCustomer = async (Params = {}) => {
+  const payload = {
+    ...Params,
+    phone: normalizePhone(Params.phone),
+    ...(Params.phone_alt
+      ? {phone_alt: normalizePhone(Params.phone_alt)}
+      : {}),
+  };
   return new Promise(resolve => {
     $axios
-      .put(url, Params)
+      .put(url, payload)
       .then(result => {
         let data = result.data;
         if (data.error) {
@@ -69,9 +77,16 @@ export const createCustomer = async (Params = {}) => {
 
 // Update customer (mst_customer) — wajib id. Phone dinormalisasi +62 di backend.
 export const updateCustomer = async (Params = {}) => {
+  const payload = {
+    ...Params,
+    ...(Params.phone ? {phone: normalizePhone(Params.phone)} : {}),
+    ...(Params.phone_alt
+      ? {phone_alt: normalizePhone(Params.phone_alt)}
+      : {}),
+  };
   return new Promise(resolve => {
     $axios
-      .post(url, Params)
+      .post(url, payload)
       .then(result => {
         let data = result.data;
         if (data.error) {

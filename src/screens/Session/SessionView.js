@@ -85,8 +85,11 @@ const SessionView = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useFocusEffect(
@@ -167,15 +170,18 @@ const SessionView = () => {
       return;
     }
     setBusy(true);
-    const ok = await createSession({
-      country: form.country,
-      symbol_currency: form.symbol_currency,
-      currency: rate,
-      price_code_unit: form.price_code_unit,
-    });
-    setBusy(false);
-    if (ok) {
-      load();
+    try {
+      const ok = await createSession({
+        country: form.country,
+        symbol_currency: form.symbol_currency,
+        currency: rate,
+        price_code_unit: form.price_code_unit,
+      });
+      if (ok) {
+        await load();
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -184,10 +190,13 @@ const SessionView = () => {
       return;
     }
     setBusy(true);
-    const ok = await closeSession(activeSession.id, {});
-    setBusy(false);
-    if (ok) {
-      load();
+    try {
+      const ok = await closeSession(activeSession.id, {});
+      if (ok) {
+        await load();
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -202,10 +211,13 @@ const SessionView = () => {
       return;
     }
     setRateSaving(true);
-    const ok = await updateSessionRate(rate);
-    setRateSaving(false);
-    if (ok) {
-      load();
+    try {
+      const ok = await updateSessionRate(rate);
+      if (ok) {
+        await load();
+      }
+    } finally {
+      setRateSaving(false);
     }
   };
 

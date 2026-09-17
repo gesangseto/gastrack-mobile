@@ -34,7 +34,7 @@ $axios.interceptors.request.use(
 $axios.interceptors.response.use(
   response => {
     let res = response.data;
-    if (res && res.status_code && res.status_code == '401') {
+    if (res && String(res.status_code) === '401') {
       Toast.show({
         type: 'error',
         text1: '401',
@@ -43,6 +43,9 @@ $axios.interceptors.response.use(
       // Token invalid/expired → logout & kembali ke halaman login
       removeProfile();
       RootNavigation.navigateReplace('LoginView');
+      const error = new Error(res.message || 'Unauthorized');
+      error.response = response;
+      return Promise.reject(error);
     }
     return Promise.resolve(response);
   },
