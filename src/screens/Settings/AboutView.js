@@ -9,6 +9,60 @@ import {
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 
+const flowSteps = [
+  {
+    number: '1',
+    title: 'Session',
+    description: 'Buka periode Jastip aktif',
+  },
+  {
+    number: '2',
+    title: 'Item Registry',
+    description: 'Daftarkan barang dan customer',
+  },
+  {
+    number: '3',
+    title: 'Batch',
+    description: 'Kelompokkan barang untuk dikirim',
+  },
+  {
+    number: '4',
+    title: 'Inbound / GRN',
+    description: 'Terima dan verifikasi barang',
+    branches: [
+      {
+        title: 'GRN variance',
+        description: 'Catat selisih jumlah atau kondisi sebelum diproses',
+      },
+    ],
+  },
+  {
+    number: '5',
+    title: 'Picking',
+    description: 'Pilih barang dan siapkan pengiriman',
+  },
+  {
+    number: '6',
+    title: 'Courier',
+    description: 'Pilih courier, buat resi, dan tracking',
+    branches: [
+      {
+        title: 'POD',
+        description: 'Simpan bukti barang berhasil diterima',
+      },
+      {
+        title: 'Failed delivery / Return',
+        description: 'Tandai gagal antar dan proses pengembalian',
+      },
+    ],
+  },
+  {
+    number: '7',
+    title: 'Finish / Sold',
+    description: 'Konfirmasi hasil akhir transaksi',
+  },
+];
+
 const AboutView = () => {
   return (
     <View style={styles.container}>
@@ -52,24 +106,26 @@ const AboutView = () => {
           <Text style={styles.flowDescription}>
             Alur kerja dari pendaftaran barang sampai transaksi selesai.
           </Text>
-          {[
-            ['1', 'Session', 'Buka periode Jastip aktif'],
-            ['2', 'Item Registry', 'Daftarkan barang dan customer'],
-            ['3', 'Batch', 'Kelompokkan barang untuk dikirim'],
-            ['4', 'Inbound / GRN', 'Terima dan verifikasi barang'],
-            ['5', 'Picking', 'Pilih barang dan siapkan pengiriman'],
-            ['6', 'Courier', 'Kirim, tracking, dan simpan resi'],
-            ['7', 'Finish / Sold', 'Konfirmasi barang diterima customer'],
-          ].map(([number, title, description], index, flow) => (
-            <View key={title} style={styles.flowItem}>
+          {flowSteps.map((step, index) => (
+            <View key={step.title} style={styles.flowItem}>
               <View style={styles.flowMarker}>
-                <Text style={styles.flowNumber}>{number}</Text>
+                <Text style={styles.flowNumber}>{step.number}</Text>
               </View>
               <View style={styles.flowContent}>
-                <Text style={styles.flowStepTitle}>{title}</Text>
-                <Text style={styles.flowStepDescription}>{description}</Text>
+                <Text style={styles.flowStepTitle}>{step.title}</Text>
+                <Text style={styles.flowStepDescription}>
+                  {step.description}
+                </Text>
+                {step.branches?.map(branch => (
+                  <View key={branch.title} style={styles.branchItem}>
+                    <Text style={styles.branchTitle}>{branch.title}</Text>
+                    <Text style={styles.branchDescription}>
+                      {branch.description}
+                    </Text>
+                  </View>
+                ))}
               </View>
-              {index < flow.length - 1 && <View style={styles.flowLine} />}
+              {index < flowSteps.length - 1 && <View style={styles.flowLine} />}
             </View>
           ))}
         </View>
@@ -207,6 +263,25 @@ const styles = StyleSheet.create({
   flowStepDescription: {
     color: '#777',
     fontSize: 12,
+    marginTop: 2,
+  },
+  branchItem: {
+    backgroundColor: color.white,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: color.secondaryColor,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  branchTitle: {
+    color: color.primaryColor,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  branchDescription: {
+    color: '#777',
+    fontSize: 11,
     marginTop: 2,
   },
   flowLine: {
