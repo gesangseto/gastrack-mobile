@@ -28,6 +28,7 @@ import {
 } from '../../helper/phone';
 import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Toast from 'react-native-toast-message';
+import {useSessionStore} from '../../store/sessionStore';
 
 // Ubah nomor penuh (+62812... / 0812...) menjadi digit lokal (812...)
 const toLocalDigits = phone => {
@@ -258,6 +259,18 @@ useEffect(() => {
     return photo;
   };
   const save = async () => {
+    // Guard create: wajib ada session aktif (edit item tidak butuh session baru)
+    if (!formData.id) {
+      const session = await useSessionStore.getState().ensureActiveSession();
+      if (!session) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Tidak ada session aktif. Mulai session terlebih dahulu.',
+        });
+        return;
+      }
+    }
     // Validasi nomor telp (9-15 digit setelah +62)
     if (!isValidPhone(formData.customer_phone)) {
       Toast.show({

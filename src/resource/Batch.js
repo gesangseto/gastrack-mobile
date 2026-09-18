@@ -48,6 +48,38 @@ export const getListBatch = async (property = {}, useAlert = true) => {
   });
 };
 
+// Ambil list batch dari endpoint item-batch (GET only) — dipakai tab Batch.
+// Mendukung filter status (array): status=Draft&status=Shipping.
+export const getListItemBatch = async (property = {}, useAlert = true) => {
+  var defaultParam = {status: [], ...property};
+  var query_string = buildQueryString(defaultParam);
+  return new Promise(resolve => {
+    $axios
+      .get(`/api/v1/jastip/item-batch?${query_string}`)
+      .then(result => {
+        let data = result.data;
+        if (data.error && useAlert) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(data.data);
+      })
+      .catch(e => {
+        if (useAlert)
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });
+        return resolve(false);
+      });
+  });
+};
+
 export const getListUnfinishBatch = async (property = {}, useAlert = true) => {
   let thisUrl = url;
   var defaultParam = {status: ['Draft', 'Shipping'], ...property};

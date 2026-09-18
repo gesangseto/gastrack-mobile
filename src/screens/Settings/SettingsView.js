@@ -54,7 +54,7 @@ const MENU = [
   },
 ];
 
-const SettingsView = ({navigation, route}) => {
+const SettingsView = ({navigation, route, inline = false}) => {
   const [profile, setProfileState] = useState(getProfile() || {});
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -90,14 +90,17 @@ const SettingsView = ({navigation, route}) => {
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
-      <StatusBar
-        barStyle={'light-content'}
-        backgroundColor={color.primaryColor}
-      />
-      <Header title="Settings" />
+      {!inline && (
+        <StatusBar
+          barStyle={'light-content'}
+          backgroundColor={color.primaryColor}
+        />
+      )}
+      {!inline && <Header title="Settings" />}
 
       {/* Kartu user */}
-      <View style={styles.body}>
+      <View style={[styles.body, inline && styles.bodyInline]}>
+        {inline && <Text style={styles.inlineTitle}>Setting</Text>}
         <View style={styles.userCard}>
           <View style={styles.userAvatar}>
             <Icon name="user" size={26} color={color.primaryColor} />
@@ -157,6 +160,19 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     padding: 24,
+  },
+  bodyInline: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    paddingTop: 12,
+    paddingBottom: 90,
+  },
+  inlineTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F1F1F',
+    marginBottom: 14,
   },
   userCard: {
     flexDirection: 'row',

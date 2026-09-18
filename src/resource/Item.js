@@ -3,12 +3,59 @@ import $axios from '../config/Api';
 // import {Toaster} from '../utils';
 let url = `/api/v1/jastip/item-registry`;
 
+// Bangun query string: array → key berulang (status=200&status=201), agar
+// Express mem-parsing menjadi array dan backend memakai IN (...).
+const buildQueryString = params => {
+  const qs = new URLSearchParams();
+  Object.keys(params).forEach(key => {
+    const val = params[key];
+    if (Array.isArray(val)) {
+      val.forEach(v => qs.append(key, v));
+    } else if (val !== undefined && val !== null && val !== '') {
+      qs.append(key, val);
+    }
+  });
+  return qs.toString();
+};
+
 export const getListItem = async (property = {}, useAlert = true) => {
   var defaultParam = {status: 200, ...property};
-  var query_string = new URLSearchParams(defaultParam).toString();
+  var query_string = buildQueryString(defaultParam);
   return new Promise(resolve => {
     $axios
       .get(`${url}?${query_string}`)
+      .then(result => {
+        let data = result.data;
+        if (data.error && useAlert) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        return resolve(data.data);
+      })
+      .catch(e => {
+        if (useAlert)
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: e.message,
+          });
+        return resolve(false);
+      });
+  });
+};
+
+// Ambil list item dari endpoint item-stock (GET only) — dipakai tab Item.
+// Mendukung filter status (array), phone, dan search (nama customer / barcode).
+export const getListItemStock = async (property = {}, useAlert = true) => {
+  var defaultParam = {status: 200, ...property};
+  var query_string = buildQueryString(defaultParam);
+  return new Promise(resolve => {
+    $axios
+      .get(`/api/v1/jastip/item-stock?${query_string}`)
       .then(result => {
         let data = result.data;
         if (data.error && useAlert) {

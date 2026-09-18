@@ -10,16 +10,24 @@ import {
   View,
 } from 'react-native';
 import color from '../constant/color';
-import * as RootNavigation from '../config/RootNavigation';
 import {syncContactsIfNeeded} from '../helper/contactSync';
+import BatchTab from './Batchs/BatchTab';
 import Home from './Home/Home';
-import Statistik from './Statistik/Statistik';
+import ItemTab from './Items/ItemTab';
+import PaymentTab from './Payment/PaymentTab';
+import SettingsView from './Settings/SettingsView';
+
+// Urutan bottom navigation: Home • Batch • Item • Payment • Setting
+const TAB_ITEMS = [
+  {name: 'Home', icon: 'house', label: 'Home'},
+  {name: 'Batch', icon: 'layers', label: 'Batch'},
+  {name: 'Item', icon: 'package', label: 'Item'},
+  {name: 'Payment', icon: 'wallet', label: 'Payment'},
+  {name: 'Setting', icon: 'settings', label: 'Setting'},
+];
 
 const TabView = () => {
-  const [activeTab, setActiveTab] = useState({name: 'Home', param: null});
-  const handleTabChange = (tabName, param = null) => {
-    setActiveTab({name: tabName, param});
-  };
+  const [activeTab, setActiveTab] = useState('Home');
 
   // Saat aplikasi pertama dibuka (setelah login): minta permission kontak,
   // jika disetujui sinkronkan kontak ke mst_customer (hanya sekali).
@@ -27,51 +35,40 @@ const TabView = () => {
     syncContactsIfNeeded();
   }, []);
 
+  const renderTabButton = item => {
+    const active = activeTab === item.name;
+    return (
+      <TouchableOpacity
+        key={item.name}
+        onPress={() => setActiveTab(item.name)}
+        style={styles.tabButton}>
+        <View style={[styles.tabInner, active && styles.activeTab]}>
+          <Icon
+            name={item.icon}
+            size={22}
+            color={active ? color.primaryColor : '#9A9A9A'}
+          />
+          <Text
+            style={[styles.tabLabel, active && styles.tabLabelActive]}
+            numberOfLines={1}>
+            {item.label}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar barStyle={'dark-content'} backgroundColor={color.white} />
-      {activeTab.name === 'Home' && <Home param={activeTab.param} />}
-      {activeTab.name === 'Statistik' && <Statistik param={activeTab.param} />}
+      {activeTab === 'Home' && <Home />}
+      {activeTab === 'Batch' && <BatchTab />}
+      {activeTab === 'Item' && <ItemTab />}
+      {activeTab === 'Payment' && <PaymentTab />}
+      {activeTab === 'Setting' && <SettingsView inline />}
 
       <View style={{position: 'absolute', bottom: 0, left: 0, right: 0}}>
-        <View style={styles.wrapper}>
-          <TouchableOpacity
-            onPress={() => handleTabChange('Home')}
-            style={styles.tabButton}>
-            <View style={activeTab.name == 'Home' ? styles.activeTab : null}>
-              <View>
-                <Icon name="house" size={24} color={color.primaryColor} />
-              </View>
-              {activeTab.name == 'Home' && (
-                <Text style={{fontSize: 12, color: color.primaryColor}}>
-                  Home
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {/* Tombol Add (tengah) — buka form Item Registry */}
-          <TouchableOpacity
-            onPress={() => RootNavigation.navigate('ItemCreate')}
-            style={styles.addButton}>
-            <Icon name="plus" size={30} color={color.white} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleTabChange('Statistik')}
-            style={styles.tabButton}>
-            <View style={activeTab.name == 'Statistik' ? styles.activeTab : null}>
-              <View>
-                <Icon name="chart-bar" size={24} color={color.primaryColor} />
-              </View>
-              {activeTab.name == 'Statistik' && (
-                <Text style={{fontSize: 12, color: color.primaryColor}}>
-                  Statistik
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
+        <View style={styles.wrapper}>{TAB_ITEMS.map(renderTabButton)}</View>
       </View>
     </SafeAreaView>
   );
@@ -83,47 +80,40 @@ const styles = StyleSheet.create({
   wrapper: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     flexDirection: 'row',
-    padding: 4,
+    paddingTop: 4,
     height: Platform.OS === 'ios' ? 80 : 70,
     backgroundColor: '#fff',
-
     paddingBottom: Platform.OS === 'ios' ? 17 : 5,
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     elevation: 1,
   },
-  activeTab: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    backgroundColor: color.primaryLight,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 30,
-  },
   tabButton: {
-    minWidth: 100,
-    minHeight: 40,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: color.primaryColor,
+  tabInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -26,
-    shadowColor: color.primaryColor,
-    shadowOpacity: 0.4,
-    shadowOffset: {width: 0, height: 6},
-    shadowRadius: 12,
-    elevation: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 16,
+    width: '100%',
+  },
+  activeTab: {
+    backgroundColor: color.primaryLight,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#9A9A9A',
+    marginTop: 2,
+  },
+  tabLabelActive: {
+    color: color.primaryColor,
   },
 });

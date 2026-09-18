@@ -16,7 +16,11 @@ import {
 import color from '../../constant/color';
 import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Header from '../../layouts/Header';
-import {closeSession, createSession, getSessionList, updateSessionRate} from '../../resource/Session';
+import {
+  closeSession,
+  createSession,
+  updateSessionRate,
+} from '../../resource/Session';
 import {fetchCountries, fetchExchangeRate} from '../../resource/Country';
 import {fetchSysConfig} from '../../resource/Configuration';
 import {getSysConfig} from '../../storage';
@@ -27,8 +31,6 @@ const SessionView = () => {
   const dashboard = useHomeStore(s => s.dashboard);
   const fetchHome = useHomeStore(s => s.fetchHome);
 
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -65,21 +67,10 @@ const SessionView = () => {
   }, [activeSession?.currency]);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    // Safety: form harus selalu tampil, jangan sampai loading selamanya
-    // (misal request menggantung karena endpoint tidak terjangkau).
-    const timer = setTimeout(() => setLoading(false), 10000);
     try {
       await fetchHome(false);
-      const list = await getSessionList({}, false);
-      if (list) {
-        setHistory(list);
-      }
     } catch (e) {
       console.log('load session error', e);
-    } finally {
-      clearTimeout(timer);
-      setLoading(false);
     }
   }, [fetchHome]);
 
@@ -273,13 +264,17 @@ const SessionView = () => {
                 <View style={styles.activeIcon}>
                   <Icon name="play" size={22} color={color.white} />
                 </View>
-                <View style={{flex: 1}}>
+                <View style={styles.activeNoWrap}>
                   <Text style={styles.activeLabel}>Session Aktif</Text>
-                  <Text style={styles.activeNo}>{activeSession.session_no}</Text>
-                </View>
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>Berjalan</Text>
+                  <Text style={styles.activeNo} numberOfLines={2}>
+                    {activeSession.session_no}
+                  </Text>
+                  <View style={styles.activeStatusRow}>
+                    <View style={styles.liveBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveText}>Berjalan</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
 
@@ -386,7 +381,11 @@ const SessionView = () => {
           ) : (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIcon}>
-                <Icon name="calendar-plus" size={30} color={color.primaryColor} />
+                <Icon
+                  name="calendar-plus"
+                  size={30}
+                  color={color.primaryColor}
+                />
               </View>
               <Text style={styles.emptyTitle}>Buka Session Baru</Text>
               <Text style={styles.emptyDesc}>
@@ -410,14 +409,20 @@ const SessionView = () => {
               <Text style={styles.fieldLabel}>Symbol Mata Uang</Text>
               <View style={styles.currencyBox}>
                 <Text style={styles.pickerValue}>{form.symbol_currency}</Text>
-                <Icon name="badge-dollar-sign" size={18} color={color.primaryColor} />
+                <Icon
+                  name="badge-dollar-sign"
+                  size={18}
+                  color={color.primaryColor}
+                />
               </View>
               <Text style={styles.fieldHint}>
                 Symbol otomatis dari negara terpilih (mst_currency).
               </Text>
 
               {/* Rate konversi (otomatis dari API kurs, bisa diedit) */}
-              <Text style={styles.fieldLabel}>Rate Konversi (1 unit = X IDR)</Text>
+              <Text style={styles.fieldLabel}>
+                Rate Konversi (1 unit = X IDR)
+              </Text>
               <View style={styles.rateBox}>
                 <TextInput
                   style={styles.rateInput}
@@ -446,9 +451,7 @@ const SessionView = () => {
                 ) : (
                   <TouchableOpacity
                     onPress={() => {
-                      const c = countries.find(
-                        it => it.name === form.country,
-                      );
+                      const c = countries.find(it => it.name === form.country);
                       if (c && c.currency_code && c.currency_code !== 'IDR') {
                         setRateLoading(true);
                         fetchExchangeRate(c.currency_code).then(rate => {
@@ -462,7 +465,11 @@ const SessionView = () => {
                         });
                       }
                     }}>
-                    <Icon name="refresh-cw" size={18} color={color.primaryColor} />
+                    <Icon
+                      name="refresh-cw"
+                      size={18}
+                      color={color.primaryColor}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -518,53 +525,6 @@ const SessionView = () => {
                 <Text style={styles.startBtnText}>Mulai Session</Text>
               </TouchableOpacity>
             </View>
-          )}
-
-          {loading ? (
-            <ActivityIndicator
-              size="small"
-              color={color.primaryColor}
-              style={{marginTop: 24}}
-            />
-          ) : (
-            history.length > 0 && (
-              <View style={styles.historySection}>
-                <Text style={styles.historyTitle}>Riwayat Session</Text>
-                {history.map((s, i) => (
-                  <View key={s.id || i} style={styles.historyItem}>
-                    <View style={styles.historyIcon}>
-                      <Icon
-                        name={s.status === 'Active' ? 'play' : 'check'}
-                        size={16}
-                        color={
-                          s.status === 'Active' ? color.success : '#9A9A9A'
-                        }
-                      />
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.historyNo}>{s.session_no}</Text>
-                      <Text style={styles.historyDate}>
-                        {formatDate(s.start_session_date)}
-                        {s.finish_session_date
-                          ? ` → ${formatDate(s.finish_session_date)}`
-                          : ''}
-                      </Text>
-                      <Text style={styles.historyMeta}>
-                        {s.country || '-'} · {s.symbol_currency || '-'} · Rate{' '}
-                        {s.currency || '-'} · {unitLabel(s.price_code_unit)}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.historyStatus,
-                        s.status === 'Active' && styles.historyStatusActive,
-                      ]}>
-                      {s.status}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )
           )}
         </ScrollView>
       </View>
@@ -648,8 +608,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeIcon: {
-    width: 44,
-    height: 44,
+    width: 60,
+    height: 60,
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
@@ -661,11 +621,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  activeNoWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  activeStatusRow: {
+    flexDirection: 'row',
+    marginTop: 5,
+  },
   activeNo: {
     color: color.white,
     fontSize: 18,
     fontWeight: '700',
     marginTop: 2,
+    flexShrink: 1,
   },
   liveBadge: {
     flexDirection: 'row',
@@ -932,58 +901,6 @@ const styles = StyleSheet.create({
   },
   btnDisabled: {
     opacity: 0.6,
-  },
-  historySection: {
-    marginTop: 24,
-  },
-  historyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1F1F1F',
-    marginBottom: 10,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: color.white,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F0F0F5',
-    padding: 12,
-    marginBottom: 8,
-  },
-  historyIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: color.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  historyNo: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F1F1F',
-  },
-  historyDate: {
-    fontSize: 11,
-    color: '#9A9A9A',
-    marginTop: 2,
-  },
-  historyMeta: {
-    fontSize: 11,
-    color: color.primaryColor,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  historyStatus: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9A9A9A',
-  },
-  historyStatusActive: {
-    color: color.success,
   },
   modalOverlay: {
     flex: 1,

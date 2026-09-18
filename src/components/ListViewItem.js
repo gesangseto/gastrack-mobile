@@ -5,6 +5,7 @@ import {
   FlatList,
   RefreshControl,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -17,7 +18,7 @@ import {getSysConfig} from '../storage';
 import ItemCard from './ItemCard';
 
 const ListViewItem = props => {
-  const {list, refresh} = props;
+  const {list, refresh, inline = false, emptyText} = props;
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Data untuk siklus harga di ItemCard (titik 2 & 3)
@@ -35,9 +36,7 @@ const ListViewItem = props => {
     const cfg = getSysConfig() || {};
     setConfig(cfg);
     fetchCountries().then(countries => {
-      const c = (countries || []).find(
-        x => x.currency_code === cfg.currency,
-      );
+      const c = (countries || []).find(x => x.currency_code === cfg.currency);
       setConfigSymbol(c?.currency_symbol || cfg.currency || '');
     });
     // Rate mata uang sys_configuration bila bukan IDR (titik 3)
@@ -102,11 +101,19 @@ const ListViewItem = props => {
     );
   };
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, inline && styles.containerInline]}>
       <FlatList
-        data={list}
+        data={list || []}
         renderItem={({item, index}) => renderItem(item, index)}
         keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+        contentContainerStyle={inline ? styles.listContentInline : undefined}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              {emptyText || 'Tidak ada data'}
+            </Text>
+          </View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -130,6 +137,24 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 35,
     paddingHorizontal: 20,
     paddingVertical: 15,
+  },
+  containerInline: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  listContentInline: {
+    paddingBottom: 90,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: '#9A9A9A',
   },
   actions: {
     flexDirection: 'row',

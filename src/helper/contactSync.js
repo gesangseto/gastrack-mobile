@@ -4,7 +4,7 @@ import Contacts from 'react-native-contacts';
 import Toast from 'react-native-toast-message';
 import {storage} from '../storage';
 import {syncCustomer} from '../resource/Customer';
-import {normalizePhone} from './phone';
+import {normalizePhone, normalizeEmail, normalizeText} from './phone';
 
 export {normalizePhone};
 
@@ -36,17 +36,26 @@ export const readContacts = async () => {
   const seen = new Set();
   const rows = [];
   for (const c of contacts) {
-    const name = [c.givenName, c.familyName].filter(Boolean).join(' ').trim();
-    const phone = normalizePhone(c.phoneNumbers?.[0]?.number);
+    // Ambil nomor valid pertama dari seluruh nomor kontak
+    const phone = (c.phoneNumbers || [])
+      .map(p => normalizePhone(p.number))
+      .find(Boolean);
     if (!phone || seen.has(phone)) continue; // lewati tanpa nomor / duplikat
     seen.add(phone);
-    const email = c.emailAddresses?.[0]?.email || null;
+
+    const name = normalizeText(
+      [c.givenName, c.familyName].filter(Boolean).join(' '),
+    );
+    const email = normalizeEmail(c.emailAddresses?.[0]?.email);
     const addr = c.postalAddresses?.[0];
     const address = addr
-      ? [addr.street, addr.city, addr.region, addr.postCode]
-          .filter(Boolean)
-          .join(', ')
+      ? normalizeText(
+          [addr.street, addr.city, addr.region, addr.postCode]
+            .filter(Boolean)
+            .join(', '),
+        )
       : null;
+
     rows.push({
       name: name || phone, // wajib ada nama
       phone,

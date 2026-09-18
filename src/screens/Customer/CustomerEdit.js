@@ -11,7 +11,7 @@ import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {updateCustomer} from '../../resource/Customer';
+import {createCustomer, updateCustomer} from '../../resource/Customer';
 import {getSysConfig} from '../../storage';
 
 // Ubah nomor penuh (+62812... / 0812...) menjadi digit lokal (812...)
@@ -27,6 +27,8 @@ const toLocalDigits = phone => {
 };
 
 const CustomerEdit = ({navigation, route}) => {
+  // Tanpa param `item` = mode tambah customer baru.
+  const isEdit = !!route?.params?.item;
   const phonePrefix = getSysConfig()?.country_code || '+62';
   const [formData, setFormData] = useState({
     id: null,
@@ -54,6 +56,8 @@ const CustomerEdit = ({navigation, route}) => {
         status: item.status || 'Active',
       });
     }
+    // Hanya saat mount: form diisi dari item yang dikirim via route params.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setField = (key, value) => {
@@ -65,8 +69,7 @@ const CustomerEdit = ({navigation, route}) => {
       return;
     }
     setSaving(true);
-    let response = await updateCustomer({
-      id: formData.id,
+    const payload = {
       name: formData.name,
       pic: formData.pic || null,
       phone: formData.phone,
@@ -74,7 +77,10 @@ const CustomerEdit = ({navigation, route}) => {
       email: formData.email || null,
       address: formData.address || null,
       status: formData.status,
-    });
+    };
+    let response = isEdit
+      ? await updateCustomer({id: formData.id, ...payload})
+      : await createCustomer(payload);
     setSaving(false);
     if (response) {
       RootNavigation.goBack();
@@ -87,7 +93,7 @@ const CustomerEdit = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title="Edit Customer" />
+      <Header title={isEdit ? 'Edit Customer' : 'Tambah Customer'} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={{paddingBottom: 40}}>

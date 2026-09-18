@@ -16,7 +16,7 @@ import color from '../constant/color';
 import {printBarcode} from '../helper/helper';
 
 const ListViewBatch = props => {
-  const {list, refresh} = props;
+  const {list, refresh, inline = false, emptyText} = props;
   const [isLoading, setIsLoading] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const handlePressPrint = async item => {
@@ -57,9 +57,16 @@ const ListViewBatch = props => {
           <Text style={styles.batchNo} numberOfLines={1}>
             {item?.batch_no}
           </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            Quantity: {item?.quantity} • {item?.status}
-          </Text>
+          <View style={styles.subRow}>
+            <View style={styles.qtyBadge}>
+              <Text style={styles.qtyBadgeText} numberOfLines={1}>
+                {item?.quantity} pcs
+              </Text>
+            </View>
+            <Text style={styles.sub} numberOfLines={1}>
+              {item?.status}
+            </Text>
+          </View>
           <Text style={styles.date}>
             {moment(item?.created_date).format('YY-MM-DD HH:mm')}
           </Text>
@@ -87,11 +94,17 @@ const ListViewBatch = props => {
     );
   };
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, inline && styles.containerInline]}>
       <FlatList
-        data={list}
+        data={list || []}
         renderItem={({item, index}) => renderItem(item, index)}
         keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+        contentContainerStyle={inline ? styles.listContentInline : undefined}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{emptyText || 'Tidak ada data'}</Text>
+          </View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -115,6 +128,24 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 35,
     paddingHorizontal: 20,
     paddingVertical: 15,
+  },
+  containerInline: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  listContentInline: {
+    paddingBottom: 90,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: '#9A9A9A',
   },
   card: {
     flexDirection: 'row',
@@ -147,6 +178,23 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     fontSize: 12,
     marginTop: 2,
+  },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  qtyBadge: {
+    backgroundColor: color.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 6,
+  },
+  qtyBadgeText: {
+    color: color.primaryColor,
+    fontSize: 11,
+    fontWeight: '700',
   },
   date: {
     color: '#C4C4C4',

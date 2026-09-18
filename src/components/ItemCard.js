@@ -1,6 +1,12 @@
 import Icon from '@react-native-vector-icons/lucide';
 import React, {useEffect, useState} from 'react';
-import {Pressable, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import color from '../constant/color';
 import {PRICE_UNIT_LIST} from '../constant/priceUnit';
 import ImageThumbnail from './ImageThumbnail';
@@ -13,13 +19,11 @@ import ImageThumbnail from './ImageThumbnail';
 // Info yang ditampilkan: Photo, Nama, Phone, Price code (cost->selling), Status
 //
 // Mode priceCycle (dipakai List Item): bagian bawah harga bisa diklik dan
-// berputar 3 titik:
-//   1. kode harga + unit (nol): "BCD (000) → FED (000)"
-//   2. konversi ke mata uang session jastip: "(P) 123 → (P) 417"
-//   3. konversi ke mata uang sys_configuration: "(Rp) 160023 → (Rp) 543000"
-// Konversi memakai snapshot item: cost_currency/cost_unit (dari session),
-// selling_currency/selling_unit (dari sys_configuration), exchange_rate
-// (1 unit cost_currency = X IDR).
+// berputar 3 titik data dari cyclePrice():
+//   1. kode harga + unit: "Code: BCD (000) -> FED (000)"
+//   2. mata uang cost: "USD: 123 -> 417"
+//   3. mata uang selling: "IDR: 160023 -> 543000"
+// Klik ke-4 → kembali ke titik 1.
 const ItemCard = ({
   item,
   onPress,
@@ -35,11 +39,11 @@ const ItemCard = ({
   configRate = 1,
 }) => {
   const [showNumbers, setShowNumbers] = useState(false);
-  const [priceView, setPriceView] = useState(0);
+  const [priceView, setPriceView] = useState(-1); // -1 = belum diklik
   // Reset toggle saat item berubah (list di-refresh / item diganti)
   useEffect(() => {
     setShowNumbers(false);
-    setPriceView(0);
+    setPriceView(-1);
   }, [item?.id]);
 
   const handlePress = onPress || (onToggle ? () => onToggle(item) : undefined);
@@ -50,64 +54,87 @@ const ItemCard = ({
   const sellingCode = item?.selling_code;
   const hasCode = !!(costCode || sellingCode);
 
-  // ===== Mode siklus harga (List Item) =====
-  const unitZeros = unit => {
-    const u = PRICE_UNIT_LIST.find(x => x.value === unit);
-    return u ? u.multiplier : '';
+  // Format angka: digenapkan ke atas + titik ribuan (1.000.000)
+  const fmtAngka = v => {
+    if (v == null || v === '') return '-';
+    const n = Math.ceil(Number(v));
+    if (isNaN(n)) return '-';
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
-  // Snapshot kolom item_stock (fallback ke session/config untuk item lama)
-  const costCurrency = item?.cost_currency || session?.currency_code || 'IDR';
-  const sellingCurrency = item?.selling_currency || 'IDR';
-  const configCurrency = config?.currency || 'IDR';
-  const exchangeRate = Number(item?.exchange_rate) || Number(session?.currency) || 1;
-  const sessionSymbol = session?.symbol_currency || '';
-  const costUnitZ = unitZeros(item?.cost_unit || session?.price_code_unit);
-  const sellingUnitZ = unitZeros(item?.selling_unit || config?.price_unit_code);
+
+  // ===== Mode siklus harga (List Item) =====
+  // Klik area harga → tampilkan 3 titik data dari cyclePrice() bergantian:
+  //   1. kode harga + unit: "Code: BCD (000) -> FED (000)"
+  //   2. mata uang cost: "USD: 123 -> 417"
+  //   3. mata uang selling: "IDR: 160023 -> 543000"
+  // Klik ke-4 → kembali ke titik 1.
   const canCycle = priceCycle && !!session && !!configSymbol;
 
-  // Konversi nilai dari mata uang asal ke tujuan, lewat IDR sebagai jembatan.
-  // exchangeRate = 1 unit cost_currency = X IDR; configRate = 1 unit
-  // config_currency = X IDR.
-  const convert = (value, from, to) => {
-    if (value == null || value === '') return null;
-    const num = Number(value);
-    if (from === to) return num;
-    const inIdr = from === 'IDR' ? num : num * exchangeRate;
-    if (to === 'IDR') return inIdr;
-    return inIdr / configRate;
+  // Data 3 titik harga yang diputar saat price diklik
+  const cyclePrice = () => {
+    let cost_angka = null;
+    let sell_angka = null;
+    if (item.cost_unit !== 'none')
+      cost_angka = PRICE_UNIT_LIST.find(it => it.value == item.cost_unit);
+    if (item.selling_unit !== 'none')
+      sell_angka = PRICE_UNIT_LIST.find(it => it.value == item.selling_unit);
+
+    let cost = `${item.cost_code}${
+      cost_angka ? ` (${cost_angka.multiplier})` : ``
+    }`;
+    let sell = `${item.selling_code}${
+      sell_angka ? ` (${sell_angka.multiplier})` : ``
+    }`;
+
+    // exchange_rate = 1 unit cost_currency = X IDR (fallback 1 agar tidak NaN)
+    const rate = Number(item.exchange_rate) || 1;
+
+    return [
+      `Code: ${cost} -> ${sell}`,
+      `${item.cost_currency}: ${fmtAngka(item.cost_price)} -> ${fmtAngka(
+        item.selling_price / rate,
+      )}`,
+      `${item.selling_currency}: ${fmtAngka(item.cost_price * rate)} -> ${fmtAngka(
+        item.selling_price,
+      )}`,
+    ];
   };
-  const fmt = v => (v == null || isNaN(v) ? '-' : Math.round(v));
 
-  // Titik 1: kode harga + unit (nol) — "code(unit)"
-  const codeText = `${costCode ?? '-'}${costUnitZ ? ` (${costUnitZ})` : ''} → ${sellingCode ?? '-'}${sellingUnitZ ? ` (${sellingUnitZ})` : ''}`;
-  // Titik 2: konversi ke mata uang session jastip (cost sudah dalam
-  // cost_currency = mata uang session; selling dikonversi dari selling_currency)
-  const sessionText = `(${sessionSymbol}) ${fmt(cost)} → (${sessionSymbol}) ${fmt(convert(selling, sellingCurrency, costCurrency))}`;
-  // Titik 3: konversi ke mata uang sys_configuration (cost & selling
-  // dikonversi dari masing-masing mata uang snapshot)
-  const configText = `(${configSymbol}) ${fmt(convert(cost, costCurrency, configCurrency))} → (${configSymbol}) ${fmt(convert(selling, sellingCurrency, configCurrency))}`;
-
-  const cycleViews = [codeText, sessionText, configText];
-  const cyclePrice = () => setPriceView(v => (v + 1) % cycleViews.length);
+  // Klik price → titik berikutnya (1 → 2 → 3 → kembali ke 1)
+  const handleCyclePrice = () => {
+    setPriceView(v => (v + 1) % 3);
+  };
 
   // Default tampil cost_code → selling_code; tap icon eye → tampil angka
-  const priceText = canCycle
-    ? cycleViews[priceView % cycleViews.length]
-    : hasCode
-      ? showNumbers
-        ? `${cost ?? '-'} → ${selling ?? '-'}`
-        : `${costCode ?? '-'} → ${sellingCode ?? '-'}`
-      : `${cost ?? '-'} → ${selling ?? '-'}`;
+  const defaultPrice = hasCode
+    ? showNumbers
+      ? `${fmtAngka(cost)} → ${fmtAngka(selling)}`
+      : `${costCode ?? '-'} → ${sellingCode ?? '-'}`
+    : `${fmtAngka(cost)} → ${fmtAngka(selling)}`;
+
+  // priceView = -1 → belum diklik (tampil default); >= 0 → titik cyclePrice
+  const priceText =
+    canCycle && priceView >= 0 ? cyclePrice()[priceView] : defaultPrice;
 
   return (
     <Pressable
       onPress={handlePress}
       style={[styles.card, selected && styles.cardSelected]}>
-      <ImageThumbnail
-        filename={item?.photo_thumbnail || item?.photo_path}
-        size={size}
-        radius={10}
-      />
+      <View style={styles.boxImage}>
+        <ImageThumbnail
+          filename={item?.photo_thumbnail || item?.photo_path}
+          size={size}
+          radius={10}
+        />
+        <View style={styles.statusRow}>
+          <View style={styles.statusDot} />
+          <Text
+            style={[styles.statusText, {maxWidth: size - 10}]}
+            numberOfLines={1}>
+            {item?.status_name || item?.status}
+          </Text>
+        </View>
+      </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
           {item?.customer_name}
@@ -117,38 +144,18 @@ const ItemCard = ({
         </Text>
         <View style={styles.bottomRow}>
           <View style={styles.priceRow}>
-            {canCycle ? (
-              <TouchableOpacity
-                onPress={cyclePrice}
-                style={styles.priceTouch}
-                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                <Text style={styles.price} numberOfLines={1}>
-                  {priceText}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <>
-                <Text style={styles.price} numberOfLines={1}>
-                  {priceText}
-                </Text>
-                {hasCode && (
-                  <TouchableOpacity
-                    onPress={() => setShowNumbers(v => !v)}
-                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                    <Icon
-                      name={showNumbers ? 'eye-off' : 'eye'}
-                      size={14}
-                      color={color.primaryColor}
-                    />
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+            <TouchableOpacity
+              onPress={handleCyclePrice}
+              style={styles.priceTouch}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+              <Text style={styles.price} numberOfLines={1}>
+                {priceText}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.statusRow}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText} numberOfLines={1}>
-              {item?.status_name || item?.status}
+          <View style={styles.qtyBadge}>
+            <Text style={styles.qtyBadgeText} numberOfLines={1}>
+              {item?.quantity} pcs
             </Text>
           </View>
         </View>
@@ -222,6 +229,20 @@ const styles = StyleSheet.create({
   },
   priceTouch: {
     flexShrink: 1,
+  },
+  qtyBadge: {
+    backgroundColor: color.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  qtyBadgeText: {
+    color: color.primaryColor,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  boxImage: {
+    alignItems: 'center',
   },
   statusRow: {
     flexDirection: 'row',

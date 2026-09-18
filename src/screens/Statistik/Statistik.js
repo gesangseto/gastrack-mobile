@@ -44,7 +44,7 @@ const CloseIcon = ({style}) => (
   <Icon name="x" size={20} color="#9CA3AF" style={style} />
 );
 
-const Statistik = ({navigation, route}) => {
+const Statistik = ({navigation, route, inline = false, header = null}) => {
   // Data dashboard dibagi via Zustand store (sama dengan Home)
   const data = useHomeStore(s => s.dashboard);
   const refreshing = useHomeStore(s => s.refreshing);
@@ -168,29 +168,33 @@ const Statistik = ({navigation, route}) => {
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
-      <StatusBar
-        barStyle={'light-content'}
-        backgroundColor={color.primaryColor}
-      />
+      {!inline && (
+        <StatusBar
+          barStyle={'light-content'}
+          backgroundColor={color.primaryColor}
+        />
+      )}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Statistik</Text>
-          <Text style={styles.headerSub}>
-            {offline
-              ? 'Offline — menampilkan data terakhir'
-              : 'Ringkasan Jasa Titip Belanja'}
-          </Text>
+      {/* Header layar penuh — saat inline (di dalam Home) header disuplai Home */}
+      {!inline && (
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Statistik</Text>
+            <Text style={styles.headerSub}>
+              {offline
+                ? 'Offline — menampilkan data terakhir'
+                : 'Ringkasan Jasa Titip Belanja'}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
+            <Icon name="refresh-cw" size={20} color={color.primaryColor} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
-          <Icon name="refresh-cw" size={20} color={color.primaryColor} />
-        </TouchableOpacity>
-      </View>
+      )}
 
       <ScrollView
         style={{flex: 1}}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, inline && styles.bodyInline]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -199,6 +203,25 @@ const Statistik = ({navigation, route}) => {
             colors={[color.primaryColor]}
           />
         }>
+        {header}
+        {inline && (
+          <View style={styles.inlineHeader}>
+            <View style={{flex: 1}}>
+              <Text style={styles.inlineTitle}>Dashboard Statistik</Text>
+              <Text style={styles.inlineSub}>
+                {offline
+                  ? 'Offline — menampilkan data terakhir'
+                  : 'Ringkasan Jasa Titip Belanja'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshBtnLight}
+              onPress={onRefresh}>
+              <Icon name="refresh-cw" size={18} color={color.primaryColor} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ===== Section: Per Session Jastip ===== */}
         <View style={styles.sessionSection}>
           <View style={styles.sectionHeader}>
@@ -526,6 +549,32 @@ const styles = StyleSheet.create({
   body: {
     padding: 20,
     paddingBottom: 100,
+  },
+  bodyInline: {
+    paddingTop: 4,
+  },
+  inlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  inlineTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1F1F1F',
+  },
+  inlineSub: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    marginTop: 2,
+  },
+  refreshBtnLight: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: color.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   /* ---- Section header (pembeda) ---- */
   section: {

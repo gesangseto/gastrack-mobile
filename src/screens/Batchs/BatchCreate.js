@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import ItemCard from '../../components/ItemCard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {getListItem} from '../../resource/Item';
 import {createBatch} from '../../resource/Batch';
+import {useSessionStore} from '../../store/sessionStore';
 
 const BatchCreate = ({navigation, route}) => {
   const [items, setItems] = useState([]);
@@ -31,6 +33,16 @@ const BatchCreate = ({navigation, route}) => {
 
   const save = async () => {
     if (items.length === 0) {
+      return;
+    }
+    // Guard: wajib ada session aktif sebelum membuat batch
+    const session = await useSessionStore.getState().ensureActiveSession();
+    if (!session) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Tidak ada session aktif. Mulai session terlebih dahulu.',
+      });
       return;
     }
     setSaving(true);
