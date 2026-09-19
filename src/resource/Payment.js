@@ -1,13 +1,12 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 
-// Endpoint backend:
-// - GET  /api/v1/jastip/item-stock/payment   → daftar item belum bayar
-// - POST /api/v1/jastip/item-stock/payment   → tandai lunas langsung (opsi 2)
-// - PUT  /api/v1/cash-flow/invoice           → buat invoice (opsi 1)
-// - POST /api/v1/cash-flow/invoice/payment   → bayar invoice (opsi 1)
-const stockUrl = '/api/v1/jastip/item-stock/payment';
-const invoiceUrl = '/api/v1/cash-flow/invoice';
+// Endpoint backend (module payment per-customer):
+// - GET  /api/v1/jastip/payment/summary      → ringkasan tagihan semua customer
+// - GET  /api/v1/jastip/payment/history      → riwayat payment
+// - GET  /api/v1/jastip/payment?customer_id  → ringkasan tagihan satu customer
+// - PUT  /api/v1/jastip/payment              → buat payment baru
+const paymentUrl = '/api/v1/jastip/payment';
 
 const notifyError = (message, useAlert) => {
   if (useAlert) {
@@ -15,20 +14,16 @@ const notifyError = (message, useAlert) => {
   }
 };
 
-// Daftar item yang belum dibayar (payment_status belum 1 & belum dispatch/sold).
-// property: { customer_id?, search? }
-export const getPaymentItems = async (property = {}, useAlert = true) => {
-  const qs = new URLSearchParams();
-  Object.keys(property).forEach(key => {
-    const val = property[key];
-    if (val !== undefined && val !== null && val !== '') {
-      qs.append(key, val);
-    }
-  });
-  const query_string = qs.toString();
+// ===== Module payment baru (pembayaran bertahap per customer) =====
+
+// Ringkasan tagihan semua customer (tab Tagihan).
+// Resolve array: [{customer_id, customer_name, customer_phone, grand_total,
+//   total_paid, remaining_amount, payment_status, total_items, total_quantity,
+//   payment_count}]
+export const getPaymentSummaryList = async (useAlert = true) => {
   return new Promise(resolve => {
     $axios
-      .get(`${stockUrl}?${query_string}`)
+      .get(`${paymentUrl}/summary`)
       .then(result => {
         let data = result.data;
         if (data.error) {
@@ -44,20 +39,27 @@ export const getPaymentItems = async (property = {}, useAlert = true) => {
   });
 };
 
-// Opsi 1a: buat invoice (status Waiting) dari item payment_status null
-// milik satu customer. Mengembalikan header invoice ({id, ...}) agar bisa
-// langsung dibayar.
-export const createInvoice = async (Params = {}, useAlert = true) => {
+// Riwayat payment (tab Riwayat).
+// property: { customer_id?, status?, search? }
+export const getPaymentHistory = async (property = {}, useAlert = true) => {
+  const qs = new URLSearchParams();
+  Object.keys(property).forEach(key => {
+    const val = property[key];
+    if (val !== undefined && val !== null && val !== '') {
+      qs.append(key, val);
+    }
+  });
+  const query_string = qs.toString();
   return new Promise(resolve => {
     $axios
-      .put(invoiceUrl, Params)
+      .get(`${paymentUrl}/history?${query_string}`)
       .then(result => {
         let data = result.data;
         if (data.error) {
           notifyError(data.message, useAlert);
           return resolve(false);
         }
-        return resolve(data.data || false);
+        return resolve(data.data || []);
       })
       .catch(e => {
         notifyError(e.message, useAlert);
@@ -66,11 +68,33 @@ export const createInvoice = async (Params = {}, useAlert = true) => {
   });
 };
 
-// Opsi 1b: bayar invoice → item terkait menjadi Paid (payment_status=1).
-export const payInvoice = async (Params = {}, useAlert = true) => {
+// Ringkasan tagihan satu customer (dipakai di PaymentCreate).
+// Resolve object summary atau null.
+export const getPaymentSummary = async (customerId, useAlert = true) => {
   return new Promise(resolve => {
     $axios
-      .post(`${invoiceUrl}/payment`, Params)
+      .get(`${paymentUrl}?customer_id=${customerId}`)
+      .then(result => {
+        let data = result.data;
+        if (data.error) {
+          notifyError(data.message, useAlert);
+          return resolve(false);
+        }
+        return resolve(data.data?.[0] || null);
+      })
+      .catch(e => {
+        notifyError(e.message, useAlert);
+        return resolve(false);
+      });
+  });
+};
+
+// Buat payment baru (PUT) — pembayaran bertahap per customer.
+// Params: { customer_id, amount, payment_method, payment_date?, reference_number?, notes?, created_by? }
+export const createPayment = async (Params = {}, useAlert = true) => {
+  return new Promise(resolve => {
+    $axios
+      .put(paymentUrl, Params)
       .then(result => {
         let data = result.data;
         if (data.error) {
@@ -80,34 +104,9 @@ export const payInvoice = async (Params = {}, useAlert = true) => {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Invoice berhasil dibayar',
+          text2: 'Payment berhasil disimpan',
         });
-        return resolve(true);
-      })
-      .catch(e => {
-        notifyError(e.message, useAlert);
-        return resolve(false);
-      });
-  });
-};
-
-// Opsi 2: tandai lunas langsung tanpa invoice (payment_status=1).
-export const markPaid = async (items = [], useAlert = true) => {
-  return new Promise(resolve => {
-    $axios
-      .post(stockUrl, {items})
-      .then(result => {
-        let data = result.data;
-        if (data.error) {
-          notifyError(data.message, useAlert);
-          return resolve(false);
-        }
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Item ditandai lunas',
-        });
-        return resolve(true);
+        return resolve(data.data?.[0] || true);
       })
       .catch(e => {
         notifyError(e.message, useAlert);

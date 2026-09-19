@@ -143,6 +143,9 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   const sold = data?.total_sales || {};
   const soldProfit = Number(sold.total_profit || 0);
 
+  // Ringkasan pembayaran customer (dari dashboard backend)
+  const paymentSummary = data?.payment_summary || {};
+
   const itemCount = code => {
     const row = itemByStatus.find(it => Number(it.status) === code);
     return row ? Number(row.total || 0) : 0;
@@ -505,6 +508,44 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
                 <Text style={styles.soldLabel}>Profit</Text>
                 <Text style={[styles.soldValue, {color: '#10B981'}]}>
                   Rp {fmt(soldProfit)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Pembayaran Customer */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Pembayaran Customer</Text>
+              <Text style={styles.cardTotal}>
+                {paymentSummary.payment_count || 0} payment
+              </Text>
+            </View>
+            <View style={styles.payRow}>
+              <View style={styles.payBox}>
+                <Text style={styles.payLabel}>Total Pengeluaran</Text>
+                <Text style={styles.payValue}>
+                  Rp {fmt(paymentSummary.total_cost)}
+                </Text>
+              </View>
+              <View style={styles.payBox}>
+                <Text style={styles.payLabel}>Pendapatan</Text>
+                <Text style={[styles.payValue, {color: '#10B981'}]}>
+                  Rp {fmt(paymentSummary.total_selling)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.payRow}>
+              <View style={styles.payBox}>
+                <Text style={styles.payLabel}>Total Dibayarkan</Text>
+                <Text style={[styles.payValue, {color: color.primaryColor}]}>
+                  Rp {fmt(paymentSummary.total_paid)}
+                </Text>
+              </View>
+              <View style={styles.payBox}>
+                <Text style={styles.payLabel}>Total Belum Dibayar</Text>
+                <Text style={[styles.payValue, {color: '#EF4444'}]}>
+                  Rp {fmt(paymentSummary.total_unpaid)}
                 </Text>
               </View>
             </View>
@@ -899,6 +940,27 @@ const styles = StyleSheet.create({
   },
   soldValue: {
     fontSize: 15,
+    fontWeight: '800',
+    color: '#333',
+    marginTop: 4,
+  },
+  payRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  payBox: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+  },
+  payLabel: {
+    fontSize: 11,
+    color: '#888',
+  },
+  payValue: {
+    fontSize: 14,
     fontWeight: '800',
     color: '#333',
     marginTop: 4,

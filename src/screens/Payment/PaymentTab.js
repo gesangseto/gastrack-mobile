@@ -1,358 +1,233 @@
 import Icon from '@react-native-vector-icons/lucide';
-import {useEffect, useMemo, useState} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
+import {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
-import ItemCard from '../../components/ItemCard';
+import MenuTile from '../../components/MenuTile';
+import SegmentedTabs from '../../components/SegmentedTabs';
+import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import {
-  createInvoice,
-  getPaymentItems,
-  markPaid,
-  payInvoice,
+  getPaymentHistory,
+  getPaymentSummaryList,
 } from '../../resource/Payment';
-import {getProfile} from '../../storage';
 
-// Tab "Payment" — dipakai inline di dalam bottom navigation (TabView).
+// Tab "Payment" — pembayaran bertahap PER CUSTOMER (module payment baru).
 //
-// Dua cara melunasi item:
-//  1. Flow invoice: buat invoice Waiting dari item (payment_status null) milik
-//     satu customer, lalu bayar dengan mengisi nomor invoice.
-//     Atau bayar invoice yang sudah ada (item payment_status=0 / Waiting).
-//  2. Tandai lunas langsung: set payment_status=1 tanpa record invoice.
-const genInvoiceNumber = customerId => {
-  const d = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(
-    d.getHours(),
-  )}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-  return `INV-${customerId ?? 'X'}-${stamp}`;
+//   Pending  : customer yang SUDAH punya payment record & masih punya sisa
+//              tagihan (belum lunas). Tap customer → PaymentCreate.
+//   Riwayat  : daftar payment record (SUCCESS / PENDING / CANCELLED).
+//
+// Customer BARU (punya item tapi belum pernah tercatat payment) dikelola
+// lewat PaymentCreate — tidak tampil di tab Pending.
+const PAYMENT_TABS = [
+  {key: 'Pending', label: 'Pending'},
+  {key: 'Riwayat', label: 'Riwayat'},
+];
+
+const formatRupiah = value => {
+  const n = Number(value || 0);
+  return 'Rp ' + n.toLocaleString('id-ID');
+};
+
+// Warna badge status pembayaran customer
+const STATUS_COLOR = {
+  UNPAID: color.danger,
+  PARTIAL: color.warning,
+  PAID: color.success,
+};
+
+// Warna badge status payment record (-1 CANCELLED, 0 PENDING, 1 SUCCESS)
+const RECORD_STATUS = {
+  '-1': {label: 'CANCELLED', color: color.danger},
+  '0': {label: 'PENDING', color: color.warning},
+  '1': {label: 'SUCCESS', color: color.success},
 };
 
 const PaymentTab = () => {
-  const [list, setList] = useState([]);
-  const [selected, setSelected] = useState({});
-  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('Pending');
+  const [bills, setBills] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [pending, setPending] = useState(null);
-
-  const loadData = async (searchText = '') => {
+  const loadData = async () => {
     setLoading(true);
-    const response = await getPaymentItems(
-      searchText ? {search: searchText} : {},
-    );
-    if (response) {
-      setList(response);
+    const [b, h] = await Promise.all([
+      getPaymentSummaryList(false),
+      getPaymentHistory({}, false),
+    ]);
+    if (b) {
+      // Tab Pending = customer yang sudah punya payment record & masih punya
+      // sisa tagihan (belum lunas). Customer baru (belum punya payment record)
+      // dikelola lewat PaymentCreate.
+      setBills(
+        b.filter(
+          x => x.has_payment_record && Number(x.remaining_amount) > 0,
+        ),
+      );
     }
+    if (h) {setHistory(h);}
     setLoading(false);
   };
 
-  useEffect(() => {
-    // Filter dijalankan di server (param `search`), bukan saat render.
-    loadData();
-  }, []);
+  // Muat ulang setiap kali tab Payment aktif (data bisa berubah setelah
+  // PaymentCreate / session baru).
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+
+    }, []),
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData(search);
+    await loadData();
     setRefreshing(false);
   };
 
-  const toggle = item => {
-    setSelected(prev => {
-      const next = {...prev};
-      if (next[item.id]) {
-        delete next[item.id];
-      } else {
-        next[item.id] = item;
-      }
-      return next;
-    });
-  };
-
-  const selectedItems = useMemo(() => Object.values(selected), [selected]);
-  const count = selectedItems.length;
-  const customerIds = useMemo(
-    () => [...new Set(selectedItems.map(i => i.customer_id))],
-    [selectedItems],
-  );
-  const trxIds = useMemo(
-    () => [
-      ...new Set(
-        selectedItems
-          .map(i => i.trx_id)
-          .filter(v => v !== null && v !== undefined),
-      ),
-    ],
-    [selectedItems],
-  );
-  const allUnpaid =
-    count > 0 &&
-    selectedItems.every(i => i.payment_status === null || i.payment_status === undefined);
-  const allWaiting =
-    count > 0 && selectedItems.every(i => Number(i.payment_status) === 0);
-
-  let invoiceMode = null;
-  if (count > 0) {
-    if (allUnpaid && customerIds.length === 1) {
-      invoiceMode = 'create';
-    } else if (allWaiting && trxIds.length === 1) {
-      invoiceMode = 'existing';
-    }
-  }
-
-  const invoiceHint = () => {
-    if (count === 0) {
-      return 'Pilih item dulu';
-    }
-    if (customerIds.length > 1) {
-      return 'Invoice hanya untuk item dari 1 customer yang sama';
-    }
-    return 'Campuran item belum & sudah invoice — pisahkan pilihannya';
-  };
-
-  const doMarkPaid = async () => {
-    setSubmitting(true);
-    const ok = await markPaid(selectedItems.map(i => i.id));
-    setSubmitting(false);
-    if (ok) {
-      setSelected({});
-      loadData(search);
-    }
-  };
-
-  const handleMarkPaid = () => {
-    if (count === 0 || submitting) {
-      return;
-    }
-    Alert.alert(
-      'Tandai Lunas',
-      `Tandai ${count} item sebagai LUNAS tanpa invoice?`,
-      [
-        {text: 'Batal', style: 'cancel'},
-        {text: 'Lunas', onPress: doMarkPaid},
-      ],
-    );
-  };
-
-  const handleInvoice = () => {
-    if (submitting) {
-      return;
-    }
-    if (!invoiceMode) {
-      Toast.show({
-        type: 'error',
-        text1: 'Tidak bisa invoice',
-        text2: invoiceHint(),
-      });
-      return;
-    }
-    const customerId = selectedItems[0]?.customer_id;
-    setPending({
-      mode: invoiceMode,
-      invoiceId: invoiceMode === 'existing' ? trxIds[0] : null,
-      customer_id: customerId,
-    });
-    setInvoiceNumber(genInvoiceNumber(customerId));
-    setModalVisible(true);
-  };
-
-  const submitInvoice = async () => {
-    const number = invoiceNumber.trim();
-    if (!number) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Nomor invoice wajib diisi',
-      });
-      return;
-    }
-    setSubmitting(true);
-    let invoiceId = pending?.invoiceId;
-    if (pending?.mode === 'create') {
-      const inv = await createInvoice({
-        customer_id: pending.customer_id,
-        items: selectedItems.map(i => ({id: i.id})),
-        created_by: getProfile()?.id || 0,
-      });
-      if (!inv || !inv.id) {
-        setSubmitting(false);
-        return;
-      }
-      invoiceId = inv.id;
-    }
-    const ok = await payInvoice({
-      id: invoiceId,
-      invoice_number: number,
-      modified_by: getProfile()?.id || 0,
-    });
-    setSubmitting(false);
-    if (ok) {
-      setModalVisible(false);
-      setPending(null);
-      setSelected({});
-      loadData(search);
-    }
-  };
-
-  const renderItem = item => {
-    const waiting = Number(item.payment_status) === 0;
+  const renderBill = item => {
+    const status = item.payment_status || 'UNPAID';
     return (
-      <ItemCard
-        item={item}
-        selected={!!selected[item.id]}
-        onToggle={toggle}
-        right={
-          <View style={[styles.badge, waiting && styles.badgeWaiting]}>
-            <Text style={[styles.badgeText, waiting && styles.badgeTextWaiting]}>
-              {waiting ? 'Waiting' : 'Baru'}
+      <Pressable
+        onPress={() =>
+          RootNavigation.navigate('PaymentCreate', {
+            customer_id: item.customer_id,
+          })
+        }
+        key={item.customer_id}
+        style={styles.card}>
+        <View style={styles.iconBox}>
+          <Icon name="receipt-text" size={22} color={color.primaryColor} />
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.customer_name || `Customer #${item.customer_id}`}
+          </Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            {item.customer_phone || '—'}
+          </Text>
+          <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>Tagihan</Text>
+            <Text style={styles.amountValue}>
+              {formatRupiah(item.grand_total)}
             </Text>
           </View>
-        }
-      />
+          <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>Dibayar</Text>
+            <Text style={styles.amountPaid}>{formatRupiah(item.total_paid)}</Text>
+          </View>
+          <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>Sisa</Text>
+            <Text style={styles.amountRemaining}>
+              {formatRupiah(item.remaining_amount)}
+            </Text>
+          </View>
+        </View>
+        <View
+          style={[
+            styles.badge,
+            {backgroundColor: STATUS_COLOR[status] || '#C4C4C4'},
+          ]}>
+          <Text style={styles.badgeText}>{status}</Text>
+        </View>
+      </Pressable>
     );
   };
+
+  const renderHistory = item => {
+    const rec = RECORD_STATUS[item.status] || {
+      label: 'UNKNOWN',
+      color: '#C4C4C4',
+    };
+    return (
+      <View key={item.id} style={styles.card}>
+        <View style={styles.iconBox}>
+          <Icon name="wallet" size={22} color={color.primaryColor} />
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.customer_name || `Customer #${item.customer_id}`}
+          </Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            {item.payment_method || '—'}
+            {item.reference_number ? ` • ${item.reference_number}` : ''}
+          </Text>
+          <Text style={styles.amountValue}>{formatRupiah(item.amount)}</Text>
+          <Text style={styles.date}>
+            {item.payment_date || item.created_date || ''}
+          </Text>
+        </View>
+        <View style={[styles.badge, {backgroundColor: rec.color}]}>
+          <Text style={styles.badgeText}>{rec.label}</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const list = activeTab === 'Pending' ? bills : history;
+  const renderItem = activeTab === 'Pending' ? renderBill : renderHistory;
+
+  const tabs = PAYMENT_TABS.map(t => ({
+    ...t,
+    qty: t.key === 'Pending' ? bills.length : history.length,
+  }));
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Payment ({list.length})</Text>
-        <Text style={styles.subtitle}>Item yang belum lunas</Text>
-      </View>
+      <Text style={styles.title}>Payment</Text>
+      <Text style={styles.subtitle}>Kelola tagihan & pembayaran customer</Text>
 
-      <View style={styles.searchBox}>
-        <Icon name="search" size={18} color={color.primaryColor} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari nama customer / barcode..."
-          value={search}
-          onChangeText={setSearch}
-          onSubmitEditing={() => loadData(search)}
-          returnKeyType="search"
-        />
-        {search.length > 0 && (
-          <TouchableOpacity
-            onPress={() => {
-              setSearch('');
-              loadData('');
-            }}>
-            <Icon name="x" size={18} color="#999" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <FlatList
-        data={list}
-        renderItem={({item}) => renderItem(item)}
-        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[color.primaryColor]}
-          />
-        }
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {loading ? 'Memuat...' : 'Tidak ada item yang perlu dibayar'}
-          </Text>
-        }
+      <MenuTile
+        icon="plus"
+        iconBg={color.primaryLight}
+        iconColor={color.primaryColor}
+        title="Tambah Payment"
+        desc="Catat pembayaran customer"
+        onPress={() => RootNavigation.navigate('PaymentCreate')}
       />
 
-      <View style={styles.actionBar}>
-        <TouchableOpacity
-          onPress={handleMarkPaid}
-          disabled={count === 0 || submitting}
-          style={[
-            styles.actionButton,
-            styles.paidButton,
-            (count === 0 || submitting) && styles.actionDisabled,
-          ]}>
-          <Icon name="check-check" size={16} color={color.white} />
-          <Text style={styles.actionText}>Tandai Lunas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleInvoice}
-          disabled={count === 0 || submitting}
-          style={[
-            styles.actionButton,
-            styles.invoiceButton,
-            (count === 0 || submitting) && styles.actionDisabled,
-          ]}>
-          {submitting ? (
-            <ActivityIndicator size="small" color={color.white} />
-          ) : (
-            <Icon name="receipt" size={16} color={color.white} />
-          )}
-          <Text style={styles.actionText}>
-            {invoiceMode === 'existing' ? 'Bayar Invoice' : 'Buat Invoice'} (
-            {count})
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <SegmentedTabs items={tabs} value={activeTab} onChange={setActiveTab} />
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {pending?.mode === 'existing' ? 'Bayar Invoice' : 'Buat Invoice'}
-            </Text>
-            <Text style={styles.modalSub}>
-              {count} item • customer {pending?.customer_id}
-            </Text>
-            <Text style={styles.modalLabel}>Nomor Invoice</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={invoiceNumber}
-              onChangeText={setInvoiceNumber}
-              placeholder="INV-..."
-              autoCapitalize="characters"
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                disabled={submitting}
-                style={[styles.modalButton, styles.modalCancel]}>
-                <Text style={styles.modalCancelText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={submitInvoice}
-                disabled={submitting}
-                style={[styles.modalButton, styles.modalSubmit]}>
-                {submitting ? (
-                  <ActivityIndicator size="small" color={color.white} />
-                ) : (
-                  <Text style={styles.modalSubmitText}>Bayar</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <View style={styles.listWrap}>
+        {loading && list.length === 0 ? (
+          <ActivityIndicator
+            size="small"
+            color={color.primaryColor}
+            style={styles.loading}
+          />
+        ) : (
+          <FlatList
+            data={list}
+            renderItem={({item}) => renderItem(item)}
+            keyExtractor={(item, index) =>
+              (item.id || item.customer_id)?.toString() || index.toString()
+            }
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[color.primaryColor]}
+              />
+            }
+            ListEmptyComponent={
+              <Text style={styles.empty}>
+                {activeTab === 'Pending'
+                  ? 'Belum ada tagihan pending'
+                  : 'Belum ada riwayat payment'}
+              </Text>
+            }
+          />
+        )}
+      </View>
     </View>
   );
 };
@@ -367,9 +242,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 74,
   },
-  header: {
-    marginBottom: 8,
-  },
   title: {
     fontSize: 20,
     fontWeight: '700',
@@ -379,23 +251,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9A9A9A',
     marginTop: 2,
+    marginBottom: 14,
   },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: color.white,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: color.primaryLighter,
-    height: 44,
-  },
-  searchInput: {
+  listWrap: {
     flex: 1,
-    fontSize: 14,
-    marginLeft: 8,
-    height: 42,
+  },
+  loading: {
+    marginTop: 24,
   },
   listContent: {
     paddingBottom: 10,
@@ -406,117 +268,78 @@ const styles = StyleSheet.create({
     marginTop: 40,
     fontSize: 13,
   },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: color.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F5',
+    padding: 12,
+    marginBottom: 10,
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: color.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  info: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  name: {
+    fontWeight: '700',
+    color: '#1F1F1F',
+    fontSize: 14,
+  },
+  sub: {
+    color: '#9A9A9A',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  amountLabel: {
+    color: '#9A9A9A',
+    fontSize: 11,
+  },
+  amountValue: {
+    color: '#1F1F1F',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  amountPaid: {
+    color: color.success,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  amountRemaining: {
+    color: color.danger,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  date: {
+    color: '#C4C4C4',
+    fontSize: 11,
+    marginTop: 2,
+  },
   badge: {
-    backgroundColor: color.primaryLighter,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginLeft: 6,
   },
-  badgeWaiting: {
-    backgroundColor: '#FFF4E5',
-  },
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: color.primaryColor,
-  },
-  badgeTextWaiting: {
-    color: color.secondaryColor,
-  },
-  actionBar: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingTop: 10,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 16,
-    height: 48,
-  },
-  paidButton: {
-    backgroundColor: color.success,
-  },
-  invoiceButton: {
-    backgroundColor: color.primaryColor,
-  },
-  actionDisabled: {
-    backgroundColor: '#C4C4C4',
-  },
-  actionText: {
     color: color.white,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  modalCard: {
-    width: '100%',
-    backgroundColor: color.white,
-    borderRadius: 20,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F1F1F',
-  },
-  modalSub: {
-    fontSize: 12,
-    color: '#9A9A9A',
-    marginTop: 2,
-  },
-  modalLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4A4A4A',
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: color.primaryLighter,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 46,
-    fontSize: 14,
-    color: '#1F1F1F',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 18,
-  },
-  modalButton: {
-    flex: 1,
-    height: 46,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancel: {
-    backgroundColor: color.primaryLight,
-  },
-  modalCancelText: {
-    color: color.primaryColor,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  modalSubmit: {
-    backgroundColor: color.primaryColor,
-  },
-  modalSubmitText: {
-    color: color.white,
-    fontWeight: '700',
-    fontSize: 14,
   },
 });
