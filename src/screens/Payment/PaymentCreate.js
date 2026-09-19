@@ -41,11 +41,10 @@ const today = () => {
 };
 
 // Layar "Tambah Payment" — pembayaran bertahap per customer.
-// Bisa dibuka dari:
-//   - MenuTile "Tambah Payment" (tanpa param) → pilih customer BARU
-//     (punya item tapi belum pernah tercatat payment — dari summary list)
-//   - Tab Pending (param customer_id) → customer sudah terpilih
+// Dibuka dari detail tagihan (PaymentCustomerDetail) dengan param
+// customer_id + session_id (opsional) → customer sudah terpilih.
 const PaymentCreate = ({route}) => {
+  const sessionId = route?.params?.session_id;
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -84,7 +83,7 @@ const PaymentCreate = ({route}) => {
   // (has_payment_record = false). Diambil dari summary list modul payment.
   const loadCandidates = async () => {
     setCandidatesLoading(true);
-    const list = await getPaymentSummaryList(false);
+    const list = await getPaymentSummaryList({session_id: sessionId}, false);
     setCandidatesLoading(false);
     if (list) {
       setCandidates(list.filter(x => !x.has_payment_record));
@@ -93,7 +92,7 @@ const PaymentCreate = ({route}) => {
 
   const loadCustomerById = async customerId => {
     setSummaryLoading(true);
-    const s = await getPaymentSummary(customerId, false);
+    const s = await getPaymentSummary(customerId, sessionId, false);
     setSummaryLoading(false);
     if (s) {
       setSelectedCustomer({
@@ -150,7 +149,7 @@ const PaymentCreate = ({route}) => {
     setShowSuggestions(false);
     // Muat ringkasan tagihan customer
     setSummaryLoading(true);
-    const s = await getPaymentSummary(selected.id, false);
+    const s = await getPaymentSummary(selected.id, sessionId, false);
     setSummaryLoading(false);
     if (s) {setSummary(s);}
   };

@@ -23,6 +23,7 @@ import CustomerList from '../screens/Customer/CustomerList';
 import CustomerEdit from '../screens/Customer/CustomerEdit';
 import SessionView from '../screens/Session/SessionView';
 import PaymentCreate from '../screens/Payment/PaymentCreate';
+import PaymentCustomerDetail from '../screens/Payment/PaymentCustomerDetail';
 
 const shouldShowCustomSplashScreen = () => {
   if (Platform.OS === 'android') {
@@ -57,6 +58,10 @@ const Router = () => {
       <Stack.Screen name="CustomerEdit" component={CustomerEdit} />
       <Stack.Screen name="SessionView" component={SessionView} />
       <Stack.Screen name="PaymentCreate" component={PaymentCreate} />
+      <Stack.Screen
+        name="PaymentCustomerDetail"
+        component={PaymentCustomerDetail}
+      />
       <Stack.Screen name="Form" component={Form} />
     </Stack.Navigator>
   );

@@ -1,6 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
 import {useFocusEffect} from '@react-navigation/native';
-import {useCallback, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,7 +10,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import MenuTile from '../../components/MenuTile';
+import DropDownPicker from 'react-native-dropdown-picker';
+import InputText from '../../components/InputText';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
@@ -18,19 +19,28 @@ import {
   getPaymentHistory,
   getPaymentSummaryList,
 } from '../../resource/Payment';
+import {getSessionList} from '../../resource/Session';
 
 // Tab "Payment" — pembayaran bertahap PER CUSTOMER (module payment baru).
 //
-//   Pending  : customer yang SUDAH punya payment record & masih punya sisa
-//              tagihan (belum lunas). Tap customer → PaymentCreate.
+//   Pending  : SEMUA customer yang masih punya sisa tagihan (belum bayar &
+//              belum lunas) pada session terpilih. Tap customer → detail
+//              tagihan (item yang dipesan) → PaymentCreate.
+//   Paid     : customer yang sudah lunas (sisa tagihan = 0) pada session.
 //   Riwayat  : daftar payment record (SUCCESS / PENDING / CANCELLED).
 //
-// Customer BARU (punya item tapi belum pernah tercatat payment) dikelola
-// lewat PaymentCreate — tidak tampil di tab Pending.
-const PAYMENT_TABS = [
-  {key: 'Pending', label: 'Pending'},
-  {key: 'Riwayat', label: 'Riwayat'},
-];
+// Data ditampilkan berdasarkan session yang dipilih (default: session aktif).
+const CloseIcon = ({style}) => (
+  <Icon name="x" size={20} color="#9CA3AF" style={style} />
+);
+
+const CustomArrowIcon = () => (
+  <Icon name="chevron-down" size={18} color="#9CA3AF" />
+);
+
+const CustomTickIcon = () => (
+  <Icon name="check" size={16} color={color.primaryColor} />
+);
 
 const formatRupiah = value => {
   const n = Number(value || 0);
@@ -57,49 +67,89 @@ const PaymentTab = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState('');
 
-  const loadData = async () => {
+  // Session dropdown (default: session aktif)
+  const [sessionList, setSessionList] = useState([]);
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [sessionValue, setSessionValue] = useState(null);
+
+  // Cegah setState setelah screen unmount (stale response saat ganti screen)
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadData = async sessionId => {
     setLoading(true);
     const [b, h] = await Promise.all([
-      getPaymentSummaryList(false),
+      getPaymentSummaryList({session_id: sessionId}, false),
       getPaymentHistory({}, false),
     ]);
-    if (b) {
-      // Tab Pending = customer yang sudah punya payment record & masih punya
-      // sisa tagihan (belum lunas). Customer baru (belum punya payment record)
-      // dikelola lewat PaymentCreate.
-      setBills(
-        b.filter(
-          x => x.has_payment_record && Number(x.remaining_amount) > 0,
-        ),
-      );
+    if (!mountedRef.current) {
+      return;
     }
-    if (h) {setHistory(h);}
+    if (b) {
+      setBills(b);
+    }
+    if (h) {
+      setHistory(h);
+    }
     setLoading(false);
+  };
+
+  const loadSessions = async () => {
+    const list = await getSessionList({}, false);
+    if (!mountedRef.current) {
+      return;
+    }
+    if (list) {
+      setSessionList(list);
+      // Default: session aktif
+      const active = list.find(s => s.status === 'Active');
+      const next = active ? active.id : null;
+      setSessionValue(next);
+      loadData(next);
+    }
   };
 
   // Muat ulang setiap kali tab Payment aktif (data bisa berubah setelah
   // PaymentCreate / session baru).
   useFocusEffect(
     useCallback(() => {
-      loadData();
-
+      loadSessions();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await loadSessions();
     setRefreshing(false);
   };
+
+  // Filter customer by nama / no. HP (tab Pending & Paid)
+  const kw = query.trim().toLowerCase();
+  const filteredBills = bills.filter(
+    b =>
+      !kw ||
+      (b.customer_name || '').toLowerCase().includes(kw) ||
+      (b.customer_phone || '').toLowerCase().includes(kw),
+  );
+  const pending = filteredBills.filter(b => Number(b.remaining_amount) > 0);
+  const paid = filteredBills.filter(b => Number(b.remaining_amount) <= 0);
 
   const renderBill = item => {
     const status = item.payment_status || 'UNPAID';
     return (
       <Pressable
         onPress={() =>
-          RootNavigation.navigate('PaymentCreate', {
+          RootNavigation.navigate('PaymentCustomerDetail', {
             customer_id: item.customer_id,
+            session_id: sessionValue,
           })
         }
         key={item.customer_id}
@@ -172,27 +222,91 @@ const PaymentTab = () => {
     );
   };
 
-  const list = activeTab === 'Pending' ? bills : history;
-  const renderItem = activeTab === 'Pending' ? renderBill : renderHistory;
+  const list =
+    activeTab === 'Pending'
+      ? pending
+      : activeTab === 'Paid'
+        ? paid
+        : history;
+  const renderItem =
+    activeTab === 'Riwayat' ? renderHistory : renderBill;
 
-  const tabs = PAYMENT_TABS.map(t => ({
-    ...t,
-    qty: t.key === 'Pending' ? bills.length : history.length,
-  }));
+  const tabs = [
+    {key: 'Pending', label: 'Pending', qty: pending.length},
+    {key: 'Paid', label: 'Paid', qty: paid.length},
+    {key: 'Riwayat', label: 'Riwayat', qty: history.length},
+  ];
+
+  const emptyText =
+    activeTab === 'Pending'
+      ? 'Belum ada tagihan pending'
+      : activeTab === 'Paid'
+        ? 'Belum ada customer lunas'
+        : 'Belum ada riwayat payment';
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Payment</Text>
       <Text style={styles.subtitle}>Kelola tagihan & pembayaran customer</Text>
 
-      <MenuTile
-        icon="plus"
-        iconBg={color.primaryLight}
-        iconColor={color.primaryColor}
-        title="Tambah Payment"
-        desc="Catat pembayaran customer"
-        onPress={() => RootNavigation.navigate('PaymentCreate')}
-      />
+      {/* Dropdown pilih session */}
+      <View style={styles.dropdownWrap}>
+        <DropDownPicker
+          open={sessionOpen}
+          value={sessionValue}
+          items={[
+            {label: 'Semua Session', value: null},
+            ...sessionList.map(s => ({
+              label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
+              value: s.id,
+            })),
+          ]}
+          setOpen={setSessionOpen}
+          setValue={setSessionValue}
+          setItems={setSessionList}
+          onChangeValue={value => loadData(value)}
+          placeholder="Pilih session jastip"
+          style={styles.picker}
+          dropDownContainerStyle={styles.pickerDropdown}
+          listMode="MODAL"
+          modalAnimationType="slide"
+          modalContentContainerStyle={styles.pickerModal}
+          searchable
+          searchPlaceholder="Cari session..."
+          searchContainerStyle={styles.pickerSearchContainer}
+          searchTextInputStyle={styles.pickerSearchInput}
+          searchPlaceholderTextColor="#9CA3AF"
+          CloseIconComponent={CloseIcon}
+          closeIconStyle={styles.pickerCloseIcon}
+          closeIconContainerStyle={styles.pickerCloseIconContainer}
+          textStyle={styles.pickerText}
+          labelStyle={styles.pickerLabel}
+          placeholderStyle={styles.pickerPlaceholder}
+          arrowIconStyle={styles.pickerArrow}
+          tickIconStyle={styles.pickerTick}
+          customArrowIcon={CustomArrowIcon}
+          customTickIcon={CustomTickIcon}
+          listItemContainerStyle={styles.pickerListItem}
+          listItemLabelStyle={styles.pickerListItemLabel}
+          selectedItemContainerStyle={styles.pickerSelectedItem}
+          selectedItemLabelStyle={styles.pickerSelectedLabel}
+          itemSeparatorStyle={styles.pickerItemSeparator}
+          listMessageContainerStyle={styles.pickerEmptyContainer}
+          listMessageTextStyle={styles.pickerEmptyText}
+          closeOnBackPressed
+          zIndex={1000}
+        />
+      </View>
+
+      {/* Pencarian customer (tab Pending & Paid) */}
+      {activeTab !== 'Riwayat' && (
+        <InputText
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Cari customer..."
+          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
+        />
+      )}
 
       <SegmentedTabs items={tabs} value={activeTab} onChange={setActiveTab} />
 
@@ -218,13 +332,7 @@ const PaymentTab = () => {
                 colors={[color.primaryColor]}
               />
             }
-            ListEmptyComponent={
-              <Text style={styles.empty}>
-                {activeTab === 'Pending'
-                  ? 'Belum ada tagihan pending'
-                  : 'Belum ada riwayat payment'}
-              </Text>
-            }
+            ListEmptyComponent={<Text style={styles.empty}>{emptyText}</Text>}
           />
         )}
       </View>
@@ -252,6 +360,78 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     marginTop: 2,
     marginBottom: 14,
+  },
+  dropdownWrap: {
+    zIndex: 1000,
+    marginBottom: 12,
+  },
+  picker: {
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    minHeight: 44,
+  },
+  pickerDropdown: {
+    borderColor: '#E5E5E5',
+  },
+  pickerModal: {
+    backgroundColor: color.white,
+  },
+  pickerSearchContainer: {
+    borderBottomColor: '#E5E5E5',
+  },
+  pickerSearchInput: {
+    borderColor: '#E5E5E5',
+  },
+  pickerCloseIcon: {
+    width: 28,
+    height: 28,
+  },
+  pickerCloseIconContainer: {
+    padding: 4,
+  },
+  pickerText: {
+    fontSize: 14,
+    color: '#1F1F1F',
+  },
+  pickerLabel: {
+    fontWeight: '600',
+  },
+  pickerPlaceholder: {
+    color: '#9CA3AF',
+  },
+  pickerArrow: {
+    width: 20,
+    height: 20,
+  },
+  pickerTick: {
+    width: 20,
+    height: 20,
+  },
+  pickerListItem: {
+    paddingVertical: 12,
+  },
+  pickerListItemLabel: {
+    fontSize: 14,
+    color: '#1F1F1F',
+  },
+  pickerSelectedItem: {
+    backgroundColor: color.primaryLight,
+  },
+  pickerSelectedLabel: {
+    fontWeight: '700',
+    color: color.primaryColor,
+  },
+  pickerItemSeparator: {
+    height: 1,
+    backgroundColor: '#F0F0F5',
+  },
+  pickerEmptyContainer: {
+    padding: 20,
+  },
+  pickerEmptyText: {
+    color: '#9CA3AF',
   },
   listWrap: {
     flex: 1,

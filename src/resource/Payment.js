@@ -16,14 +16,23 @@ const notifyError = (message, useAlert) => {
 
 // ===== Module payment baru (pembayaran bertahap per customer) =====
 
-// Ringkasan tagihan semua customer (tab Tagihan).
+// Ringkasan tagihan semua customer (tab Pending/Paid).
+// property: { session_id? } — filter item per session (menu payment per session).
 // Resolve array: [{customer_id, customer_name, customer_phone, grand_total,
 //   total_paid, remaining_amount, payment_status, total_items, total_quantity,
 //   payment_count}]
-export const getPaymentSummaryList = async (useAlert = true) => {
+export const getPaymentSummaryList = async (property = {}, useAlert = true) => {
+  const qs = new URLSearchParams();
+  Object.keys(property).forEach(key => {
+    const val = property[key];
+    if (val !== undefined && val !== null && val !== '') {
+      qs.append(key, val);
+    }
+  });
+  const query_string = qs.toString();
   return new Promise(resolve => {
     $axios
-      .get(`${paymentUrl}/summary`)
+      .get(`${paymentUrl}/summary?${query_string}`)
       .then(result => {
         let data = result.data;
         if (data.error) {
@@ -68,12 +77,18 @@ export const getPaymentHistory = async (property = {}, useAlert = true) => {
   });
 };
 
-// Ringkasan tagihan satu customer (dipakai di PaymentCreate).
+// Ringkasan tagihan satu customer (dipakai di PaymentCreate & detail tagihan).
+// sessionId opsional — filter item per session.
 // Resolve object summary atau null.
-export const getPaymentSummary = async (customerId, useAlert = true) => {
+export const getPaymentSummary = async (customerId, sessionId, useAlert = true) => {
+  const qs = new URLSearchParams();
+  qs.append('customer_id', customerId);
+  if (sessionId !== undefined && sessionId !== null && sessionId !== '') {
+    qs.append('session_id', sessionId);
+  }
   return new Promise(resolve => {
     $axios
-      .get(`${paymentUrl}?customer_id=${customerId}`)
+      .get(`${paymentUrl}?${qs.toString()}`)
       .then(result => {
         let data = result.data;
         if (data.error) {
@@ -81,6 +96,33 @@ export const getPaymentSummary = async (customerId, useAlert = true) => {
           return resolve(false);
         }
         return resolve(data.data?.[0] || null);
+      })
+      .catch(e => {
+        notifyError(e.message, useAlert);
+        return resolve(false);
+      });
+  });
+};
+
+// Daftar item yang dipesan customer (detail tagihan).
+// Resolve array: [{id, product_id, barcode, product_name, quantity,
+//   selling_price, status, status_name, payment_status, session_id}]
+export const getPaymentItems = async (customerId, sessionId, useAlert = true) => {
+  const qs = new URLSearchParams();
+  qs.append('customer_id', customerId);
+  if (sessionId !== undefined && sessionId !== null && sessionId !== '') {
+    qs.append('session_id', sessionId);
+  }
+  return new Promise(resolve => {
+    $axios
+      .get(`${paymentUrl}/items?${qs.toString()}`)
+      .then(result => {
+        let data = result.data;
+        if (data.error) {
+          notifyError(data.message, useAlert);
+          return resolve(false);
+        }
+        return resolve(data.data || []);
       })
       .catch(e => {
         notifyError(e.message, useAlert);
