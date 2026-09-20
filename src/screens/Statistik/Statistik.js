@@ -55,6 +55,8 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   const [sessionList, setSessionList] = useState([]);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [sessionValue, setSessionValue] = useState(null); // null = semua
+  // true selama daftar session masih dimuat (dropdown belum siap)
+  const [sessionLoading, setSessionLoading] = useState(false);
   // Statistik per session (grafik)
   const [sessionStats, setSessionStats] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -79,6 +81,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   );
 
   const loadSessions = async () => {
+    setSessionLoading(true);
     const list = await getSessionList({}, false);
     if (!mountedRef.current) {
       return;
@@ -89,6 +92,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
       const active = list.find(s => s.status === 'Active');
       setSessionValue(active ? active.id : null);
     }
+    setSessionLoading(false);
   };
 
   // Muat statistik per session (grafik 6 terakhir)
@@ -106,17 +110,29 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
     loadSessionStats();
   }, []);
 
+  // Penanda request session terbaru — mencegah stale response: response
+  // fetch session lama diabaikan jika session sudah berubah (termasuk
+  // menjadi null / "Semua Session").
+  const sessionRequestRef = useRef(0);
+
   // Saat session dipilih di dropdown → ambil detail statistik session tsb
-  // (total_items, total_selling, total_cost, total_profit, total_batch)
-  // agar card per-session ikut ter-update. null = Semua Session → pakai total.
+  // (total_items, total_selling, total_cost, total_profit, total_batch,
+  //  total_paid, total_unpaid) agar card per-session ikut ter-update.
+  // null = Semua Session → pakai total global, TANPA fetch data session.
   useEffect(() => {
+    const requestId = ++sessionRequestRef.current;
     if (!sessionValue) {
       setSessionDetail(null);
+      setSessionDetailLoading(false);
       return;
     }
     setSessionDetailLoading(true);
     fetchSessionStats({session_id: sessionValue}, false).then(stats => {
       if (!mountedRef.current) {
+        return;
+      }
+      // Ada request lebih baru (session berubah / jadi null) → abaikan
+      if (sessionRequestRef.current !== requestId) {
         return;
       }
       setSessionDetail(stats && stats[0] ? stats[0] : null);
@@ -145,6 +161,16 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
 
   // Ringkasan pembayaran customer (dari dashboard backend)
   const paymentSummary = data?.payment_summary || {};
+
+  // Fallback global hanya saat user memilih "Semua Session" secara eksplisit.
+  // Saat session masih dimuat (null karena loading) → tampilkan 0, bukan angka
+  // global yang menyesatkan (mis. total_unpaid seluruh session).
+  const isAllSessions = !sessionValue && !sessionLoading;
+
+  // Nilai hero: session terpilih → data session; "Semua Session" → global;
+  // session masih dimuat → 0.
+  const heroVal = (sessionKey, globalVal) =>
+    sessionData ? sessionData[sessionKey] : isAllSessions ? globalVal : 0;
 
   const itemCount = code => {
     const row = itemByStatus.find(it => Number(it.status) === code);
@@ -311,22 +337,35 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
               )}
             </View>
             <Text style={styles.heroValue}>
-              Rp{' '}
-              {fmt(sessionData ? sessionData.total_selling : totalSelling)}
+              Rp {fmt(heroVal('total_selling', totalSelling))}
             </Text>
             <View style={styles.heroDivider} />
             <View style={styles.heroStats}>
               <View style={{flex: 1}}>
                 <Text style={styles.heroStatLabel}>Modal</Text>
                 <Text style={styles.heroStatValue}>
-                  Rp {fmt(sessionData ? sessionData.total_cost : totalCost)}
+                  Rp {fmt(heroVal('total_cost', totalCost))}
                 </Text>
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.heroStatLabel}>Profit</Text>
                 <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                  Rp{' '}
-                  {fmt(sessionData ? sessionData.total_profit : totalProfit)}
+                  Rp {fmt(heroVal('total_profit', totalProfit))}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.heroStats}>
+              <View style={{flex: 1}}>
+                <Text style={styles.heroStatLabel}>Total Belum Dibayar</Text>
+                <Text style={[styles.heroStatValue, {color: '#de604a'}]}>
+                  Rp {fmt(heroVal('total_unpaid', paymentSummary.total_unpaid))}
+                </Text>
+              </View>
+              <View style={{flex: 1}}>
+                <Text style={styles.heroStatLabel}>Total Dibayarkan</Text>
+                <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
+                  Rp {fmt(heroVal('total_paid', paymentSummary.total_paid))}
                 </Text>
               </View>
             </View>
@@ -337,9 +376,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
               <Icon name="package" size={18} color={color.primaryColor} />
               <Text style={styles.miniValue}>
-                {sessionData
-                  ? sessionData.total_items || 0
-                  : totalItems || 0}
+                {heroVal('total_items', totalItems) || 0}
               </Text>
               <Text style={styles.miniLabel}>Item</Text>
             </View>
@@ -351,11 +388,16 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
               <Icon name="layers" size={18} color="#10B981" />
               <Text style={styles.miniValue}>
-                {sessionData
-                  ? sessionData.total_batch || 0
-                  : totalBatch || 0}
+                {heroVal('total_batch', totalBatch) || 0}
               </Text>
               <Text style={styles.miniLabel}>Batch</Text>
+            </View>
+          </View>
+
+          {/* Pembayaran Session: total dibayarkan & belum dibayar */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Pembayaran Session</Text>
             </View>
           </View>
         </View>

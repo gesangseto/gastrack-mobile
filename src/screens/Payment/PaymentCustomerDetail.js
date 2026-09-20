@@ -99,7 +99,7 @@ const PaymentCustomerDetail = ({route}) => {
             style={styles.loading}
           />
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <>
             {/* Identitas customer */}
             <View style={styles.customerBox}>
               <View style={styles.customerIcon}>
@@ -149,58 +149,77 @@ const PaymentCustomerDetail = ({route}) => {
               </Text>
             </View>
 
-            {/* Daftar item yang dipesan */}
-            <Text style={styles.sectionTitle}>Item Dipesan</Text>
-            {items.length === 0 ? (
-              <Text style={styles.emptyText}>
-                Tidak ada item pada session ini
-              </Text>
-            ) : (
-              items.map(item => {
-                const total = Number(item.quantity || 0) * Number(item.selling_price || 0);
-                const itemColor =
-                  ITEM_STATUS_COLOR[String(item.status)] || '#C4C4C4';
-                return (
-                  <View key={item.id} style={styles.itemCard}>
-                    <View style={styles.itemIcon}>
-                      <Icon name="package" size={18} color={color.primaryColor} />
+            {/* Daftar item yang dipesan — header fix, list scrollable */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Item Dipesan</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>
+                  {items.length} item
+                </Text>
+              </View>
+            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.itemList}>
+              {items.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  Tidak ada item pada session ini
+                </Text>
+              ) : (
+                items.map(item => {
+                  const total =
+                    Number(item.quantity || 0) * Number(item.selling_price || 0);
+                  const itemColor =
+                    ITEM_STATUS_COLOR[String(item.status)] || '#C4C4C4';
+                  return (
+                    <View key={item.id} style={styles.itemCard}>
+                      <View style={styles.itemIcon}>
+                        <Icon
+                          name="package"
+                          size={18}
+                          color={color.primaryColor}
+                        />
+                      </View>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName} numberOfLines={2}>
+                          {item.product_name || `Item #${item.id}`}
+                        </Text>
+                        <Text style={styles.itemSub}>
+                          {item.quantity} pcs ×{' '}
+                          {formatRupiah(item.selling_price)}
+                        </Text>
+                        <Text style={styles.itemTotal}>
+                          {formatRupiah(total)}
+                        </Text>
+                      </View>
+                      <View
+                        style={[styles.itemBadge, {backgroundColor: itemColor}]}>
+                        <Text style={styles.itemBadgeText}>
+                          {item.status_name || item.status}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.itemInfo}>
-                      <Text style={styles.itemName} numberOfLines={2}>
-                        {item.product_name || `Item #${item.id}`}
-                      </Text>
-                      <Text style={styles.itemSub}>
-                        {item.quantity} pcs × {formatRupiah(item.selling_price)}
-                      </Text>
-                      <Text style={styles.itemTotal}>
-                        {formatRupiah(total)}
-                      </Text>
-                    </View>
-                    <View
-                      style={[styles.itemBadge, {backgroundColor: itemColor}]}>
-                      <Text style={styles.itemBadgeText}>
-                        {item.status_name || item.status}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })
-            )}
-
-            {/* Tombol bayar */}
-            <TouchableOpacity
-              onPress={() =>
-                RootNavigation.navigate('PaymentCreate', {
-                  customer_id,
-                  session_id,
+                  );
                 })
-              }
-              style={styles.payButton}>
-              <Icon name="wallet" size={18} color={color.white} />
-              <Text style={styles.payButtonText}>Bayar Tagihan</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              )}
+            </ScrollView>
+          </>
         )}
+      </View>
+
+      {/* Tombol "Bayar Tagihan" — fixed di bagian bawah layar */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          onPress={() =>
+            RootNavigation.navigate('PaymentCreate', {
+              customer_id,
+              session_id,
+            })
+          }
+          style={styles.payButton}>
+          <Icon name="wallet" size={18} color={color.white} />
+          <Text style={styles.payButtonText}>Bayar Tagihan</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -304,11 +323,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9A9A9A',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1F1F1F',
-    marginBottom: 10,
+  },
+  countBadge: {
+    backgroundColor: color.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: color.primaryColor,
+  },
+  itemList: {
+    flex: 1,
   },
   emptyText: {
     fontSize: 13,
@@ -366,7 +404,6 @@ const styles = StyleSheet.create({
     color: color.white,
   },
   payButton: {
-    marginTop: 16,
     borderRadius: 20,
     backgroundColor: color.primaryColor,
     height: 50,
@@ -380,5 +417,13 @@ const styles = StyleSheet.create({
     color: color.white,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  footer: {
+    backgroundColor: color.white,
+    paddingHorizontal: 30,
+    paddingTop: 12,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F5',
   },
 });

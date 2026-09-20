@@ -1,6 +1,6 @@
 import Icon from '@react-native-vector-icons/lucide';
 import {useFocusEffect} from '@react-navigation/native';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -83,11 +83,16 @@ const PaymentTab = () => {
     };
   }, []);
 
+  // Session terakhir yang dimuat — mencegah duplikat request dari onChangeValue
+  // DropDownPicker (yang ikut terpicu saat loadSessions meng-set sessionValue).
+  const lastLoadedSessionRef = useRef(null);
+
   const loadData = async sessionId => {
+    lastLoadedSessionRef.current = sessionId;
     setLoading(true);
     const [b, h] = await Promise.all([
       getPaymentSummaryList({session_id: sessionId}, false),
-      getPaymentHistory({}, false),
+      getPaymentHistory({session_id: sessionId}, false),
     ]);
     if (!mountedRef.current) {
       return;
@@ -99,6 +104,15 @@ const PaymentTab = () => {
       setHistory(h);
     }
     setLoading(false);
+  };
+
+  // onChangeValue DropDownPicker: panggil loadData hanya jika session benar-benar
+  // berubah. Tanpa guard ini, setSessionValue() dari loadSessions ikut memicu
+  // onChangeValue → loadData duplikat.
+  const handleSessionChange = value => {
+    if (lastLoadedSessionRef.current !== value) {
+      loadData(value);
+    }
   };
 
   const loadSessions = async () => {
@@ -244,6 +258,21 @@ const PaymentTab = () => {
         ? 'Belum ada customer lunas'
         : 'Belum ada riwayat payment';
 
+  // Items dropdown session — WAJIB di-memoize. DropDownPicker v5 memanggil
+  // onChangeValue setiap kali referensi `items` berubah; array inline yang dibuat
+  // ulang tiap render akan memicu loop tak berujung (loadData → setState → render
+  // → items baru → onChangeValue → ...).
+  const sessionItems = useMemo(
+    () => [
+      {label: 'Semua Session', value: null},
+      ...sessionList.map(s => ({
+        label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
+        value: s.id,
+      })),
+    ],
+    [sessionList],
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Payment</Text>
@@ -254,17 +283,11 @@ const PaymentTab = () => {
         <DropDownPicker
           open={sessionOpen}
           value={sessionValue}
-          items={[
-            {label: 'Semua Session', value: null},
-            ...sessionList.map(s => ({
-              label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
-              value: s.id,
-            })),
-          ]}
+          items={sessionItems}
           setOpen={setSessionOpen}
           setValue={setSessionValue}
           setItems={setSessionList}
-          onChangeValue={value => loadData(value)}
+          onChangeValue={handleSessionChange}
           placeholder="Pilih session jastip"
           style={styles.picker}
           dropDownContainerStyle={styles.pickerDropdown}

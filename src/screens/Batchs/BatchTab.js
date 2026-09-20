@@ -11,8 +11,8 @@ import {useBatchStore} from '../../store/batchStore';
 import {useSessionStore} from '../../store/sessionStore';
 
 // Tab "Batch" — Tambah Batch + filter status batch.
-// Data batch (Draft + Shipping) dimuat SEKALI saat screen aktif dan disimpan
-// di Zustand store. Klik tab hanya mem-filter data store (tanpa request ulang).
+// Data batch (Draft + Shipping) dari session AKTIF dimuat saat screen aktif dan
+// disimpan di Zustand store. Klik tab hanya mem-filter data store (tanpa request ulang).
 const BATCH_TABS = [
   {key: 'Draft', label: 'Draft'},
   {key: 'Shipping', label: 'Shipping'},
@@ -24,13 +24,35 @@ const BatchTab = () => {
   const list = useBatchStore(s => s.list);
   const loading = useBatchStore(s => s.loading);
   const fetchBatches = useBatchStore(s => s.fetchBatches);
+  const clearBatches = useBatchStore(s => s.clearBatches);
 
-  // Muat batch Draft + Shipping sekali saat screen Batch aktif.
+  const activeSession = useSessionStore(s => s.activeSession);
+  const ensureActiveSession = useSessionStore(s => s.ensureActiveSession);
+
+  // Muat batch Draft + Shipping dari session AKTIF saat screen Batch aktif.
+  // Tanpa session aktif → list dikosongkan (jangan tampilkan batch session lain).
   useFocusEffect(
     useCallback(() => {
-      fetchBatches(false);
-    }, [fetchBatches]),
+      (async () => {
+        const session = await ensureActiveSession();
+        if (session) {
+          fetchBatches(session.id, false);
+        } else {
+          clearBatches();
+        }
+      })();
+    }, [fetchBatches, ensureActiveSession, clearBatches]),
   );
+
+  // Pull-to-refresh: muat ulang batch dari session aktif.
+  const handleRefresh = async () => {
+    const session = await ensureActiveSession();
+    if (session) {
+      fetchBatches(session.id, true);
+    } else {
+      clearBatches();
+    }
+  };
 
   // Filter client-side: tab Draft → status Draft, tab Shipping → status Shipping.
   const filteredList = list.filter(b => b.status === activeTab);
@@ -86,12 +108,14 @@ const BatchTab = () => {
         ) : (
           <ListViewBatch
             list={filteredList}
-            refresh={() => fetchBatches(true)}
+            refresh={handleRefresh}
             inline
             emptyText={
-              activeTab === 'Draft'
-                ? 'Belum ada batch draft'
-                : 'Belum ada batch yang dikirim'
+              !activeSession
+                ? 'Tidak ada session aktif. Mulai session terlebih dahulu.'
+                : activeTab === 'Draft'
+                  ? 'Belum ada batch draft'
+                  : 'Belum ada batch yang dikirim'
             }
           />
         )}

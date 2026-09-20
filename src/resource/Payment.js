@@ -49,7 +49,8 @@ export const getPaymentSummaryList = async (property = {}, useAlert = true) => {
 };
 
 // Riwayat payment (tab Riwayat).
-// property: { customer_id?, status?, search? }
+// property: { customer_id?, status?, search?, session_id? } — session_id
+// memfilter hanya payment dari customer yang punya item di session tersebut.
 export const getPaymentHistory = async (property = {}, useAlert = true) => {
   const qs = new URLSearchParams();
   Object.keys(property).forEach(key => {
@@ -132,7 +133,8 @@ export const getPaymentItems = async (customerId, sessionId, useAlert = true) =>
 };
 
 // Buat payment baru (PUT) — pembayaran bertahap per customer.
-// Params: { customer_id, amount, payment_method, payment_date?, reference_number?, notes?, created_by? }
+// Params: { customer_id, session_id, amount, payment_method, payment_date?, reference_number?, notes?, created_by? }
+// session_id = session tempat pembayaran dicatat (untuk filter riwayat per session).
 export const createPayment = async (Params = {}, useAlert = true) => {
   return new Promise(resolve => {
     $axios

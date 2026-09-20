@@ -18,8 +18,8 @@ import {useSessionStore} from '../../store/sessionStore';
 //   201 Manifest    → sudah masuk batch (batch masih Draft)
 //   202 In-Transit  → batch sudah dikirim, barang belum tiba di warehouse
 //
-// Data item (status 200/201/202) dimuat SEKALI saat screen aktif dan disimpan
-// di Zustand store. Klik tab hanya mem-filter data store (tanpa request ulang).
+// Data item (status 200/201/202) dari session AKTIF dimuat saat screen aktif
+// dan disimpan di Zustand store. Klik tab hanya mem-filter data store (tanpa request ulang).
 const ITEM_TABS = [
   {key: 'Draft', label: 'Draft', status: 200},
   {key: 'OnBatch', label: 'On Batch', status: 201},
@@ -61,6 +61,10 @@ const ItemTab = () => {
   const list = useItemStore(s => s.list);
   const loading = useItemStore(s => s.loading);
   const fetchItems = useItemStore(s => s.fetchItems);
+  const clearItems = useItemStore(s => s.clearItems);
+
+  const activeSession = useSessionStore(s => s.activeSession);
+  const ensureActiveSession = useSessionStore(s => s.ensureActiveSession);
 
   const current = ITEM_TABS.find(t => t.key === activeTab) || ITEM_TABS[0];
 
@@ -70,16 +74,34 @@ const ItemTab = () => {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Muat item status 200/201/202 sekali saat screen Item aktif.
+  // Muat item status 200/201/202 dari session AKTIF saat screen Item aktif.
+  // Tanpa session aktif → list dikosongkan (jangan tampilkan item session lain).
   useFocusEffect(
     useCallback(() => {
-      fetchItems(false);
-    }, [fetchItems]),
+      (async () => {
+        const session = await ensureActiveSession();
+        if (session) {
+          fetchItems(session.id, false);
+        } else {
+          clearItems();
+        }
+      })();
+    }, [fetchItems, ensureActiveSession, clearItems]),
   );
+
+  // Pull-to-refresh: muat ulang item dari session aktif.
+  const handleRefresh = async () => {
+    const session = await ensureActiveSession();
+    if (session) {
+      fetchItems(session.id, true);
+    } else {
+      clearItems();
+    }
+  };
 
   // Filter client-side: tab status + kata kunci pencarian.
   const matchesSearch = item => {
-    if (!keyword) return true;
+    if (!keyword) {return true;}
     const k = keyword.toLowerCase();
     if (searchType === 'phone') {
       return (item.customer_phone || '').toLowerCase().includes(k);
@@ -158,12 +180,14 @@ const ItemTab = () => {
         ) : (
           <ListViewItem
             list={filteredList}
-            refresh={() => fetchItems(true)}
+            refresh={handleRefresh}
             inline
             emptyText={
-              keyword
-                ? `Tidak ada item untuk pencarian "${keyword}"`
-                : 'Belum ada item'
+              !activeSession
+                ? 'Tidak ada session aktif. Mulai session terlebih dahulu.'
+                : keyword
+                  ? `Tidak ada item untuk pencarian "${keyword}"`
+                  : 'Belum ada item'
             }
           />
         )}

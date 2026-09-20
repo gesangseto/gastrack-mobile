@@ -61,7 +61,7 @@ const PaymentCreate = ({route}) => {
 
   // Form payment
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('CASH');
+  const [method, setMethod] = useState('BANK_TRANSFER');
   const [paymentDate, setPaymentDate] = useState(today());
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
@@ -193,6 +193,7 @@ const PaymentCreate = ({route}) => {
     setSaving(true);
     const ok = await createPayment({
       customer_id: selectedCustomer.id,
+      session_id: sessionId,
       amount: value,
       payment_method: method,
       payment_date: paymentDate.trim() || null,
