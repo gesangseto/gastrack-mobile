@@ -3,6 +3,7 @@ import {getSessionList} from '../resource/Session';
 import {storage} from '../storage';
 
 const SELECTED_KEY = 'selected_session';
+const SESSION_LIST_KEY = 'session_list_cache';
 
 // ===== Persist ke MMKV (pola sama dgn homeStore) =====
 const loadSelected = () => {
@@ -19,6 +20,33 @@ const saveSelected = s => {
     storage.set(SELECTED_KEY, JSON.stringify(s));
   } catch (e) {
     console.log('saveSelected err', e);
+  }
+};
+
+// ===== Cache daftar session (dropdown "Per Session Jastip") =====
+// Disimpan di MMKV agar pindah-pindah menu tidak perlu fetch ulang;
+// refresh hanya via pull-to-refresh.
+const loadSessionListCache = () => {
+  try {
+    const raw = storage.getString(SESSION_LIST_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.log('loadSessionListCache err', e);
+    return null;
+  }
+};
+const saveSessionListCache = list => {
+  try {
+    storage.set(SESSION_LIST_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.log('saveSessionListCache err', e);
+  }
+};
+const clearSessionListCache = () => {
+  try {
+    storage.delete(SESSION_LIST_KEY);
+  } catch (e) {
+    console.log('clearSessionListCache err', e);
   }
 };
 
@@ -40,6 +68,7 @@ export const useSessionStore = create((set, get) => ({
   loading: false,
   refreshing: false,
   lastUpdated: null,
+  hasSessionCache: false,
 
   // Muat session aktif dari endpoint session (status=Active).
   // isRefresh=true → dipakai setelah stop session (spinner RefreshControl).
@@ -71,19 +100,63 @@ export const useSessionStore = create((set, get) => ({
     try {
       const response = await getSessionList({}, false);
       if (Array.isArray(response)) {
+        saveSessionListCache(response);
         set({
           sessionList: response,
+          hasSessionCache: true,
           lastUpdated: new Date().toISOString(),
         });
-        // Jika belum ada pilihan tersimpan → default ke session aktif.
-        const {selectedSession, activeSession} = get();
-        if (!selectedSession) set({selectedSession: activeSession || null});
+        // Sinkronkan session terpilih: jika belum ada pilihan → default ke
+        // session aktif (dari response); jika sudah ada → perbarui datanya
+        // dgn hasil fetch terbaru (misal status berubah) lalu persist MMKV.
+        const {selectedSession} = get();
+        if (!selectedSession) {
+          const active = response.find(s => s.status === 'Active');
+          set({selectedSession: active || null});
+        } else {
+          const fresh = response.find(s => s.id === selectedSession.id);
+          if (fresh) {
+            set({selectedSession: fresh});
+            saveSelected(fresh);
+          }
+        }
       }
     } catch (e) {
       console.log('fetchSessionList error', e);
     } finally {
       set({loading: false, refreshing: false});
     }
+  },
+
+  // Muat daftar session dari cache MMKV (tanpa network). Jika belum ada
+  // cache (app baru pertama kali) → fetch dari backend sekali.
+  initSessionListFromCache: async () => {
+    const cache = loadSessionListCache();
+    if (cache && Array.isArray(cache) && cache.length > 0) {
+      set({sessionList: cache, hasSessionCache: true});
+      // Default pilihan ke session aktif jika belum ada pilihan tersimpan
+      // (dipakai bersama oleh Home/Statistik & Payment).
+      const {selectedSession} = get();
+      if (!selectedSession) {
+        const active = cache.find(s => s.status === 'Active');
+        if (active) {
+          set({selectedSession: active});
+          saveSelected(active);
+        }
+      }
+      return;
+    }
+    await get().fetchSessionList();
+  },
+
+  // Set daftar session langsung (dipakai DropDownPicker setItems).
+  setSessionList: list => set({sessionList: list}),
+
+  // Hapus cache daftar session (dipakai setelah buka/tutup session agar
+  // dropdown tidak menampilkan data basi).
+  invalidateSessionList: () => {
+    clearSessionListCache();
+    set({hasSessionCache: false});
   },
 
   // Pilih session utk seluruh menu (boleh session lampau / Closed).

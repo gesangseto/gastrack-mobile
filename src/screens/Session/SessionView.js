@@ -25,11 +25,15 @@ import {fetchCountries, fetchExchangeRate} from '../../resource/Country';
 import {fetchSysConfig} from '../../resource/Configuration';
 import {getSysConfig} from '../../storage';
 import {useHomeStore} from '../../store/homeStore';
+import {useSessionStore} from '../../store/sessionStore';
 import Toast from 'react-native-toast-message';
 
 const SessionView = () => {
   const dashboard = useHomeStore(s => s.dashboard);
   const fetchHome = useHomeStore(s => s.fetchHome);
+  // Refresh daftar session di store + cache MMKV setelah buka/tutup session,
+  // agar dropdown "Per Session Jastip" di Home tidak menampilkan data basi.
+  const fetchSessionList = useSessionStore(s => s.fetchSessionList);
 
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -170,6 +174,7 @@ const SessionView = () => {
       });
       if (ok) {
         await load();
+        fetchSessionList();
       }
     } finally {
       setBusy(false);
@@ -185,6 +190,7 @@ const SessionView = () => {
       const ok = await closeSession(activeSession.id, {});
       if (ok) {
         await load();
+        fetchSessionList();
       }
     } finally {
       setBusy(false);

@@ -14,8 +14,8 @@ import {useFocusEffect} from '@react-navigation/native';
 import color from '../../constant/color';
 import Icon from '@react-native-vector-icons/lucide';
 import {useHomeStore} from '../../store/homeStore';
+import {useSessionStore} from '../../store/sessionStore';
 import {fetchSessionStats} from '../../resource/Dashboard';
-import {getSessionList} from '../../resource/Session';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 // ===== Mapping status =====
@@ -51,12 +51,25 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   const offline = useHomeStore(s => s.offline);
   const fetchHome = useHomeStore(s => s.fetchHome);
 
-  // Session dropdown
-  const [sessionList, setSessionList] = useState([]);
+  // Session dropdown — daftar session dari store (cache MMKV). Tidak
+  // di-fetch ulang saat kembali ke layar; refresh hanya via pull-to-refresh.
+  const sessionList = useSessionStore(s => s.sessionList);
+  const fetchSessionList = useSessionStore(s => s.fetchSessionList);
+  const initSessionListFromCache = useSessionStore(
+    s => s.initSessionListFromCache,
+  );
+  const setSessionList = useSessionStore(s => s.setSessionList);
+  // Session terpilih disimpan di store (persist MMKV) beserta datanya —
+  // sumber tunggal filter. Saat kembali ke Home, pilihan tetap tampil
+  // tanpa perlu muat ulang.
+  const selectedSession = useSessionStore(s => s.selectedSession);
+  const selectSession = useSessionStore(s => s.selectSession);
+  // Value dropdown = id session terpilih (jika masih ada di daftar).
+  const sessionValue =
+    selectedSession && sessionList.some(s => s.id === selectedSession.id)
+      ? selectedSession.id
+      : null;
   const [sessionOpen, setSessionOpen] = useState(false);
-  const [sessionValue, setSessionValue] = useState(null); // null = semua
-  // true selama daftar session masih dimuat (dropdown belum siap)
-  const [sessionLoading, setSessionLoading] = useState(false);
   // Statistik per session (grafik)
   const [sessionStats, setSessionStats] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -76,24 +89,20 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   useFocusEffect(
     useCallback(() => {
       fetchHome(false);
-      loadSessions();
-    }, [fetchHome]),
+      // Muat daftar session dari cache MMKV (tanpa network). Fetch hanya
+      // saat belum ada cache (pertama kali) atau via pull-to-refresh.
+      initSessionListFromCache();
+    }, [fetchHome, initSessionListFromCache]),
   );
 
-  const loadSessions = async () => {
-    setSessionLoading(true);
-    const list = await getSessionList({}, false);
-    if (!mountedRef.current) {
-      return;
+  // Default pilihan = session aktif (hanya saat belum ada pilihan tersimpan).
+  // Disimpan ke store agar bertahan saat pindah menu / restart app.
+  useEffect(() => {
+    if (!selectedSession && sessionList.length > 0) {
+      const active = sessionList.find(s => s.status === 'Active');
+      if (active) selectSession(active);
     }
-    if (list) {
-      setSessionList(list);
-      // Default: session aktif
-      const active = list.find(s => s.status === 'Active');
-      setSessionValue(active ? active.id : null);
-    }
-    setSessionLoading(false);
-  };
+  }, [sessionList, selectedSession, selectSession]);
 
   // Muat statistik per session (grafik 6 terakhir)
   const loadSessionStats = async () => {
@@ -142,45 +151,44 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
 
   const onRefresh = () => {
     fetchHome(true);
-    loadSessions();
+    fetchSessionList(true);
     loadSessionStats();
+  };
+
+  // Pilih session di dropdown → simpan lengkap ke store (persist MMKV)
+  // beserta informasinya (session_no, country, status, dll).
+  // Catatan: react-native-dropdown-picker memanggil setValue dengan FUNGSI
+  // (state => newValue) — evaluasi dulu sebelum dipakai.
+  const handleSelectSession = value => {
+    const id = typeof value === 'function' ? value(sessionValue) : value;
+    const session = sessionList.find(s => s.id === id) || null;
+    selectSession(session);
   };
 
   // ===== Turunan data =====
   const itemByStatus = data?.item_by_status || [];
   const totalItems = sumBy(itemByStatus, 'total');
-  const totalSelling = sumBy(itemByStatus, 'total_selling');
-  const totalCost = sumBy(itemByStatus, 'total_cost');
-  const totalProfit = totalSelling - totalCost;
-
-  const totalBatch = sumBy(data?.batch_by_status || [], 'total');
-  const totalCustomer = data?.total_customer || 0;
 
   const sold = data?.total_sales || {};
   const soldProfit = Number(sold.total_profit || 0);
 
-  // Ringkasan pembayaran customer (dari dashboard backend)
+  // Ringkasan pembayaran customer (dari dashboard backend) — dipakai card
+  // "Pembayaran Customer" di section Total Keseluruhan (agregat semua session).
   const paymentSummary = data?.payment_summary || {};
 
-  // Fallback global hanya saat user memilih "Semua Session" secara eksplisit.
-  // Saat session masih dimuat (null karena loading) → tampilkan 0, bukan angka
-  // global yang menyesatkan (mis. total_unpaid seluruh session).
-  const isAllSessions = !sessionValue && !sessionLoading;
-
-  // Nilai hero: session terpilih → data session; "Semua Session" → global;
-  // session masih dimuat → 0.
-  const heroVal = (sessionKey, globalVal) =>
-    sessionData ? sessionData[sessionKey] : isAllSessions ? globalVal : 0;
+  // Nilai hero & mini card: HANYA dari data session terpilih. Tanpa session
+  // terpilih → 0. Tidak pernah fallback ke angka global (seluruh session).
+  const heroVal = sessionKey =>
+    sessionData ? Number(sessionData[sessionKey] || 0) : 0;
 
   const itemCount = code => {
     const row = itemByStatus.find(it => Number(it.status) === code);
     return row ? Number(row.total || 0) : 0;
   };
 
-  // Session terpilih → info header (session_no, country, status)
-  const selectedSession = sessionValue
-    ? sessionList.find(s => s.id === sessionValue)
-    : null;
+  // Session terpilih → info header (session_no, country, status).
+  // Data diambil langsung dari store (persist MMKV), bukan dari sessionList,
+  // agar tetap tampil walau daftar session belum dimuat ulang.
   // Detail statistik session terpilih (dari /session-stats?session_id=...)
   // Berisi total_items, total_selling, total_cost, total_profit, total_batch.
   const sessionData = sessionDetail || null;
@@ -275,14 +283,13 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
               open={sessionOpen}
               value={sessionValue}
               items={[
-                {label: 'Semua Session', value: null},
                 ...sessionList.map(s => ({
                   label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
                   value: s.id,
                 })),
               ]}
               setOpen={setSessionOpen}
-              setValue={setSessionValue}
+              setValue={handleSelectSession}
               setItems={setSessionList}
               placeholder="Pilih session jastip"
               style={styles.picker}
@@ -330,27 +337,27 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
               <Text style={styles.heroLabel}>
                 {selectedSession
                   ? `Session ${selectedSession.session_no}`
-                  : 'Total Penjualan'}
+                  : 'Pilih session'}
               </Text>
               {sessionDetailLoading && (
                 <ActivityIndicator size="small" color="#B1A3D2" />
               )}
             </View>
             <Text style={styles.heroValue}>
-              Rp {fmt(heroVal('total_selling', totalSelling))}
+              Rp {fmt(heroVal('total_selling'))}
             </Text>
             <View style={styles.heroDivider} />
             <View style={styles.heroStats}>
               <View style={{flex: 1}}>
                 <Text style={styles.heroStatLabel}>Modal</Text>
                 <Text style={styles.heroStatValue}>
-                  Rp {fmt(heroVal('total_cost', totalCost))}
+                  Rp {fmt(heroVal('total_cost'))}
                 </Text>
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.heroStatLabel}>Profit</Text>
                 <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                  Rp {fmt(heroVal('total_profit', totalProfit))}
+                  Rp {fmt(heroVal('total_profit'))}
                 </Text>
               </View>
             </View>
@@ -359,13 +366,13 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
               <View style={{flex: 1}}>
                 <Text style={styles.heroStatLabel}>Total Belum Dibayar</Text>
                 <Text style={[styles.heroStatValue, {color: '#de604a'}]}>
-                  Rp {fmt(heroVal('total_unpaid', paymentSummary.total_unpaid))}
+                  Rp {fmt(heroVal('total_unpaid'))}
                 </Text>
               </View>
               <View style={{flex: 1}}>
                 <Text style={styles.heroStatLabel}>Total Dibayarkan</Text>
                 <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                  Rp {fmt(heroVal('total_paid', paymentSummary.total_paid))}
+                  Rp {fmt(heroVal('total_paid'))}
                 </Text>
               </View>
             </View>
@@ -376,19 +383,19 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
               <Icon name="package" size={18} color={color.primaryColor} />
               <Text style={styles.miniValue}>
-                {heroVal('total_items', totalItems) || 0}
+                {heroVal('total_items')}
               </Text>
               <Text style={styles.miniLabel}>Item</Text>
             </View>
             <View style={[styles.miniCard, {backgroundColor: '#E0F2FE'}]}>
               <Icon name="users" size={18} color="#0EA5E9" />
-              <Text style={styles.miniValue}>{totalCustomer || 0}</Text>
+              <Text style={styles.miniValue}>{heroVal('total_customer')}</Text>
               <Text style={styles.miniLabel}>Customer</Text>
             </View>
             <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
               <Icon name="layers" size={18} color="#10B981" />
               <Text style={styles.miniValue}>
-                {heroVal('total_batch', totalBatch) || 0}
+                {heroVal('total_batch')}
               </Text>
               <Text style={styles.miniLabel}>Batch</Text>
             </View>

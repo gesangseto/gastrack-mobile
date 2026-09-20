@@ -19,7 +19,7 @@ import {
   getPaymentHistory,
   getPaymentSummaryList,
 } from '../../resource/Payment';
-import {getSessionList} from '../../resource/Session';
+import {useSessionStore} from '../../store/sessionStore';
 
 // Tab "Payment" — pembayaran bertahap PER CUSTOMER (module payment baru).
 //
@@ -69,10 +69,25 @@ const PaymentTab = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
 
-  // Session dropdown (default: session aktif)
-  const [sessionList, setSessionList] = useState([]);
+  // Session dropdown — daftar session dari store (cache MMKV). Tidak
+  // di-fetch ulang saat kembali ke layar; refresh hanya via pull-to-refresh.
+  const sessionList = useSessionStore(s => s.sessionList);
+  const fetchSessionList = useSessionStore(s => s.fetchSessionList);
+  const initSessionListFromCache = useSessionStore(
+    s => s.initSessionListFromCache,
+  );
+  const setSessionList = useSessionStore(s => s.setSessionList);
+  // Session terpilih disimpan di store (persist MMKV) beserta datanya —
+  // sumber tunggal filter. Saat kembali ke Payment, pilihan tetap tampil
+  // tanpa perlu muat ulang.
+  const selectedSession = useSessionStore(s => s.selectedSession);
+  const selectSession = useSessionStore(s => s.selectSession);
+  // Value dropdown = id session terpilih (jika masih ada di daftar).
+  const sessionValue =
+    selectedSession && sessionList.some(s => s.id === selectedSession.id)
+      ? selectedSession.id
+      : null;
   const [sessionOpen, setSessionOpen] = useState(false);
-  const [sessionValue, setSessionValue] = useState(null);
 
   // Cegah setState setelah screen unmount (stale response saat ganti screen)
   const mountedRef = useRef(true);
@@ -84,12 +99,21 @@ const PaymentTab = () => {
   }, []);
 
   // Session terakhir yang dimuat — mencegah duplikat request dari onChangeValue
-  // DropDownPicker (yang ikut terpicu saat loadSessions meng-set sessionValue).
+  // DropDownPicker (yang ikut terpicu saat value/items berubah).
   const lastLoadedSessionRef = useRef(null);
 
   const loadData = async sessionId => {
     lastLoadedSessionRef.current = sessionId;
     setLoading(true);
+    // Tanpa session terpilih → jangan muat data tanpa filter session.
+    // (Opsi "Semua Session" sudah dihapus; null hanya terjadi saat tidak ada
+    // session aktif — tampilkan daftar kosong, bukan data seluruh session.)
+    if (!sessionId) {
+      setBills([]);
+      setHistory([]);
+      setLoading(false);
+      return;
+    }
     const [b, h] = await Promise.all([
       getPaymentSummaryList({session_id: sessionId}, false),
       getPaymentHistory({session_id: sessionId}, false),
@@ -107,42 +131,40 @@ const PaymentTab = () => {
   };
 
   // onChangeValue DropDownPicker: panggil loadData hanya jika session benar-benar
-  // berubah. Tanpa guard ini, setSessionValue() dari loadSessions ikut memicu
-  // onChangeValue → loadData duplikat.
+  // berubah. Tanpa guard ini, perubahan items/value ikut memicu onChangeValue →
+  // loadData duplikat.
   const handleSessionChange = value => {
     if (lastLoadedSessionRef.current !== value) {
       loadData(value);
     }
   };
 
-  const loadSessions = async () => {
-    const list = await getSessionList({}, false);
-    if (!mountedRef.current) {
-      return;
-    }
-    if (list) {
-      setSessionList(list);
-      // Default: session aktif
-      const active = list.find(s => s.status === 'Active');
-      const next = active ? active.id : null;
-      setSessionValue(next);
-      loadData(next);
-    }
+  // Pilih session di dropdown → simpan lengkap ke store (persist MMKV).
+  // Catatan: react-native-dropdown-picker memanggil setValue dengan FUNGSI
+  // (state => newValue) — evaluasi dulu sebelum dipakai.
+  const handleSelectSession = value => {
+    const id = typeof value === 'function' ? value(sessionValue) : value;
+    const session = sessionList.find(s => s.id === id) || null;
+    selectSession(session);
   };
 
-  // Muat ulang setiap kali tab Payment aktif (data bisa berubah setelah
-  // PaymentCreate / session baru).
+  // Saat tab Payment aktif: muat daftar session dari cache MMKV (tanpa
+  // network). Data tagihan/riwayat TIDAK di-fetch ulang — hanya saat session
+  // berubah (onChangeValue) atau pull-to-refresh.
   useFocusEffect(
     useCallback(() => {
-      loadSessions();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
+      initSessionListFromCache();
+    }, [initSessionListFromCache]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadSessions();
-    setRefreshing(false);
+    try {
+      await fetchSessionList(true);
+      loadData(sessionValue);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Filter customer by nama / no. HP (tab Pending & Paid)
@@ -264,7 +286,6 @@ const PaymentTab = () => {
   // → items baru → onChangeValue → ...).
   const sessionItems = useMemo(
     () => [
-      {label: 'Semua Session', value: null},
       ...sessionList.map(s => ({
         label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
         value: s.id,
@@ -285,7 +306,7 @@ const PaymentTab = () => {
           value={sessionValue}
           items={sessionItems}
           setOpen={setSessionOpen}
-          setValue={setSessionValue}
+          setValue={handleSelectSession}
           setItems={setSessionList}
           onChangeValue={handleSessionChange}
           placeholder="Pilih session jastip"
