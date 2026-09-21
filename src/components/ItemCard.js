@@ -91,11 +91,11 @@ const ItemCard = ({
 
     return [
       `Code: ${cost} -> ${sell}`,
-      `${item.cost_currency}: ${fmtAngka(item.cost_price)} -> ${fmtAngka(
-        item.selling_price / rate,
+      `${item.foreign_currency}: ${fmtAngka(item.foreign_cost)} -> ${fmtAngka(
+        item.foreign_price,
       )}`,
-      `${item.selling_currency}: ${fmtAngka(item.cost_price * rate)} -> ${fmtAngka(
-        item.selling_price,
+      `${item.local_currency}: ${fmtAngka(item.local_cost)} -> ${fmtAngka(
+        item.local_price,
       )}`,
     ];
   };
@@ -153,26 +153,31 @@ const ItemCard = ({
               </Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.qtyBadge}>
-            <Text style={styles.qtyBadgeText} numberOfLines={1}>
-              {item?.quantity} pcs
-            </Text>
-          </View>
         </View>
       </View>
-      {onRemove && (
-        <TouchableOpacity
-          onPress={() => onRemove(item)}
-          style={styles.removeBtn}>
-          <Icon name="x" size={16} color={color.danger} />
-        </TouchableOpacity>
-      )}
-      {onToggle && (
-        <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-          {selected && <Icon name="check" size={14} color={color.white} />}
+      <View style={styles.boxImage}>
+        <View style={styles.qtyBadge}>
+          <Text style={styles.qtyBadgeText} numberOfLines={1}>
+            {item?.quantity} pcs
+          </Text>
         </View>
-      )}
-      {right}
+        <View style={styles.statusRow}>
+          {onRemove && (
+            <TouchableOpacity
+              onPress={() => onRemove(item)}
+              style={styles.removeBtn}>
+              <Icon name="x" size={16} color={color.danger} />
+            </TouchableOpacity>
+          )}
+          {onToggle && (
+            <View
+              style={[styles.checkbox, selected && styles.checkboxSelected]}>
+              {selected && <Icon name="check" size={14} color={color.white} />}
+            </View>
+          )}
+          {right}
+        </View>
+      </View>
     </Pressable>
   );
 };
@@ -234,7 +239,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    marginBottom: 10,
   },
   qtyBadgeText: {
     color: color.primaryColor,

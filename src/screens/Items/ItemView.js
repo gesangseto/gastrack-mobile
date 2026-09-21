@@ -36,54 +36,36 @@ const calcProfit = item => {
   const sp = Number(item?.selling_price || 0);
   const cp = Number(item?.cost_price || 0);
   const rate = Number(item?.exchange_rate || 1);
-  const costIdr =
-    (item?.cost_currency || 'IDR') === 'IDR' ? cp : cp * rate;
+  const costIdr = (item?.cost_currency || 'IDR') === 'IDR' ? cp : cp * rate;
   return sp - costIdr;
 };
 
 const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
   const [visibleImageViewer, setVisibleImageViewer] = useState(false);
-  const [profitMode, setProfitMode] = useState('selling'); // 'selling' | 'session'
-
-  const profit = calcProfit(item);
-  // Konversi profit ke mata uang session jika diminta
-  const rate = Number(item?.exchange_rate || 1);
-  const displayProfit =
-    profitMode === 'session' && rate > 0
-      ? profit / rate
-      : profit;
-  const profitCurrency =
-    profitMode === 'session'
-      ? item?.cost_currency || 'IDR'
-      : item?.selling_currency || 'IDR';
-  const profitColor = profit >= 0 ? '#10B981' : color.danger;
+  const [profitMode, setProfitMode] = useState('local'); // 'local' | 'foreign'
 
   const handlePressDelete = () => {
-    Alert.alert(
-      'Hapus Item',
-      'Apakah anda yakin ingin menghapus item ini?',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {
-          text: 'Hapus',
-          style: 'destructive',
-          onPress: async () => {
-            let response = await cancelItem({id: item.id});
-            if (response) {
-              RootNavigation.goBack();
-            }
-          },
+    Alert.alert('Hapus Item', 'Apakah anda yakin ingin menghapus item ini?', [
+      {text: 'Batal', style: 'cancel'},
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: async () => {
+          let response = await cancelItem({id: item.id});
+          if (response) {
+            RootNavigation.goBack();
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
   const handlePressEdit = async () => {
     RootNavigation.navigate('ItemCreate', {item});
   };
 
   const handleRefresh = async () => {
-    let response = await getListItem({id: item.id});
+    let response = await getListItem({item_id: item.id});
     if (response && response[0]) {
       // Update params supaya data fresh
       navigation.setParams({item: response[0]});
@@ -170,108 +152,111 @@ const ItemView = ({navigation, route}) => {
             colors={[color.primaryColor]}
           />
         }>
-        {/* Harga — compact 2 kolom */}
-        <View style={styles.priceCard}>
-          <View style={styles.priceGrid}>
-            <View style={styles.priceCell}>
-              <Text style={styles.priceCellLabel}>Cost</Text>
-              <Text style={styles.priceCellValue}>
-                {item?.cost_price != null ? fmt(item.cost_price) : '-'}
-              </Text>
-              <Text style={styles.priceCellSub}>
-                {item?.cost_currency || 'IDR'} · {item?.cost_code || '-'}
-              </Text>
-            </View>
-            <View style={styles.priceCellDivider} />
-            <View style={styles.priceCell}>
-              <Text style={styles.priceCellLabel}>Selling</Text>
-              <Text style={styles.priceCellValue}>
-                {item?.selling_price != null ? fmt(item.selling_price) : '-'}
-              </Text>
-              <Text style={styles.priceCellSub}>
-                {item?.selling_currency || 'IDR'} · {item?.selling_code || '-'}
-              </Text>
-            </View>
-          </View>
-          {/* Baris kedua: Shipment + Rate */}
-          <View style={[styles.priceGrid, {borderTopWidth: 1, borderTopColor: '#F0F0F5'}]}>
-            <View style={styles.priceCell}>
-              <Text style={styles.priceCellLabel}>Shipment</Text>
-              <Text style={styles.priceCellValue}>
-                {item?.shipment_price != null ? fmt(item.shipment_price) : '-'}
-              </Text>
-              <Text style={styles.priceCellSub}>
-                {item?.shipment_currency || item?.cost_currency || 'IDR'}
-              </Text>
-            </View>
-            <View style={styles.priceCellDivider} />
-            <View style={styles.priceCell}>
-              <Text style={styles.priceCellLabel}>Rate</Text>
-              <Text style={styles.priceCellValue}>
-                {item?.exchange_rate != null
-                  ? `1 ${item?.cost_currency || 'IDR'} = ${fmt(item.exchange_rate)}`
-                  : '-'}
-              </Text>
-              <Text style={styles.priceCellSub}>IDR</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Profit card */}
         <View style={styles.profitCard}>
           <View style={styles.profitHeader}>
-            <Text style={styles.profitTitle}>Profit</Text>
+            <Text style={styles.priceCellValue}>
+              1 {item.cost_currency} = {item.exchange_rate}{' '}
+              {item.selling_currency}
+            </Text>
             <View style={styles.profitToggle}>
               <TouchableOpacity
                 style={[
                   styles.profitToggleBtn,
-                  profitMode === 'selling' && styles.profitToggleActive,
+                  profitMode === 'local' && styles.profitToggleActive,
                 ]}
-                onPress={() => setProfitMode('selling')}>
+                onPress={() => setProfitMode('local')}>
                 <Text
                   style={[
                     styles.profitToggleText,
-                    profitMode === 'selling' && styles.profitToggleTextActive,
+                    profitMode === 'local' && styles.profitToggleTextActive,
                   ]}>
-                  {item?.selling_currency || 'IDR'}
+                  {item?.local_currency}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.profitToggleBtn,
-                  profitMode === 'session' && styles.profitToggleActive,
+                  profitMode === 'foreign' && styles.profitToggleActive,
                 ]}
-                onPress={() => setProfitMode('session')}>
+                onPress={() => setProfitMode('foreign')}>
                 <Text
                   style={[
                     styles.profitToggleText,
-                    profitMode === 'session' && styles.profitToggleTextActive,
+                    profitMode === 'foreign' && styles.profitToggleTextActive,
                   ]}>
-                  {item?.cost_currency || 'IDR'}
+                  {item?.foreign_currency}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
-          <Text style={[styles.profitValue, {color: profitColor}]}>
-            {displayProfit >= 0 ? '+' : ''}
-            {fmt(displayProfit)} {profitCurrency}
-          </Text>
+          {/* Harga — compact 2 kolom */}
+
+          <View style={styles.priceCard}>
+            <View style={styles.priceGrid}>
+              <View style={styles.priceCell}>
+                <Text style={styles.priceCellLabel}>Cost</Text>
+                <Text style={styles.priceCellValue}>
+                  {fmt(item[`${profitMode}_cost`])}
+                </Text>
+              </View>
+              <View style={styles.priceCellDivider} />
+              <View style={styles.priceCell}>
+                <Text style={styles.priceCellLabel}>Selling</Text>
+                <Text style={styles.priceCellValue}>
+                  {fmt(item[`${profitMode}_price`])}
+                </Text>
+              </View>
+            </View>
+            {/* Baris kedua: Shipment + Rate */}
+            <View
+              style={[
+                styles.priceGrid,
+                {borderTopWidth: 1, borderTopColor: '#F0F0F5'},
+              ]}>
+              <View style={styles.priceCell}>
+                <Text style={styles.priceCellLabel}>Shipment</Text>
+                <Text style={styles.priceCellValue}>
+                  {fmt(item[`${profitMode}_shipping`])}
+                </Text>
+              </View>
+              <View style={styles.priceCellDivider} />
+              <View style={styles.priceCell}>
+                <Text style={styles.priceCellLabel}>Profit</Text>
+                <Text style={styles.priceCellValue}>
+                  {fmt(item[`${profitMode}_profit`])}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         {/* Detail compact */}
         <View style={styles.detailCard}>
           {[
             {label: 'Status', value: item?.status_name || '-'},
-            {label: 'Qty', value: item?.quantity != null ? `${item.quantity} pcs` : '-'},
+            {
+              label: 'Qty',
+              value: item?.quantity != null ? `${item.quantity} pcs` : '-',
+            },
             {label: 'Barcode', value: item?.barcode || '-'},
             {label: 'Batch', value: item?.batch_no || '-'},
             {label: 'Gudang', value: item?.warehouse_name || '-'},
-            {label: 'Order', value: moment(item?.created_date).format('DD MMM YYYY, HH:mm')},
-            {label: 'Update', value: moment(item?.modified_date).format('DD MMM YYYY, HH:mm')},
+            {
+              label: 'Order',
+              value: moment(item?.created_date).format('DD MMM YYYY, HH:mm'),
+            },
+            {
+              label: 'Update',
+              value: moment(item?.modified_date).format('DD MMM YYYY, HH:mm'),
+            },
           ].map((row, i, arr) => (
             <View
               key={row.label}
-              style={[styles.detailRow, i < arr.length - 1 && styles.detailRowBorder]}>
+              style={[
+                styles.detailRow,
+                i < arr.length - 1 && styles.detailRowBorder,
+              ]}>
               <Text style={styles.detailLabel}>{row.label}</Text>
               <Text style={styles.detailValue} numberOfLines={1}>
                 {row.value}
@@ -400,6 +385,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8EAF0',
     borderRadius: 8,
     padding: 2,
+    marginBottom: 5,
   },
   profitToggleBtn: {
     paddingHorizontal: 10,
