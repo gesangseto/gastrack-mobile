@@ -25,11 +25,12 @@ const AppSettingView = ({navigation, route}) => {
   const [form, setForm] = useState({
     identity_name: config.identity_name || '',
     identity_number: config.identity_number || '',
+    identity_phone: config.identity_phone || '',
+    identity_address: config.identity_address || '',
     country: config.country || 'Indonesia',
     country_code: config.country_code || '+62',
     currency: config.currency || 'IDR',
     price_unit_code: config.price_unit_code || 'none',
-    entity_address: config.entity_address || '',
   });
   const [countries, setCountries] = useState([]);
   const [currencies, setCurrencies] = useState([]);
@@ -68,11 +69,12 @@ const AppSettingView = ({navigation, route}) => {
       users_name: config.users_name,
       identity_name: form.identity_name,
       identity_number: form.identity_number,
+      identity_phone: form.identity_phone,
+      identity_address: form.identity_address,
       country: form.country,
       country_code: form.country_code,
       currency: form.currency,
       price_unit_code: form.price_unit_code,
-      entity_address: form.entity_address,
     };
     const updated = await updateSysConfig(payload);
     setSaving(false);
@@ -146,6 +148,21 @@ const AppSettingView = ({navigation, route}) => {
             }
             placeholder="Nomor identitas perusahaan"
           />
+          <InputText
+            label="No. HP"
+            keyboardType="phone-pad"
+            value={form.identity_phone}
+            onChangeText={value => setForm({...form, identity_phone: value})}
+            placeholder="08xxxxxxxxxx"
+          />
+          <InputText
+            label="Alamat"
+            value={form.identity_address}
+            onChangeText={value =>
+              setForm({...form, identity_address: value})
+            }
+            placeholder="Alamat perusahaan"
+          />
           {/* Negara */}
           <Text style={styles.fieldLabel}>Negara</Text>
           <TouchableOpacity
@@ -214,14 +231,6 @@ const AppSettingView = ({navigation, route}) => {
             unit dari session.
           </Text>
 
-          <InputText
-            label="Alamat"
-            value={form.entity_address}
-            onChangeText={value =>
-              setForm({...form, entity_address: value})
-            }
-            placeholder="Alamat perusahaan"
-          />
           <TouchableOpacity
             onPress={save}
             disabled={saving}

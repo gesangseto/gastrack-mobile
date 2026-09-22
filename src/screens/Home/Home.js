@@ -9,7 +9,7 @@ import {useHomeStore} from '../../store/homeStore';
 import {useSessionStore} from '../../store/sessionStore';
 import Statistik from '../Statistik/Statistik';
 
-// Home = Start/Stop Session + List/Add Customer + Dashboard Statistik (inline).
+// Home = Start/Stop Session + Customer/Price Code + Dashboard Statistik (inline).
 const Home = () => {
   const activeSession = useSessionStore(s => s.activeSession);
   const sessionSummary = useHomeStore(s => s.dashboard?.session_summary);
@@ -114,7 +114,7 @@ const Home = () => {
         </TouchableOpacity>
       )}
 
-      {/* Quick action: List Customer & Add Customer */}
+      {/* Quick action: Customer, Price Code, Product & Country (list, tambah, edit, hapus) */}
       <View style={styles.quickRow}>
         <TouchableOpacity
           style={styles.quickTile}
@@ -122,15 +122,31 @@ const Home = () => {
           <View style={[styles.quickIcon, {backgroundColor: '#2E8B57'}]}>
             <Icon name="users" size={20} color={color.white} />
           </View>
-          <Text style={styles.quickLabel}>List Customer</Text>
+          <Text style={styles.quickLabel}>Customer</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickTile}
-          onPress={() => RootNavigation.navigate('CustomerEdit')}>
+          onPress={() => RootNavigation.navigate('PriceCodeList')}>
           <View style={[styles.quickIcon, {backgroundColor: '#F59E0B'}]}>
-            <Icon name="user-plus" size={20} color={color.white} />
+            <Icon name="tags" size={20} color={color.white} />
           </View>
-          <Text style={styles.quickLabel}>Add Customer</Text>
+          <Text style={styles.quickLabel}>Price Code</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickTile}
+          onPress={() => RootNavigation.navigate('ProductList')}>
+          <View style={[styles.quickIcon, {backgroundColor: '#3B82F6'}]}>
+            <Icon name="package" size={20} color={color.white} />
+          </View>
+          <Text style={styles.quickLabel}>Product</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickTile}
+          onPress={() => RootNavigation.navigate('CountryList')}>
+          <View style={[styles.quickIcon, {backgroundColor: '#8B5CF6'}]}>
+            <Icon name="globe" size={20} color={color.white} />
+          </View>
+          <Text style={styles.quickLabel}>Country</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -239,20 +255,19 @@ const styles = StyleSheet.create({
   },
   quickRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginTop: 12,
   },
   quickTile: {
-    flex: 1,
-    flexDirection: 'row',
+    width: '48%',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
     backgroundColor: color.white,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: color.primaryLighter,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   quickIcon: {
     width: 38,
@@ -262,9 +277,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickLabel: {
-    flex: 1,
-    fontSize: 12,
+    marginTop: 6,
+    fontSize: 11,
     fontWeight: '600',
     color: '#4A4A4A',
+    textAlign: 'center',
   },
 });

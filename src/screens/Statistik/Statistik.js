@@ -328,52 +328,78 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             />
           </View>
 
-          {/* Hero: Total Penjualan (compact) */}
-          <View style={styles.heroCard}>
-            <View style={styles.heroTop}>
-              <View style={styles.heroIcon}>
-                <Icon name="wallet" size={20} color={color.white} />
-              </View>
-              <Text style={styles.heroLabel}>
+          {/* Profit card — summary semua item di session terpilih
+              (style mengikuti ItemView.js bagian Profit card) */}
+          <View style={styles.profitCard}>
+            <View style={styles.profitHeader}>
+              <Text style={styles.profitTitle}>
                 {selectedSession
                   ? `Session ${selectedSession.session_no}`
                   : 'Pilih session'}
               </Text>
               {sessionDetailLoading && (
-                <ActivityIndicator size="small" color="#B1A3D2" />
+                <ActivityIndicator size="small" color="#9CA3AF" />
               )}
             </View>
-            <Text style={styles.heroValue}>
-              Rp {fmt(heroVal('total_selling'))}
-            </Text>
-            <View style={styles.heroDivider} />
-            <View style={styles.heroStats}>
-              <View style={{flex: 1}}>
-                <Text style={styles.heroStatLabel}>Modal</Text>
-                <Text style={styles.heroStatValue}>
-                  Rp {fmt(heroVal('total_cost'))}
-                </Text>
-              </View>
-              <View style={{flex: 1}}>
-                <Text style={styles.heroStatLabel}>Profit</Text>
-                <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                  Rp {fmt(heroVal('total_profit'))}
-                </Text>
-              </View>
-            </View>
 
-            <View style={styles.heroStats}>
-              <View style={{flex: 1}}>
-                <Text style={styles.heroStatLabel}>Total Belum Dibayar</Text>
-                <Text style={[styles.heroStatValue, {color: '#de604a'}]}>
-                  Rp {fmt(heroVal('total_unpaid'))}
-                </Text>
+            {/* Cost - Selling, compact 2 kolom */}
+            <View style={styles.priceCard}>
+              <View style={styles.priceGrid}>
+                <View style={styles.priceCell}>
+                  <Text style={styles.priceCellLabel}>Cost</Text>
+                  <Text style={styles.priceCellValue}>
+                    Rp {fmt(heroVal('total_cost'))}
+                  </Text>
+                </View>
+                <View style={styles.priceCellDivider} />
+                <View style={styles.priceCell}>
+                  <Text style={styles.priceCellLabel}>Selling</Text>
+                  <Text style={styles.priceCellValue}>
+                    Rp {fmt(heroVal('total_selling'))}
+                  </Text>
+                </View>
               </View>
-              <View style={{flex: 1}}>
-                <Text style={styles.heroStatLabel}>Total Dibayarkan</Text>
-                <Text style={[styles.heroStatValue, {color: '#4ADE80'}]}>
-                  Rp {fmt(heroVal('total_paid'))}
-                </Text>
+
+              {/* Shipment - Profit, compact 2 kolom */}
+              <View
+                style={[
+                  styles.priceGrid,
+                  {borderTopWidth: 1, borderTopColor: '#F0F0F5'},
+                ]}>
+                <View style={styles.priceCell}>
+                  <Text style={styles.priceCellLabel}>Shipment</Text>
+                  <Text style={styles.priceCellValue}>
+                    Rp {fmt(heroVal('total_shipment'))}
+                  </Text>
+                </View>
+                <View style={styles.priceCellDivider} />
+                <View style={styles.priceCell}>
+                  <Text style={styles.priceCellLabel}>Profit</Text>
+                  <Text style={[styles.priceCellValue, {color: '#10B981'}]}>
+                    Rp {fmt(heroVal('total_profit'))}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Dibayar - Belum dibayar, compact 2 kolom */}
+              <View
+                style={[
+                  styles.priceGrid,
+                  {borderTopWidth: 1, borderTopColor: '#F0F0F5'},
+                ]}>
+                <View style={styles.priceCell}>
+                  <Text style={styles.priceCellLabel}>Dibayar</Text>
+                  <Text style={[styles.priceCellValue, {color: '#10B981'}]}>
+                    Rp {fmt(heroVal('total_paid'))}
+                  </Text>
+                </View>
+                <View style={styles.priceCellDivider} />
+                <View style={styles.priceCell}>
+                  <Text style={styles.priceCellLabel}>Belum Dibayar</Text>
+                  <Text style={[styles.priceCellValue, {color: '#EF4444'}]}>
+                    Rp {fmt(heroVal('total_unpaid'))}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -382,9 +408,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
           <View style={styles.miniRow}>
             <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
               <Icon name="package" size={18} color={color.primaryColor} />
-              <Text style={styles.miniValue}>
-                {heroVal('total_items')}
-              </Text>
+              <Text style={styles.miniValue}>{heroVal('total_items')}</Text>
               <Text style={styles.miniLabel}>Item</Text>
             </View>
             <View style={[styles.miniCard, {backgroundColor: '#E0F2FE'}]}>
@@ -394,17 +418,8 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             </View>
             <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
               <Icon name="layers" size={18} color="#10B981" />
-              <Text style={styles.miniValue}>
-                {heroVal('total_batch')}
-              </Text>
+              <Text style={styles.miniValue}>{heroVal('total_batch')}</Text>
               <Text style={styles.miniLabel}>Batch</Text>
-            </View>
-          </View>
-
-          {/* Pembayaran Session: total dibayarkan & belum dibayar */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Pembayaran Session</Text>
             </View>
           </View>
         </View>
@@ -646,7 +661,7 @@ const styles = StyleSheet.create({
   inlineHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginTop: 10,
   },
   inlineTitle: {
     fontSize: 18,
@@ -806,56 +821,53 @@ const styles = StyleSheet.create({
   pickerTick: {
     tintColor: color.primaryColor,
   },
-  heroCard: {
-    backgroundColor: color.primaryColor,
-    borderRadius: 22,
-    padding: 18,
-    shadowColor: color.primaryColor,
-    shadowOpacity: 0.3,
-    shadowOffset: {width: 0, height: 8},
-    shadowRadius: 16,
-    elevation: 8,
+  /* ---- Profit Card (style ItemView.js) ---- */
+  profitCard: {
+    backgroundColor: '#F6F8FC',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  heroTop: {
+  profitHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
+    marginBottom: 10,
   },
-  heroIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#B1A3D2',
-  },
-  heroValue: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: color.white,
-    marginTop: 10,
-  },
-  heroDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    marginVertical: 12,
-  },
-  heroStats: {
-    flexDirection: 'row',
-  },
-  heroStatLabel: {
-    fontSize: 12,
-    color: '#B1A3D2',
-  },
-  heroStatValue: {
-    fontSize: 15,
+  profitTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: color.white,
+    color: '#555',
+  },
+  priceCard: {
+    backgroundColor: color.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#F0F0F5',
+    overflow: 'hidden',
+  },
+  priceGrid: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  priceCell: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  priceCellDivider: {
+    width: 1,
+    backgroundColor: '#F0F0F5',
+  },
+  priceCellLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9A9A9A',
+  },
+  priceCellValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: color.primaryColor,
     marginTop: 2,
   },
   miniRow: {

@@ -190,7 +190,7 @@ const ItemView = ({navigation, route}) => {
               </TouchableOpacity>
             </View>
           </View>
-          {/* Harga — compact 2 kolom */}
+          {/* Cost - Selling compact 2 kolom */}
 
           <View style={styles.priceCard}>
             <View style={styles.priceGrid}>
@@ -208,7 +208,7 @@ const ItemView = ({navigation, route}) => {
                 </Text>
               </View>
             </View>
-            {/* Baris kedua: Shipment + Rate */}
+            {/* Shipment - Profit, compact 2 kolom */}
             <View
               style={[
                 styles.priceGrid,

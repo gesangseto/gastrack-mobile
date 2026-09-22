@@ -21,6 +21,8 @@ import AppSettingView from '../screens/Settings/AppSettingView';
 import AboutView from '../screens/Settings/AboutView';
 import CustomerList from '../screens/Customer/CustomerList';
 import CustomerEdit from '../screens/Customer/CustomerEdit';
+import PriceCodeList from '../screens/PriceCode/PriceCodeList';
+import PriceCodeEdit from '../screens/PriceCode/PriceCodeEdit';
 import SessionView from '../screens/Session/SessionView';
 import PaymentCreate from '../screens/Payment/PaymentCreate';
 import PaymentCustomerDetail from '../screens/Payment/PaymentCustomerDetail';
@@ -56,6 +58,8 @@ const Router = () => {
       <Stack.Screen name="AboutView" component={AboutView} />
       <Stack.Screen name="CustomerList" component={CustomerList} />
       <Stack.Screen name="CustomerEdit" component={CustomerEdit} />
+      <Stack.Screen name="PriceCodeList" component={PriceCodeList} />
+      <Stack.Screen name="PriceCodeEdit" component={PriceCodeEdit} />
       <Stack.Screen name="SessionView" component={SessionView} />
       <Stack.Screen name="PaymentCreate" component={PaymentCreate} />
       <Stack.Screen

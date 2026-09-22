@@ -115,6 +115,40 @@ export const updateCustomer = async (Params = {}) => {
   });
 };
 
+// Hapus customer (soft delete, delete_flag=true).
+// Aturan backend: hanya customer berstatus Inactive yang bisa dihapus.
+export const deleteCustomer = async id => {
+  return new Promise(resolve => {
+    $axios
+      .delete(url, {data: {id}})
+      .then(result => {
+        let data = result.data;
+        if (data.error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return resolve(false);
+        }
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Customer berhasil dihapus',
+        });
+        return resolve(true);
+      })
+      .catch(e => {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: e.message,
+        });
+        return resolve(false);
+      });
+  });
+};
+
 // Sinkronisasi massal kontak ke mst_customer (bulk upsert by phone)
 export const syncCustomer = async (Params = {}) => {
   return new Promise(resolve => {

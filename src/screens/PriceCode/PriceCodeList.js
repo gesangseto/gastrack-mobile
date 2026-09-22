@@ -16,11 +16,11 @@ import {
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {deleteCustomer, getListCustomer} from '../../resource/Customer';
+import {deletePriceCode, getListPriceCode} from '../../resource/PriceCode';
 
-const CustomerList = ({navigation, route}) => {
+const PriceCodeList = ({navigation, route}) => {
   const [list, setList] = useState([]);
-  const [title, setTitle] = useState('List Customer');
+  const [title, setTitle] = useState('Price Code');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,7 +41,7 @@ const CustomerList = ({navigation, route}) => {
   );
 
   const loadData = async () => {
-    let response = await getListCustomer({}, true);
+    let response = await getListPriceCode({}, true);
     if (response) {
       setList(response);
     }
@@ -55,15 +55,15 @@ const CustomerList = ({navigation, route}) => {
 
   const handleDelete = item => {
     Alert.alert(
-      'Hapus Customer',
-      `Hapus customer "${item?.name}"?`,
+      'Hapus Price Code',
+      `Hapus price code "${item?.name}"?`,
       [
         {text: 'Batal', style: 'cancel'},
         {
           text: 'Hapus',
           style: 'destructive',
           onPress: async () => {
-            const ok = await deleteCustomer(item.id);
+            const ok = await deletePriceCode(item.id);
             if (ok) {
               loadData();
             }
@@ -73,14 +73,14 @@ const CustomerList = ({navigation, route}) => {
     );
   };
 
-  // Filter client-side: nama, phone, email, status
+  // Filter client-side: nama, code, number, status
   const filteredList = list.filter(item => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
       (item?.name || '').toLowerCase().includes(q) ||
-      (item?.phone || '').toLowerCase().includes(q) ||
-      (item?.email || '').toLowerCase().includes(q) ||
+      (item?.code || '').toLowerCase().includes(q) ||
+      String(item?.number ?? '').includes(q) ||
       (item?.status || '').toLowerCase().includes(q)
     );
   });
@@ -89,19 +89,19 @@ const CustomerList = ({navigation, route}) => {
     return (
       <Pressable
         onPress={() =>
-          RootNavigation.navigate('CustomerEdit', {item: item})
+          RootNavigation.navigate('PriceCodeEdit', {item: item})
         }
         key={index}
         style={styles.card}>
         <View style={styles.avatar}>
-          <Icon name="user-round" size={20} color={color.primaryColor} />
+          <Icon name="tags" size={20} color={color.primaryColor} />
         </View>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
             {item?.name}
           </Text>
           <Text style={styles.sub} numberOfLines={1}>
-            {item?.phone}
+            {item?.code} = {item?.number}
           </Text>
           <View style={styles.statusRow}>
             <View
@@ -112,19 +112,15 @@ const CustomerList = ({navigation, route}) => {
                   : styles.statusDotInactive,
               ]}
             />
-            <Text
-              style={styles.statusText}
-              numberOfLines={1}
-              ellipsizeMode="tail">
+            <Text style={styles.statusText} numberOfLines={1}>
               {item?.status}
-              {item?.email ? ` • ${item.email}` : ''}
             </Text>
           </View>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity
             onPress={() =>
-              RootNavigation.navigate('CustomerEdit', {item: item})
+              RootNavigation.navigate('PriceCodeEdit', {item: item})
             }
             style={styles.actionBtn}>
             <Icon name="pencil" size={16} color={color.warning} />
@@ -154,7 +150,7 @@ const CustomerList = ({navigation, route}) => {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder="Cari nama / nomor / email..."
+            placeholder="Cari nama / kode / angka..."
             autoCapitalize="none"
             autoCorrect={false}
             placeholderTextColor="#B0B0B0"
@@ -167,7 +163,7 @@ const CustomerList = ({navigation, route}) => {
         </View>
         {filteredList.length === 0 && (
           <Text style={styles.emptyText}>
-            {search ? 'Tidak ditemukan.' : 'Belum ada data customer.'}
+            {search ? 'Tidak ditemukan.' : 'Belum ada data price code.'}
           </Text>
         )}
         <FlatList
@@ -182,10 +178,10 @@ const CustomerList = ({navigation, route}) => {
             />
           }
         />
-        {/* Tombol tambah customer baru */}
+        {/* Tombol tambah price code baru */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => RootNavigation.navigate('CustomerEdit')}>
+          onPress={() => RootNavigation.navigate('PriceCodeEdit')}>
           <Icon name="plus" size={24} color={color.white} />
         </TouchableOpacity>
       </View>
@@ -193,7 +189,7 @@ const CustomerList = ({navigation, route}) => {
   );
 };
 
-export default CustomerList;
+export default PriceCodeList;
 
 const styles = StyleSheet.create({
   container: {

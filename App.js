@@ -1,5 +1,9 @@
 import {NavigationContainer} from '@react-navigation/native';
-import Toast from 'react-native-toast-message';
+import Toast, {
+  ErrorToast,
+  InfoToast,
+  SuccessToast,
+} from 'react-native-toast-message';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Router from './src/config/Router';
 import {navigationRef} from './src/config/RootNavigation';
@@ -15,6 +19,20 @@ import {PermissionsAndroid, Platform} from 'react-native';
 //   }
 // });
 
+// Konfigurasi Toast: teks panjang TIDAK dipotong (numberOfLines=0 = tanpa
+// batas baris), melainkan wrap ke baris baru agar pesan tetap terbaca utuh.
+const toastConfig = {
+  success: props => (
+    <SuccessToast {...props} text1NumberOfLines={0} text2NumberOfLines={0} />
+  ),
+  error: props => (
+    <ErrorToast {...props} text1NumberOfLines={0} text2NumberOfLines={0} />
+  ),
+  info: props => (
+    <InfoToast {...props} text1NumberOfLines={0} text2NumberOfLines={0} />
+  ),
+};
+
 export default function App() {
   async function requestPermission() {
     if (Platform.OS === 'android') {
@@ -26,7 +44,7 @@ export default function App() {
   return (
     <NavigationContainer ref={navigationRef}>
       <Router />
-      <Toast />
+      <Toast config={toastConfig} />
     </NavigationContainer>
   );
 }
