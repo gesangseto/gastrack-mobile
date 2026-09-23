@@ -1,41 +1,9 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
+let url = `/api/v1/master/product`;
 
-let url = `/api/v1/master/country`;
-
-// Ambil daftar negara (mst_country) yang aktif.
-// Resolve array: [{id, name, code, country_code, currency_code, currency_symbol}]
-export const fetchCountries = async (useAlert = false) => {
-  return new Promise(resolve => {
-    $axios
-      .get(url)
-      .then(result => {
-        let data = result.data;
-        if (data.error) {
-          if (useAlert)
-            Toast.show({
-              type: 'error',
-              text1: 'Error',
-              text2: data.message,
-            });
-          return resolve([]);
-        }
-        return resolve(data.data || data.rows || []);
-      })
-      .catch(e => {
-        if (useAlert)
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: e?.message || e,
-          });
-        return resolve([]);
-      });
-  });
-};
-
-// List negara dari mst_country (search = LIKE name/code/currency)
-export const getListCountry = async (property = {}, useAlert = true) => {
+// List product dari mst_product (search = LIKE name/description/status)
+export const getListProduct = async (property = {}, useAlert = true) => {
   var query_string = new URLSearchParams(property).toString();
   return new Promise(resolve => {
     $axios
@@ -64,8 +32,8 @@ export const getListCountry = async (property = {}, useAlert = true) => {
   });
 };
 
-// Tambah negara baru (mst_country) — wajib name.
-export const createCountry = async (Params = {}) => {
+// Tambah product baru (mst_product) — wajib name.
+export const createProduct = async (Params = {}) => {
   return new Promise(resolve => {
     $axios
       .put(url, Params)
@@ -82,7 +50,7 @@ export const createCountry = async (Params = {}) => {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Negara berhasil disimpan',
+          text2: 'Product berhasil disimpan',
         });
         return resolve(data.data);
       })
@@ -97,8 +65,8 @@ export const createCountry = async (Params = {}) => {
   });
 };
 
-// Update negara (mst_country) — wajib id.
-export const updateCountry = async (Params = {}) => {
+// Update product (mst_product) — wajib id.
+export const updateProduct = async (Params = {}) => {
   return new Promise(resolve => {
     $axios
       .post(url, Params)
@@ -115,7 +83,7 @@ export const updateCountry = async (Params = {}) => {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Negara berhasil diupdate',
+          text2: 'Product berhasil diupdate',
         });
         return resolve(data.data);
       })
@@ -130,9 +98,9 @@ export const updateCountry = async (Params = {}) => {
   });
 };
 
-// Hapus negara (soft delete, delete_flag=true).
-// Aturan backend: hanya negara berstatus Inactive yang bisa dihapus.
-export const deleteCountry = async id => {
+// Hapus product (soft delete, delete_flag=true).
+// Aturan backend: hanya product berstatus Inactive yang bisa dihapus.
+export const deleteProduct = async id => {
   return new Promise(resolve => {
     $axios
       .delete(url, {data: {id}})
@@ -149,7 +117,7 @@ export const deleteCountry = async id => {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Negara berhasil dihapus',
+          text2: 'Product berhasil dihapus',
         });
         return resolve(true);
       })
@@ -162,29 +130,4 @@ export const deleteCountry = async id => {
         return resolve(false);
       });
   });
-};
-
-// Ambil rate kurs dari API publik (open.er-api.com, gratis tanpa key).
-// Resolve number: 1 unit mata uang `code` = X IDR. null jika gagal.
-export const fetchExchangeRate = async (code, useAlert = false) => {
-  if (!code) {
-    return null;
-  }
-  try {
-    const res = await fetch(`https://open.er-api.com/v6/latest/${code}`);
-    const json = await res.json();
-    if (json && json.result === 'success' && json.rates && json.rates.IDR) {
-      return Number(json.rates.IDR);
-    }
-    return null;
-  } catch (e) {
-    if (useAlert) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: `Gagal ambil kurs: ${e?.message || e}`,
-      });
-    }
-    return null;
-  }
 };
