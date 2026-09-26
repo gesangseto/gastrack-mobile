@@ -44,6 +44,15 @@ const MENU = [
     screen: 'AppSettingView',
   },
   {
+    key: 'calculator',
+    title: 'Calculator',
+    desc: 'Kalkulator konversi & markup harga',
+    icon: 'calculator',
+    tint: '#8B5CF6',
+    bg: '#EDE9FE',
+    screen: 'CalculatorView',
+  },
+  {
     key: 'about',
     title: 'About',
     desc: 'Informasi tentang aplikasi',

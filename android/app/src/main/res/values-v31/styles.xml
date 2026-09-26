@@ -1,0 +1,10 @@
+<resources>
+
+    <!-- Splash theme for Android 12+ (API 31): system splash with brand assets -->
+    <style name="AppTheme.Splash" parent="AppTheme">
+        <item name="android:windowSplashScreenBackground">@drawable/ic_launcher_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+    </style>
+
+</resources>

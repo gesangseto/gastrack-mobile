@@ -1,6 +1,5 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
-import {Platform} from 'react-native';
 const Stack = createNativeStackNavigator();
 
 import Details from '../screens/Details/Details';
@@ -19,6 +18,7 @@ import ProfileView from '../screens/Settings/ProfileView';
 import LocalSettingView from '../screens/Settings/LocalSettingView';
 import AppSettingView from '../screens/Settings/AppSettingView';
 import AboutView from '../screens/Settings/AboutView';
+import CalculatorView from '../screens/Settings/CalculatorView';
 import CustomerList from '../screens/Customer/CustomerList';
 import CustomerEdit from '../screens/Customer/CustomerEdit';
 import PriceCodeList from '../screens/PriceCode/PriceCodeList';
@@ -31,16 +31,6 @@ import SessionView from '../screens/Session/SessionView';
 import PaymentCreate from '../screens/Payment/PaymentCreate';
 import PaymentCustomerDetail from '../screens/Payment/PaymentCustomerDetail';
 
-const shouldShowCustomSplashScreen = () => {
-  if (Platform.OS === 'android') {
-    const androidVersion = Platform.Version;
-    // Android 12 (API level 31) atau lebih tinggi
-    if (androidVersion >= 31) {
-      return false; // Jangan tampilkan splash screen kustom
-    }
-  }
-  return true; // Tampilkan splash screen kustom untuk versi lain
-};
 const Router = () => {
   return (
     <Stack.Navigator
@@ -60,6 +50,7 @@ const Router = () => {
       <Stack.Screen name="LocalSettingView" component={LocalSettingView} />
       <Stack.Screen name="AppSettingView" component={AppSettingView} />
       <Stack.Screen name="AboutView" component={AboutView} />
+      <Stack.Screen name="CalculatorView" component={CalculatorView} />
       <Stack.Screen name="CustomerList" component={CustomerList} />
       <Stack.Screen name="CustomerEdit" component={CustomerEdit} />
       <Stack.Screen name="PriceCodeList" component={PriceCodeList} />

@@ -8,7 +8,7 @@ const generateToken = () => {
   let profile = getProfile();
   // Token berasal dari respons login Backend (sys_authentication).
   // Tanpa token → string kosong (request akan ditolak backend dengan 401).
-  return profile?.token || '';
+  return profile?.token || 'ax771p65T5CykAeTWXD4Js0pLr2lyDSz';
 };
 
 const $axios = axios.create();

@@ -5,19 +5,12 @@ import Toast, {
   SuccessToast,
 } from 'react-native-toast-message';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {useState} from 'react';
+import SplashScreen from './src/screens/SplashScreen';
 import Router from './src/config/Router';
 import {navigationRef} from './src/config/RootNavigation';
 import 'react-native-get-random-values';
 const Stack = createNativeStackNavigator();
-import {PermissionsAndroid, Platform} from 'react-native';
-
-// ErrorUtils.setGlobalHandler(error => {
-//   console.log('💥 Uncaught Error:', error);
-//   // misal:
-//   if (__DEV__) {
-//     alert(`Error: ${error.message}`);
-//   }
-// });
 
 // Konfigurasi Toast: teks panjang TIDAK dipotong (numberOfLines=0 = tanpa
 // batas baris), melainkan wrap ke baris baru agar pesan tetap terbaca utuh.
@@ -34,17 +27,18 @@ const toastConfig = {
 };
 
 export default function App() {
-  async function requestPermission() {
-    if (Platform.OS === 'android') {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-      );
-    }
-  }
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Router />
-      <Toast config={toastConfig} />
-    </NavigationContainer>
+    <>
+      {/* Splash ditampilkan saat app baru dibuka (cold start), lalu
+          diturunkan setelah bootstrap; navigasi dirender di bawahnya. */}
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+
+      <NavigationContainer ref={navigationRef}>
+        <Router />
+        <Toast config={toastConfig} />
+      </NavigationContainer>
+    </>
   );
 }
