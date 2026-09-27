@@ -158,3 +158,30 @@ export const createPayment = async (Params = {}, useAlert = true) => {
       });
   });
 };
+
+// Kirim tagihan via WhatsApp (POST) — render template REQUEST_PAYMENT.
+// Params: { customer_id, session_id }
+// Resolve: { message, rows: [{ customer_id, phone, message }] }
+export const sendInvoice = async (params = {}, useAlert = true) => {
+  return new Promise(resolve => {
+    $axios
+      .post(`${paymentUrl}/send-invoice`, params)
+      .then(result => {
+        let data = result.data;
+        if (data.error) {
+          notifyError(data.message, useAlert);
+          return resolve(false);
+        }
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: data.message || 'Tagihan terkirim via WhatsApp',
+        });
+        return resolve(data.data?.[0] || true);
+      })
+      .catch(e => {
+        notifyError(e.message, useAlert);
+        return resolve(false);
+      });
+  });
+};

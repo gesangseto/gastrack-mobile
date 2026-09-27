@@ -13,7 +13,8 @@ import {
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {getPaymentItems, getPaymentSummary} from '../../resource/Payment';
+import Toast from 'react-native-toast-message';
+import {getPaymentItems, getPaymentSummary, sendInvoice} from '../../resource/Payment';
 
 // Detail tagihan customer — dibuka dari tab Pending/Paid di menu Payment.
 // Menampilkan ringkasan tagihan + daftar item yang dipesan customer pada
@@ -45,6 +46,7 @@ const PaymentCustomerDetail = ({route}) => {
   const [summary, setSummary] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
   const mountedRef = useRef(true);
   useFocusEffect(
@@ -83,6 +85,26 @@ const PaymentCustomerDetail = ({route}) => {
   );
 
   const status = summary?.payment_status || 'UNPAID';
+
+  const handleSendInvoice = async () => {
+    if (sending) return;
+    setSending(true);
+    const ok = await sendInvoice({customer_id, session_id}, false);
+    setSending(false);
+    if (ok) {
+      Toast.show({
+        type: 'success',
+        text1: 'Berhasil',
+        text2: 'Tagihan terkirim ke WhatsApp customer',
+      });
+    } else {
+      Toast.show({
+        type: 'error',
+        text1: 'Gagal',
+        text2: 'Gagal kirim tagihan via WhatsApp',
+      });
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -207,8 +229,19 @@ const PaymentCustomerDetail = ({route}) => {
         )}
       </View>
 
-      {/* Tombol "Bayar Tagihan" — fixed di bagian bawah layar */}
+      {/* Footer: Kirim Tagihan (jika belum lunas) + Bayar Tagihan */}
       <View style={styles.footer}>
+        {status !== 'PAID' && (
+          <TouchableOpacity
+            onPress={handleSendInvoice}
+            disabled={sending}
+            style={[styles.sendButton, sending && styles.saveButtonDisabled]}>
+            <Icon name="send" size={18} color={color.white} />
+            <Text style={styles.payButtonText}>
+              {sending ? 'Mengirim...' : 'Kirim Tagihan'}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           onPress={() =>
             RootNavigation.navigate('PaymentCreate', {
@@ -412,6 +445,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     width: '100%',
+  },
+  sendButton: {
+    borderRadius: 20,
+    backgroundColor: color.warning,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+    marginBottom: 10,
   },
   payButtonText: {
     color: color.white,
