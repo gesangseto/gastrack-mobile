@@ -90,10 +90,10 @@ export default InputText;
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 18,
+    marginBottom: 12,
   },
   label: {
-    marginBottom: 6,
+    marginBottom: 4,
     fontSize: 11,
     color: '#9A9A9A',
     fontWeight: '500',
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: 14,
     color: '#1F1F1F',
     backgroundColor: 'transparent',
   },

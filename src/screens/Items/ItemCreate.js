@@ -69,6 +69,12 @@ const ItemCreate = ({navigation, route}) => {
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
   const [savingCustomer, setSavingCustomer] = useState(false);
+  // Pembayaran langsung (opsional)
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [showMethodPicker, setShowMethodPicker] = useState(false);
   // Ref untuk navigasi keyboard antar field
   const quantityRef = useRef(null);
   const phoneRef = useRef(null);
@@ -313,6 +319,13 @@ useEffect(() => {
         // Unit harga per item (override default session/config)
         form.append('cost_unit', effectiveCostUnit);
         form.append('selling_unit', effectiveSellingUnit);
+        // Pembayaran langsung (opsional — hanya saat create baru)
+        if (!formData.id && Number(paymentAmount) > 0) {
+          form.append('payment_amount', paymentAmount);
+          form.append('payment_method', paymentMethod);
+          if (paymentRef.trim()) form.append('reference_number', paymentRef.trim());
+          if (paymentNotes.trim()) form.append('payment_notes', paymentNotes.trim());
+        }
         let submit = null;
         if (formData.id) {
           submit = await updateItem(form);
@@ -380,14 +393,14 @@ useEffect(() => {
         style={{
           flex: 1,
           backgroundColor: color.white,
-          marginTop: -40,
-          borderTopLeftRadius: 35,
-          borderTopRightRadius: 35,
-          padding: 30,
+          marginTop: -30,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          padding: 18,
         }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View>
-            <View style={{marginTop: 18}}>
+            <View style={{marginTop: 8}}>
               <View style={styles.row}>
                 <View style={styles.rowItem}>
                   <InputText
@@ -579,15 +592,63 @@ useEffect(() => {
                 //   required
                 //   showError={submitted}
               />
+
+              {/* === Pembayaran Langsung (opsional, hanya create baru) === */}
+              {!formData.id && selectedCustomer && (
+                <View style={styles.paymentSection}>
+                  <View style={styles.paymentDivider} />
+                  <Text style={styles.paymentTitle}>Pembayaran (Opsional)</Text>
+                  <InputText
+                    label="Jumlah Bayar"
+                    keyboardType="numeric"
+                    value={paymentAmount}
+                    onChangeText={setPaymentAmount}
+                    placeholder="0"
+                    prefix={sellingSymbol}
+                    returnKeyType="next"
+                  />
+                  <Text style={styles.label}>Metode Bayar</Text>
+                  <TouchableOpacity
+                    style={styles.methodPicker}
+                    onPress={() => setShowMethodPicker(true)}>
+                    <Text style={styles.methodPickerText}>
+                      {paymentMethod === 'CASH' && '💵 Tunai'}
+                      {paymentMethod === 'BANK_TRANSFER' && '🏦 Transfer Bank'}
+                      {paymentMethod === 'E_WALLET' && '📱 E-Wallet'}
+                      {paymentMethod === 'OTHER' && '🔄 Lainnya'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color="#999" />
+                  </TouchableOpacity>
+                  {Number(paymentAmount) > 0 && (
+                    <>
+                      <InputText
+                        label="No. Referensi"
+                        value={paymentRef}
+                        onChangeText={setPaymentRef}
+                        placeholder="No. transfer / referensi (opsional)"
+                        returnKeyType="next"
+                      />
+                      <InputText
+                        label="Catatan"
+                        value={paymentNotes}
+                        onChangeText={setPaymentNotes}
+                        placeholder="Catatan pembayaran (opsional)"
+                        returnKeyType="done"
+                        onSubmitEditing={() => save()}
+                      />
+                    </>
+                  )}
+                </View>
+              )}
             </View>
           </View>
           <TouchableOpacity
             onPress={() => save()}
             style={{
-              marginTop: 10,
-              borderRadius: 20,
+              marginTop: 6,
+              borderRadius: 16,
               backgroundColor: color.primaryColor,
-              height: 50,
+              height: 42,
               alignItems: 'center',
               justifyContent: 'center',
               width: '100%',
@@ -658,6 +719,54 @@ useEffect(() => {
           </View>
         </View>
       </Modal>
+
+      {/* Modal pilih metode bayar */}
+      <Modal
+        visible={showMethodPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMethodPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pilih Metode Bayar</Text>
+              <TouchableOpacity onPress={() => setShowMethodPicker(false)}>
+                <Icon name="x" size={22} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {[
+              {value: 'CASH', label: '💵 Tunai'},
+              {value: 'BANK_TRANSFER', label: '🏦 Transfer Bank'},
+              {value: 'E_WALLET', label: '📱 E-Wallet'},
+              {value: 'OTHER', label: '🔄 Lainnya'},
+            ].map(m => (
+              <TouchableOpacity
+                key={m.value}
+                style={[
+                  styles.unitItem,
+                  paymentMethod === m.value && styles.unitItemActive,
+                ]}
+                onPress={() => {
+                  setPaymentMethod(m.value);
+                  setShowMethodPicker(false);
+                }}>
+                <View style={styles.unitItemLeft}>
+                  <Text
+                    style={[
+                      styles.unitItemLabel,
+                      paymentMethod === m.value && styles.unitItemLabelActive,
+                    ]}>
+                    {m.label}
+                  </Text>
+                </View>
+                {paymentMethod === m.value && (
+                  <Icon name="check" size={18} color={color.primaryColor} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -680,14 +789,14 @@ const styles = StyleSheet.create({
   unitSuffix: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: '#F4F4F8',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   unitSuffixText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#333',
   },
@@ -698,19 +807,19 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: color.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 30,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 24,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#333',
   },
@@ -718,20 +827,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#f2f2f2',
   },
   unitItemActive: {
     backgroundColor: color.primaryLight,
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 8,
   },
   unitItemLeft: {
     flex: 1,
   },
   unitItemLabel: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: '#333',
   },
@@ -739,47 +848,47 @@ const styles = StyleSheet.create({
     color: color.primaryColor,
   },
   unitItemSub: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#9A9A9A',
-    marginTop: 2,
+    marginTop: 1,
   },
   suggestionBox: {
     backgroundColor: color.white,
     borderWidth: 1,
     borderColor: color.primaryLighter,
-    borderRadius: 12,
-    marginBottom: 15,
-    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 10,
+    paddingHorizontal: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: {width: 0, height: 4},
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowOffset: {width: 0, height: 2},
+    shadowRadius: 4,
+    elevation: 2,
   },
   selectedCustomerBox: {
     backgroundColor: color.primaryLight,
     borderWidth: 1,
     borderColor: color.primaryLighter,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 15,
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 10,
   },
   selectedCustomerLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: color.primaryColor,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   selectedCustomerName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1F1F1F',
   },
   selectedCustomerPhone: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '500',
     color: color.primaryColor,
-    marginTop: 2,
+    marginTop: 1,
   },
   suggestionHint: {
     fontSize: 13,
@@ -788,52 +897,52 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   suggestionItem: {
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   suggestionItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: color.primaryLighter,
   },
   suggestionName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: '#1F1F1F',
   },
   suggestionPhone: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '500',
     color: color.primaryColor,
-    marginTop: 2,
+    marginTop: 1,
   },
   suggestionAddress: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#9A9A9A',
     marginTop: 2,
   },
   addCustomerBox: {
     backgroundColor: color.primaryLight,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 15,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: color.primaryLighter,
   },
   addCustomerTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: color.primaryColor,
   },
   addCustomerSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6A6A6A',
-    marginTop: 4,
-    marginBottom: 12,
+    marginTop: 2,
+    marginBottom: 8,
   },
   addCustomerButton: {
-    marginTop: 4,
-    borderRadius: 12,
+    marginTop: 2,
+    borderRadius: 10,
     backgroundColor: color.primaryColor,
-    height: 46,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -844,5 +953,40 @@ const styles = StyleSheet.create({
     color: color.white,
     fontSize: 14,
     fontWeight: '700',
+  },
+  paymentSection: {
+    marginTop: 4,
+  },
+  paymentDivider: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginVertical: 10,
+  },
+  paymentTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: color.primaryColor,
+    marginBottom: 8,
+  },
+  label: {
+    fontSize: 14,
+    marginBottom: 4,
+    color: '#333',
+  },
+  methodPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    backgroundColor: '#f8f8f8',
+  },
+  methodPickerText: {
+    fontSize: 13,
+    color: '#333',
   },
 });

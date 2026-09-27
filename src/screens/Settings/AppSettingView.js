@@ -8,6 +8,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Switch,
+  Image,
 } from 'react-native';
 import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
@@ -19,6 +21,11 @@ import {updateSysConfig} from '../../resource/Configuration';
 import {getSysConfig, setSysConfig} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
 import Toast from 'react-native-toast-message';
+import {
+  fetchWhatsAppStatus,
+  fetchWhatsAppQR,
+  deleteWhatsAppSession,
+} from '../../resource/Whatsapp';
 
 const AppSettingView = ({navigation, route}) => {
   const config = getSysConfig() || {};
@@ -31,12 +38,19 @@ const AppSettingView = ({navigation, route}) => {
     country_code: config.country_code || '+62',
     currency: config.currency || 'IDR',
     price_unit_code: config.price_unit_code || 'none',
+    notification_whatsapp: config.notification_whatsapp === true,
   });
   const [countries, setCountries] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // WhatsApp — single session 'main'
+  const [waStatus, setWaStatus] = useState(null);
+  const [waQR, setWaQR] = useState(null);
+  const [waLoading, setWaLoading] = useState(false);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
 
   useEffect(() => {
     fetchCountries().then(list => {
@@ -52,6 +66,10 @@ const AppSettingView = ({navigation, route}) => {
         return true;
       });
       setCurrencies(cur);
+    });
+    // Load WA status saat buka setting
+    fetchWhatsAppStatus().then(st => {
+      if (st) setWaStatus(st);
     });
   }, []);
 
@@ -75,6 +93,7 @@ const AppSettingView = ({navigation, route}) => {
       country_code: form.country_code,
       currency: form.currency,
       price_unit_code: form.price_unit_code,
+      notification_whatsapp: form.notification_whatsapp,
     };
     const updated = await updateSysConfig(payload);
     setSaving(false);
@@ -87,6 +106,37 @@ const AppSettingView = ({navigation, route}) => {
         text2: 'Konfigurasi tersimpan',
       });
       RootNavigation.goBack();
+    }
+  };
+
+  // ON → jika belum ada session tampilkan QR; jika sudah ada tampilkan status.
+  // OFF → abaikan koneksi WhatsApp (disconnect session).
+  const handleToggleWhatsApp = async value => {
+    setForm(prev => ({...prev, notification_whatsapp: value}));
+    if (value) {
+      setWaLoading(true);
+      const status = await fetchWhatsAppStatus();
+      if (status) setWaStatus(status);
+      if (status && status.session_exists) {
+        setWaQR(null);
+      } else {
+        const qr = await fetchWhatsAppQR();
+        if (qr && qr.qr_base64) {
+          setWaQR(qr.qr_base64);
+          setQrModalVisible(true);
+        }
+      }
+      setWaLoading(false);
+    } else {
+      await deleteWhatsAppSession({id: 'main'});
+      setWaStatus(prev => ({
+        ...(prev || {}),
+        connected: false,
+        session_exists: false,
+        phone_number: null,
+      }));
+      setWaQR(null);
+      setQrModalVisible(false);
     }
   };
 
@@ -231,6 +281,43 @@ const AppSettingView = ({navigation, route}) => {
             unit dari session.
           </Text>
 
+          {/* Koneksi WhatsApp */}
+          <Text style={styles.fieldLabel}>Koneksi WhatsApp</Text>
+          <View style={styles.waBox}>
+            <View style={styles.waRow}>
+              <View style={styles.waInfo}>
+                <Text style={styles.waTitle}>Hubungkan WhatsApp</Text>
+                <Text style={styles.waDesc}>
+                  {waStatus?.connected
+                    ? `Terhubung${
+                        waStatus.phone_number
+                          ? ' · ' + waStatus.phone_number.split('@')[0]
+                          : ''
+                      }`
+                    : waStatus?.session_exists
+                    ? 'Session tersimpan'
+                    : 'Belum ada session'}
+                </Text>
+              </View>
+              <Switch
+                value={form.notification_whatsapp}
+                onValueChange={handleToggleWhatsApp}
+                disabled={waLoading}
+                trackColor={{false: '#E5E5E5', true: '#D8CCF3'}}
+                thumbColor={
+                  form.notification_whatsapp ? color.primaryColor : '#f4f4f4'
+                }
+              />
+            </View>
+          </View>
+          <Text style={styles.fieldHint}>
+            {form.notification_whatsapp
+              ? waStatus?.connected
+                ? 'Aktif dan terhubung. Notifikasi terkirim otomatis.'
+                : 'Aktif. Kalau session belum ada, barcode WA muncul — scan untuk pairing.'
+              : 'Nonaktif. Koneksi WhatsApp diabaikan.'}
+          </Text>
+
           <TouchableOpacity
             onPress={save}
             disabled={saving}
@@ -296,6 +383,36 @@ const AppSettingView = ({navigation, route}) => {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal QR pairing WhatsApp */}
+      <Modal
+        visible={qrModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQrModalVisible(false)}>
+        <View style={styles.qrOverlay}>
+          <View style={styles.qrCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Scan QR WhatsApp</Text>
+              <TouchableOpacity onPress={() => setQrModalVisible(false)}>
+                <Icon name="x" size={22} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {waQR ? (
+              <Image
+                source={{uri: waQR}}
+                style={styles.qrImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={styles.qrEmpty}>QR belum tersedia.</Text>
+            )}
+            <Text style={styles.qrHint}>
+              WhatsApp → Settings → Linked Devices → Link a Device
+            </Text>
           </View>
         </View>
       </Modal>
@@ -480,5 +597,64 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: color.primaryColor,
+  },
+  waBox: {
+    borderWidth: 1,
+    borderColor: '#D9D9E3',
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: '#fff',
+    marginBottom: 4,
+  },
+  waRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  waInfo: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  waTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  waDesc: {
+    fontSize: 11,
+    color: '#8A8A8A',
+    marginTop: 3,
+  },
+  qrOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  qrCard: {
+    backgroundColor: color.white,
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 320,
+  },
+  qrImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    backgroundColor: '#F4F4F8',
+  },
+  qrEmpty: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 13,
+    paddingVertical: 40,
+  },
+  qrHint: {
+    fontSize: 11,
+    color: '#8A8A8A',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

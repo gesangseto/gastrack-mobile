@@ -9,27 +9,66 @@ import {
   View,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import {
+  check,
+  request,
+  PERMISSIONS,
+  RESULTS,
+  openSettings,
+} from 'react-native-permissions';
 
 const UploadImage = ({label, image, setImage, required, showError}) => {
+  const requestCameraAndLaunch = async () => {
+    const permission =
+      Platform.OS === 'ios'
+        ? PERMISSIONS.IOS.CAMERA
+        : PERMISSIONS.ANDROID.CAMERA;
+
+    const result = await request(permission);
+
+    switch (result) {
+      case RESULTS.GRANTED:
+        launchCamera({mediaType: 'photo', quality: 0.5}, response => {
+          if (!response.didCancel && !response.errorCode) {
+            setImage(response.assets[0]);
+          } else if (response.errorCode) {
+            Alert.alert('Error', response.errorMessage || 'Gagal membuka kamera');
+          }
+        });
+        break;
+
+      case RESULTS.BLOCKED:
+        Alert.alert(
+          'Izin Kamera Diblokir',
+          'Izin kamera diblokir. Silakan aktifkan di Pengaturan.',
+          [{text: 'Buka Pengaturan', onPress: openSettings}, {text: 'Batal'}],
+        );
+        break;
+
+      case RESULTS.DENIED:
+        Alert.alert(
+          'Izin Kamera Ditolak',
+          'Anda perlu memberikan izin kamera untuk mengambil foto.',
+        );
+        break;
+
+      default:
+        Alert.alert('Error', 'Kamera tidak tersedia di perangkat ini');
+        break;
+    }
+  };
+
   const pickImage = () => {
     Alert.alert('Pilih Sumber Gambar', '', [
       {
         text: 'Kamera',
-        onPress: () => {
-          launchCamera({mediaType: 'photo', quality: 0.5}, response => {
-            if (!response.didCancel && !response.errorCode) {
-              setImage(response.assets[0]);
-            }
-          });
-        },
+        onPress: requestCameraAndLaunch,
       },
       {
         text: 'Galeri',
         onPress: () =>
           launchImageLibrary({mediaType: 'photo', quality: 0.5}, response => {
             if (!response.didCancel && !response.errorCode) {
-              let image = response.assets[0];
-              let uri = image.uri;
               setImage(response.assets[0]);
             }
           }),
@@ -74,7 +113,7 @@ export default UploadImage;
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   label: {
     fontSize: 14,
@@ -85,7 +124,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
-    height: 150,
+    height: 100,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8f8f8',

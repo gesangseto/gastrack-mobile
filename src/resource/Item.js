@@ -178,12 +178,12 @@ export const createItem = async (Params = {}) => {
         Toast.show({
           type: data.error ? 'error' : 'success',
           text1: data.error ? 'Error' : 'Success',
-          text2: data.error ? data.message : 'Data has been save',
+          text2: data.error ? data.message : (data.message || 'Data has been saved'),
         });
         if (data.error) {
           return resolve(false);
         } else {
-          return resolve(true);
+          return resolve(data);
         }
       })
       .catch(e => {
