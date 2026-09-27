@@ -114,7 +114,7 @@ const Home = () => {
         </TouchableOpacity>
       )}
 
-      {/* Quick action: Customer, Price Code, Product & Country (list, tambah, edit, hapus) */}
+      {/* Quick action: Customer, Price Code, Message Template & Country */}
       <View style={styles.quickRow}>
         <TouchableOpacity
           style={styles.quickTile}
@@ -134,16 +134,16 @@ const Home = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickTile}
-          onPress={() => RootNavigation.navigate('ProductList')}>
-          <View style={[styles.quickIcon, {backgroundColor: '#3B82F6'}]}>
-            <Icon name="package" size={20} color={color.white} />
+          onPress={() => RootNavigation.navigate('MessageTemplateList')}>
+          <View style={[styles.quickIcon, {backgroundColor: '#8B5CF6'}]}>
+            <Icon name="message-square" size={20} color={color.white} />
           </View>
-          <Text style={styles.quickLabel}>Product</Text>
+          <Text style={styles.quickLabel}>Message Template</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickTile}
           onPress={() => RootNavigation.navigate('CountryList')}>
-          <View style={[styles.quickIcon, {backgroundColor: '#8B5CF6'}]}>
+          <View style={[styles.quickIcon, {backgroundColor: '#3B82F6'}]}>
             <Icon name="globe" size={20} color={color.white} />
           </View>
           <Text style={styles.quickLabel}>Country</Text>

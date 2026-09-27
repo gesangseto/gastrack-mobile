@@ -7,8 +7,8 @@ import TabView from '../screens/TabView';
 import Form from '../screens/Form/Form';
 import LoginView from '../screens/LoginView';
 import ItemCreate from '../screens/Items/ItemCreate';
-import ItemView from '../screens/Items/ItemView';
 import ItemList from '../screens/Items/ItemList';
+import ItemView from '../screens/Items/ItemView';
 import BatchCreate from '../screens/Batchs/BatchCreate';
 import BatchList from '../screens/Batchs/BatchList';
 import BatchView from '../screens/Batchs/BatchView';
@@ -30,6 +30,8 @@ import CountryEdit from '../screens/Country/CountryEdit';
 import SessionView from '../screens/Session/SessionView';
 import PaymentCreate from '../screens/Payment/PaymentCreate';
 import PaymentCustomerDetail from '../screens/Payment/PaymentCustomerDetail';
+import MessageTemplateList from '../screens/MessageTemplate/MessageTemplateList';
+import MessageTemplateEdit from '../screens/MessageTemplate/MessageTemplateEdit';
 
 const Router = () => {
   return (
@@ -66,6 +68,8 @@ const Router = () => {
         component={PaymentCustomerDetail}
       />
       <Stack.Screen name="Form" component={Form} />
+      <Stack.Screen name="MessageTemplateList" component={MessageTemplateList} />
+      <Stack.Screen name="MessageTemplateEdit" component={MessageTemplateEdit} />
     </Stack.Navigator>
   );
 };
