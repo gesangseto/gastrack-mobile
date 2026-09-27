@@ -10,18 +10,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import moment from 'moment';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import Toast from 'react-native-toast-message';
 import {getPaymentItems, getPaymentSummary, sendInvoice} from '../../resource/Payment';
+import ImageThumbnail from '../../components/ImageThumbnail';
 
 // Detail tagihan customer — dibuka dari tab Pending/Paid di menu Payment.
 // Menampilkan ringkasan tagihan + daftar item yang dipesan customer pada
 // session terpilih, dengan tombol "Bayar" → PaymentCreate (customer terpilih).
-const formatRupiah = value => {
-  const n = Number(value || 0);
-  return 'Rp ' + n.toLocaleString('id-ID');
+const formatCurrency = (value) => {
+  if (value == null || value === '') return '-';
+  const n = Math.round(Number(value));
+  if (isNaN(n)) return '-';
+  return n.toLocaleString('id-ID');
 };
 
 const STATUS_COLOR = {
@@ -89,9 +93,15 @@ const PaymentCustomerDetail = ({route}) => {
   const handleSendInvoice = async () => {
     if (sending) return;
     setSending(true);
-    const ok = await sendInvoice({customer_id, session_id}, false);
+    const result = await sendInvoice({customer_id, session_id}, false);
     setSending(false);
-    if (ok) {
+    if (result && result.error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Gagal',
+        text2: result.message || 'Gagal kirim tagihan via WhatsApp',
+      });
+    } else if (result) {
       Toast.show({
         type: 'success',
         text1: 'Berhasil',
@@ -149,19 +159,19 @@ const PaymentCustomerDetail = ({route}) => {
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Total Tagihan</Text>
                 <Text style={styles.summaryValue}>
-                  {formatRupiah(summary?.grand_total)}
+                  {formatCurrency(summary?.grand_total)}
                 </Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Sudah Dibayar</Text>
                 <Text style={styles.summaryPaid}>
-                  {formatRupiah(summary?.total_paid)}
+                  {formatCurrency(summary?.total_paid)}
                 </Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Sisa Tagihan</Text>
                 <Text style={styles.summaryRemaining}>
-                  {formatRupiah(summary?.remaining_amount)}
+                  {formatCurrency(summary?.remaining_amount)}
                 </Text>
               </View>
               <View style={styles.summaryDivider} />
@@ -190,29 +200,37 @@ const PaymentCustomerDetail = ({route}) => {
               ) : (
                 items.map(item => {
                   const total =
-                    Number(item.quantity || 0) * Number(item.selling_price || 0);
+                    Number(item.quantity || 0) * Number(item.local_price || 0);
                   const itemColor =
                     ITEM_STATUS_COLOR[String(item.status)] || '#C4C4C4';
                   return (
                     <View key={item.id} style={styles.itemCard}>
-                      <View style={styles.itemIcon}>
-                        <Icon
-                          name="package"
-                          size={18}
-                          color={color.primaryColor}
-                        />
-                      </View>
+                      <ImageThumbnail
+                        filename={item.photo_thumbnail || item.photo_path}
+                        size={56}
+                        radius={12}
+                      />
                       <View style={styles.itemInfo}>
                         <Text style={styles.itemName} numberOfLines={2}>
-                          {item.product_name || `Item #${item.id}`}
+                          {item.product_name || item.item_name || `Item #${item.id}`}
                         </Text>
+                        {item.barcode ? (
+                          <Text style={styles.itemBarcode}>
+                            {item.barcode}
+                          </Text>
+                        ) : null}
                         <Text style={styles.itemSub}>
                           {item.quantity} pcs ×{' '}
-                          {formatRupiah(item.selling_price)}
+                          {formatCurrency(item.local_price)}
                         </Text>
-                        <Text style={styles.itemTotal}>
-                          {formatRupiah(total)}
-                        </Text>
+                        <View style={styles.itemPriceRow}>
+                          <Text style={styles.itemTotal}>
+                            {formatCurrency(total)}
+                          </Text>
+                          <Text style={styles.itemForeign}>
+                            {Number(item.foreign_price || 0).toLocaleString('id-ID')}
+                          </Text>
+                        </View>
                       </View>
                       <View
                         style={[styles.itemBadge, {backgroundColor: itemColor}]}>
@@ -397,33 +415,46 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
   },
-  itemIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+  itemImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
     backgroundColor: color.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   itemInfo: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 12,
   },
   itemName: {
     fontSize: 13,
     fontWeight: '600',
     color: '#1F1F1F',
   },
+  itemBarcode: {
+    fontSize: 10,
+    color: '#B0B0B0',
+    marginTop: 1,
+  },
   itemSub: {
     fontSize: 11,
     color: '#9A9A9A',
     marginTop: 2,
   },
+  itemPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 3,
+  },
   itemTotal: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1F1F1F',
-    marginTop: 2,
+  },
+  itemForeign: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: color.primaryColor,
   },
   itemBadge: {
     borderRadius: 8,

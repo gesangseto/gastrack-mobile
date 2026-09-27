@@ -169,8 +169,9 @@ export const sendInvoice = async (params = {}, useAlert = true) => {
       .then(result => {
         let data = result.data;
         if (data.error) {
-          notifyError(data.message, useAlert);
-          return resolve(false);
+          // Always surface backend error message, even if useAlert=false
+          // (caller can show its own toast)
+          return resolve({error: true, message: data.message});
         }
         Toast.show({
           type: 'success',
@@ -181,7 +182,7 @@ export const sendInvoice = async (params = {}, useAlert = true) => {
       })
       .catch(e => {
         notifyError(e.message, useAlert);
-        return resolve(false);
+        return resolve({error: true, message: e.message});
       });
   });
 };

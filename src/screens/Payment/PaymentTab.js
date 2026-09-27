@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
+import moment from 'moment';
 import InputText from '../../components/InputText';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
@@ -248,7 +249,7 @@ const PaymentTab = () => {
           </Text>
           <Text style={styles.amountValue}>{formatRupiah(item.amount)}</Text>
           <Text style={styles.date}>
-            {item.payment_date || item.created_date || ''}
+            {item.payment_date ? moment(item.payment_date).format('DD MMM YYYY, HH:mm') : item.created_date ? moment(item.created_date).format('DD MMM YYYY, HH:mm') : ''}
           </Text>
         </View>
         <View style={[styles.badge, {backgroundColor: rec.color}]}>
