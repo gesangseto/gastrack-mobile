@@ -8,3 +8,57 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# React Native
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.hermes.** { *; }
+-keep class com.facebook.jni.** { *; }
+-keep class com.facebook.soloader.** { *; }
+-keep class com.facebook.fresco.** { *; }
+-keep class com.facebook.infer.** { *; }
+-keep class com.facebook.yoga.** { *; }
+
+# OkHttp
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+
+# JavaScriptCore (JSC)
+-keep class org.chromium.** { *; }
+-keep class android.webkit.** { *; }
+
+# Gson
+-keep class com.google.gson.** { *; }
+
+# Keep serializable
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# Keep enums
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# Keep Parcelable
+-keep class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# Keep R classes
+-keep class **.R
+-keep class **.R$* {
+    <fields>;
+}
+
+# Okio
+-keep class okio.** { *; }
+
+# Keep Hermes bytecode
+-keep class com.facebook.hermes.** { *; }
+-keep class hermes.** { *; }
