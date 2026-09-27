@@ -7,15 +7,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {
-  createMessageTemplate,
+  getMessageTemplate,
   getListTemplateVariable,
-  updateMessageTemplate,
 } from '../../resource/MessageTemplate';
 
 const CHANNEL_OPTIONS = ['wa', 'email', 'sms'];
@@ -24,7 +24,7 @@ const RECIPIENT_TYPE_OPTIONS = ['customer', 'all', 'segment'];
 const STATUS_OPTIONS = ['Active', 'Inactive'];
 
 const MessageTemplateEdit = ({navigation, route}) => {
-  // Tanpa param `item` = mode tambah template baru.
+  // Android read-only: semua edit dilakukan dari Website (ERP).
   const isEdit = !!route?.params?.item;
   const [formData, setFormData] = useState({
     id: null,
@@ -77,29 +77,10 @@ const MessageTemplateEdit = ({navigation, route}) => {
   };
 
   const handleSave = async () => {
-    if (!formData.code || !formData.name || !formData.content_template) {
-      return;
-    }
-    setSaving(true);
-    const payload = {
-      code: formData.code,
-      name: formData.name,
-      channel: formData.channel,
-      content_template: formData.content_template,
-      description: formData.description || null,
-      subject: formData.subject || null,
-      content_type: formData.content_type,
-      trigger_event: formData.trigger_event || null,
-      recipient_type: formData.recipient_type,
-      status: formData.status,
-    };
-    let response = isEdit
-      ? await updateMessageTemplate({id: formData.id, ...payload})
-      : await createMessageTemplate(payload);
-    setSaving(false);
-    if (response) {
-      RootNavigation.goBack();
-    }
+    Alert.alert(
+      'Read-Only',
+      'Pengeditan template pesan hanya bisa dilakukan dari Website (ERP).',
+    );
   };
 
   const insertVariable = key => {
@@ -224,14 +205,11 @@ const MessageTemplateEdit = ({navigation, route}) => {
 
         {renderChipGroup('Status', STATUS_OPTIONS, 'status')}
 
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={saving}
-          style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Menyimpan...' : 'Simpan'}
+        <View style={styles.readOnlyNotice}>
+          <Text style={styles.readOnlyText}>
+            📋 Read-Only: Edit template dari Website (ERP)
           </Text>
-        </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -314,6 +292,20 @@ const styles = StyleSheet.create({
     color: '#4338CA',
     fontWeight: '500',
   },
+  readOnlyNotice: {
+    backgroundColor: color.primaryLight,
+    borderWidth: 1,
+    borderColor: color.primaryLighter,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  readOnlyText: {
+    color: '#666666',
+    fontSize: 12,
+    fontWeight: '500',
+  },
   saveButton: {
     marginTop: 14,
     borderRadius: 20,
@@ -322,10 +314,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-  },
-  saveButtonText: {
-    color: color.white,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });

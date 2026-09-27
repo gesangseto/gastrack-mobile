@@ -2,7 +2,6 @@ import Icon from '@react-native-vector-icons/lucide';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCallback, useState} from 'react';
 import {
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -17,9 +16,11 @@ import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {
-  deleteMessageTemplate,
   getListMessageTemplate,
 } from '../../resource/MessageTemplate';
+
+// Android hanya read-only: tidak ada tambah/edit/hapus template di sini.
+// Semua perubahan master template dilakukan dari Website (ERP).
 
 const MessageTemplateList = () => {
   const [list, setList] = useState([]);
@@ -43,26 +44,6 @@ const MessageTemplateList = () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  };
-
-  const handleDelete = item => {
-    Alert.alert(
-      'Hapus Template',
-      `Hapus template "${item?.name}"?\n\nTemplate hanya bisa dihapus kalau statusnya Inactive.`,
-      [
-        {text: 'Batal', style: 'cancel'},
-        {
-          text: 'Hapus',
-          style: 'destructive',
-          onPress: async () => {
-            const ok = await deleteMessageTemplate(item.id);
-            if (ok) {
-              loadData();
-            }
-          },
-        },
-      ],
-    );
   };
 
   // Filter client-side: name, code, trigger_event, channel
@@ -119,12 +100,7 @@ const MessageTemplateList = () => {
               RootNavigation.navigate('MessageTemplateEdit', {item: item})
             }
             style={styles.actionBtn}>
-            <Icon name="pencil" size={16} color={color.warning} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDelete(item)}
-            style={[styles.actionBtn, styles.actionBtnDanger]}>
-            <Icon name="trash-2" size={16} color="#EF4444" />
+            <Icon name="eye" size={16} color={color.primaryColor} />
           </TouchableOpacity>
         </View>
       </Pressable>
@@ -137,7 +113,7 @@ const MessageTemplateList = () => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title={`Message Template (${filteredList.length})`} />
+      <Header title={`Template Pesan (${filteredList.length})`} />
       <View style={styles.container}>
         {/* Pencarian */}
         <View style={styles.searchBox}>
@@ -174,12 +150,7 @@ const MessageTemplateList = () => {
             />
           }
         />
-        {/* Tombol tambah template baru */}
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => RootNavigation.navigate('MessageTemplateEdit')}>
-          <Icon name="plus" size={24} color={color.white} />
-        </TouchableOpacity>
+        {/* Android read-only: tidak ada tombol tambah template */}
       </View>
     </View>
   );
@@ -279,27 +250,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionBtnDanger: {
-    backgroundColor: '#FEE2E2',
-  },
-  actions: {
+actions: {
     flexDirection: 'row',
     gap: 8,
   },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: color.primaryColor,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
   },
 });

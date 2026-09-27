@@ -247,30 +247,34 @@ const PaymentCustomerDetail = ({route}) => {
         )}
       </View>
 
-      {/* Footer: Kirim Tagihan (jika belum lunas) + Bayar Tagihan */}
+      {/* Footer: Bayar Tagihan (75%) + Kirim Tagihan icon (25%) */}
       <View style={styles.footer}>
-        {status !== 'PAID' && (
+        <View style={styles.footerRow}>
           <TouchableOpacity
-            onPress={handleSendInvoice}
-            disabled={sending}
-            style={[styles.sendButton, sending && styles.saveButtonDisabled]}>
-            <Icon name="send" size={18} color={color.white} />
-            <Text style={styles.payButtonText}>
-              {sending ? 'Mengirim...' : 'Kirim Tagihan'}
-            </Text>
+            onPress={() =>
+              RootNavigation.navigate('PaymentCreate', {
+                customer_id,
+                session_id,
+              })
+            }
+            style={styles.payButtonInline}>
+            <Icon name="wallet" size={18} color={color.white} />
+            <Text style={styles.payButtonText}>Bayar Tagihan</Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          onPress={() =>
-            RootNavigation.navigate('PaymentCreate', {
-              customer_id,
-              session_id,
-            })
-          }
-          style={styles.payButton}>
-          <Icon name="wallet" size={18} color={color.white} />
-          <Text style={styles.payButtonText}>Bayar Tagihan</Text>
-        </TouchableOpacity>
+          {status !== 'PAID' && (
+            <TouchableOpacity
+              onPress={handleSendInvoice}
+              disabled={sending}
+              style={[styles.sendButtonInline, sending && styles.saveButtonDisabled]}>
+              <Icon
+                name="send"
+                size={18}
+                color={color.white}
+                style={!sending ? undefined : styles.hiddenIcon}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -487,6 +491,31 @@ const styles = StyleSheet.create({
     gap: 8,
     width: '100%',
     marginBottom: 10,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  payButtonInline: {
+    flex: 3,
+    borderRadius: 16,
+    backgroundColor: color.primaryColor,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  sendButtonInline: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: color.warning,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hiddenIcon: {
+    opacity: 0,
   },
   payButtonText: {
     color: color.white,
