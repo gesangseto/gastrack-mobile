@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
 import {
   Modal,
   ScrollView,
@@ -110,7 +110,7 @@ const AppSettingView = ({navigation, route}) => {
   };
 
   // ON → langsung request QR (initWhatsApp dijalankan karena notification_whatsapp dikirim true ke backend).
-  //     Kalau sudah ada session → tampilkan status. Kalau belum → tampilkan QR barcode.
+  //     Kalau sudah ada session → tampilkan status. Kalau belum → tampilkan QR barcode + polling.
   // OFF → disconnect & hapus session.
   const handleToggleWhatsApp = async value => {
     const willBeOn = value;
@@ -124,7 +124,7 @@ const AppSettingView = ({navigation, route}) => {
       });
       // 2. Cek status setelah backend inisialisasi WA
       const status = await fetchWhatsAppStatus();
-      if (status) setWaStatus(status);
+      if (status) {setWaStatus(status);}
       if (status && status.connected) {
         // Sudah terhubung → tampilkan status, tanpa QR
         setWaQR(null);
@@ -135,12 +135,13 @@ const AppSettingView = ({navigation, route}) => {
         if (qr && qr.qr_base64) {
           setWaQR(qr.qr_base64);
           setQrModalVisible(true);
+          startQrPolling();
         } else {
           // QR null/empty tapi session ada → tampilkan pesan
           Toast.show({
             type: 'info',
             text1: 'Session Ada',
-            text2: 'Menunggu koneksi... Jika tidak, scan QR dari Settings di 9Router.',
+            text2: 'Menunggu koneksi... Jika tidak, silakan scan QR yang tampil.',
           });
         }
       } else {
@@ -149,6 +150,7 @@ const AppSettingView = ({navigation, route}) => {
         if (qr && qr.qr_base64) {
           setWaQR(qr.qr_base64);
           setQrModalVisible(true);
+          startQrPolling();
         } else if (qr && qr.message) {
           // Backend kirim pesan status (bukan QR)
           Toast.show({
@@ -181,6 +183,39 @@ const AppSettingView = ({navigation, route}) => {
         notification_whatsapp: false,
       });
     }
+  };
+
+  // Polling QR: cek status setiap 3 detik sampai connected atau user cancel
+  const qrPollingRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      if (qrPollingRef.current) {
+        clearInterval(qrPollingRef.current);
+        qrPollingRef.current = null;
+      }
+    };
+  }, []);
+  const startQrPolling = () => {
+    if (qrPollingRef.current) {clearInterval(qrPollingRef.current);}
+    qrPollingRef.current = setInterval(async () => {
+      try {
+        const status = await fetchWhatsAppStatus();
+        if (status && status.connected) {
+          clearInterval(qrPollingRef.current);
+          qrPollingRef.current = null;
+          setWaStatus(status);
+          setWaQR(null);
+          setQrModalVisible(false);
+          Toast.show({
+            type: 'success',
+            text1: 'Berhasil!',
+            text2: 'WhatsApp terhubung. Notifikasi aktif.',
+          });
+        }
+      } catch (e) {
+        // ignore, terus polling
+      }
+    }, 3000);
   };
 
   const currencyLabel = code => {
