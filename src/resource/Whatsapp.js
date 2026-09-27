@@ -72,7 +72,8 @@ export const createWhatsAppSession = async (params = {}) => {
   });
 };
 
-// Hapus session WhatsApp (disconnect)
+// Hapus session WhatsApp (disconnect).
+// Kirim DELETE ke /whatsapp/session (body: {id:'main'}).
 export const deleteWhatsAppSession = async (params = {}) => {
   return new Promise(resolve => {
     $axios

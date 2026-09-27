@@ -109,21 +109,59 @@ const AppSettingView = ({navigation, route}) => {
     }
   };
 
-  // ON → jika belum ada session tampilkan QR; jika sudah ada tampilkan status.
-  // OFF → abaikan koneksi WhatsApp (disconnect session).
+  // ON → langsung request QR (initWhatsApp dijalankan karena notification_whatsapp dikirim true ke backend).
+  //     Kalau sudah ada session → tampilkan status. Kalau belum → tampilkan QR barcode.
+  // OFF → disconnect & hapus session.
   const handleToggleWhatsApp = async value => {
+    const willBeOn = value;
     setForm(prev => ({...prev, notification_whatsapp: value}));
-    if (value) {
+    if (willBeOn) {
       setWaLoading(true);
+      // 1. Simpan toggle ke backend dulu (biar initWhatsApp jalan)
+      await updateSysConfig({
+        users_name: config.users_name,
+        notification_whatsapp: true,
+      });
+      // 2. Cek status setelah backend inisialisasi WA
       const status = await fetchWhatsAppStatus();
       if (status) setWaStatus(status);
-      if (status && status.session_exists) {
+      if (status && status.connected) {
+        // Sudah terhubung → tampilkan status, tanpa QR
         setWaQR(null);
-      } else {
+        setQrModalVisible(false);
+      } else if (status && status.session_exists) {
+        // Session tersimpan tapi belum connect → request QR untuk reconnect
         const qr = await fetchWhatsAppQR();
         if (qr && qr.qr_base64) {
           setWaQR(qr.qr_base64);
           setQrModalVisible(true);
+        } else {
+          // QR null/empty tapi session ada → tampilkan pesan
+          Toast.show({
+            type: 'info',
+            text1: 'Session Ada',
+            text2: 'Menunggu koneksi... Jika tidak, scan QR dari Settings di 9Router.',
+          });
+        }
+      } else {
+        // Belum ada session sama sekali → minta QR baru
+        const qr = await fetchWhatsAppQR();
+        if (qr && qr.qr_base64) {
+          setWaQR(qr.qr_base64);
+          setQrModalVisible(true);
+        } else if (qr && qr.message) {
+          // Backend kirim pesan status (bukan QR)
+          Toast.show({
+            type: 'info',
+            text1: 'Status WhatsApp',
+            text2: qr.message,
+          });
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'QR Error',
+            text2: 'Tidak bisa generate QR. Coba lagi.',
+          });
         }
       }
       setWaLoading(false);
@@ -137,6 +175,11 @@ const AppSettingView = ({navigation, route}) => {
       }));
       setWaQR(null);
       setQrModalVisible(false);
+      // Matikan toggle di backend juga
+      await updateSysConfig({
+        users_name: config.users_name,
+        notification_whatsapp: false,
+      });
     }
   };
 
