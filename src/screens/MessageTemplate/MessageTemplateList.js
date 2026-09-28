@@ -15,13 +15,11 @@ import {
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
-import {
-  getListMessageTemplate,
-} from '../../resource/MessageTemplate';
+
+import {getListMessageTemplate} from '../../resource/MessageTemplate';
 
 // Android hanya read-only: tidak ada tambah/edit/hapus template di sini.
 // Semua perubahan master template dilakukan dari Website (ERP).
-
 const MessageTemplateList = () => {
   const [list, setList] = useState([]);
   const [search, setSearch] = useState('');
@@ -67,7 +65,11 @@ const MessageTemplateList = () => {
         key={index}
         style={styles.card}>
         <View style={styles.avatar}>
-          <Icon name="message-square-text" size={20} color={color.primaryColor} />
+          <Icon
+            name="message-square-text"
+            size={20}
+            color={color.primaryColor}
+          />
         </View>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
@@ -100,7 +102,7 @@ const MessageTemplateList = () => {
               RootNavigation.navigate('MessageTemplateEdit', {item: item})
             }
             style={styles.actionBtn}>
-            <Icon name="eye" size={16} color={color.primaryColor} />
+            <Icon name="pencil" size={16} color={color.primaryColor} />
           </TouchableOpacity>
         </View>
       </Pressable>
@@ -108,7 +110,7 @@ const MessageTemplateList = () => {
   };
 
   return (
-    <View style={{flex: 1, backgroundColor: color.white}}>
+    <View style={styles.root}>
       <StatusBar
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
@@ -141,7 +143,9 @@ const MessageTemplateList = () => {
         <FlatList
           data={filteredList}
           renderItem={({item, index}) => renderItem(item, index)}
-          keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          keyExtractor={(item, index) =>
+            item.id?.toString() || index.toString()
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -159,6 +163,10 @@ const MessageTemplateList = () => {
 export default MessageTemplateList;
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: color.white,
+  },
   container: {
     flex: 1,
     backgroundColor: color.white,
@@ -242,6 +250,10 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     fontSize: 11,
   },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   actionBtn: {
     width: 32,
     height: 32,
@@ -249,10 +261,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-actions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   },
 });

@@ -16,7 +16,6 @@ import Icon from '@react-native-vector-icons/lucide';
 import {useHomeStore} from '../../store/homeStore';
 import {useSessionStore} from '../../store/sessionStore';
 import {fetchSessionStats} from '../../resource/Dashboard';
-import DropDownPicker from 'react-native-dropdown-picker';
 
 // ===== Mapping status =====
 // Item stock: 200 Draft, 201 Manifesting, 202 In-Transit, 203 GRN,
@@ -39,11 +38,6 @@ const fmt = v => {
 const sumBy = (arr, key) =>
   (arr || []).reduce((acc, it) => acc + Number(it[key] || 0), 0);
 
-// Icon close untuk modal dropdown (minimalis, konsisten dgn ikon lucide)
-const CloseIcon = ({style}) => (
-  <Icon name="x" size={20} color="#9CA3AF" style={style} />
-);
-
 const Statistik = ({navigation, route, inline = false, header = null}) => {
   // Data dashboard dibagi via Zustand store (sama dengan Home)
   const data = useHomeStore(s => s.dashboard);
@@ -51,25 +45,18 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   const offline = useHomeStore(s => s.offline);
   const fetchHome = useHomeStore(s => s.fetchHome);
 
-  // Session dropdown — daftar session dari store (cache MMKV). Tidak
-  // di-fetch ulang saat kembali ke layar; refresh hanya via pull-to-refresh.
+  // Session dropdown TIDAK lagi ada di layar ini — pindah ke Home.
+  // Statistik hanya BACA `selectedSession` dari zustand sebagai sumber
+  // tunggal session aktif, jadi load data mengikuti pilihan user di Home.
   const sessionList = useSessionStore(s => s.sessionList);
   const fetchSessionList = useSessionStore(s => s.fetchSessionList);
   const initSessionListFromCache = useSessionStore(
     s => s.initSessionListFromCache,
   );
-  const setSessionList = useSessionStore(s => s.setSessionList);
-  // Session terpilih disimpan di store (persist MMKV) beserta datanya —
-  // sumber tunggal filter. Saat kembali ke Home, pilihan tetap tampil
-  // tanpa perlu muat ulang.
   const selectedSession = useSessionStore(s => s.selectedSession);
   const selectSession = useSessionStore(s => s.selectSession);
-  // Value dropdown = id session terpilih (jika masih ada di daftar).
-  const sessionValue =
-    selectedSession && sessionList.some(s => s.id === selectedSession.id)
-      ? selectedSession.id
-      : null;
-  const [sessionOpen, setSessionOpen] = useState(false);
+  // Id session terpilih — dipakai sebagai filter query statistik.
+  const sessionValue = selectedSession ? selectedSession.id : null;
   // Statistik per session (grafik)
   const [sessionStats, setSessionStats] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -153,16 +140,6 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
     fetchHome(true);
     fetchSessionList(true);
     loadSessionStats();
-  };
-
-  // Pilih session di dropdown → simpan lengkap ke store (persist MMKV)
-  // beserta informasinya (session_no, country, status, dll).
-  // Catatan: react-native-dropdown-picker memanggil setValue dengan FUNGSI
-  // (state => newValue) — evaluasi dulu sebelum dipakai.
-  const handleSelectSession = value => {
-    const id = typeof value === 'function' ? value(sessionValue) : value;
-    const session = sessionList.find(s => s.id === id) || null;
-    selectSession(session);
   };
 
   // ===== Turunan data =====
@@ -277,56 +254,6 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             </View>
           </View>
 
-          {/* Dropdown pilih session */}
-          <View style={styles.dropdownWrap}>
-            <DropDownPicker
-              open={sessionOpen}
-              value={sessionValue}
-              items={[
-                ...sessionList.map(s => ({
-                  label: `${s.session_no} • ${s.country || '-'} (${s.status})`,
-                  value: s.id,
-                })),
-              ]}
-              setOpen={setSessionOpen}
-              setValue={handleSelectSession}
-              setItems={setSessionList}
-              placeholder="Pilih session jastip"
-              style={styles.picker}
-              dropDownContainerStyle={styles.pickerDropdown}
-              listMode="MODAL"
-              modalAnimationType="slide"
-              modalContentContainerStyle={styles.pickerModal}
-              searchable
-              searchPlaceholder="Cari session..."
-              searchContainerStyle={styles.pickerSearchContainer}
-              searchTextInputStyle={styles.pickerSearchInput}
-              searchPlaceholderTextColor="#9CA3AF"
-              CloseIconComponent={CloseIcon}
-              closeIconStyle={styles.pickerCloseIcon}
-              closeIconContainerStyle={styles.pickerCloseIconContainer}
-              textStyle={styles.pickerText}
-              labelStyle={styles.pickerLabel}
-              placeholderStyle={styles.pickerPlaceholder}
-              arrowIconStyle={styles.pickerArrow}
-              tickIconStyle={styles.pickerTick}
-              customArrowIcon={() => (
-                <Icon name="chevron-down" size={18} color="#9CA3AF" />
-              )}
-              customTickIcon={() => (
-                <Icon name="check" size={16} color={color.primaryColor} />
-              )}
-              listItemContainerStyle={styles.pickerListItem}
-              listItemLabelStyle={styles.pickerListItemLabel}
-              selectedItemContainerStyle={styles.pickerSelectedItem}
-              selectedItemLabelStyle={styles.pickerSelectedLabel}
-              itemSeparatorStyle={styles.pickerItemSeparator}
-              listMessageContainerStyle={styles.pickerEmptyContainer}
-              listMessageTextStyle={styles.pickerEmptyText}
-              closeOnBackPressed
-              zIndex={1000}
-            />
-          </View>
 
           {/* Profit card — summary semua item di session terpilih
               (style mengikuti ItemView.js bagian Profit card) */}

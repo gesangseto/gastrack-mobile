@@ -1,7 +1,8 @@
 import Icon from '@react-native-vector-icons/lucide';
 import {useFocusEffect} from '@react-navigation/native';
-import {useCallback, useEffect} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import SessionDropdown from '../../components/SessionDropdown';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import {closeSession} from '../../resource/Session';
@@ -16,6 +17,12 @@ const Home = () => {
   const fetchHome = useHomeStore(s => s.fetchHome);
   const initFromCache = useHomeStore(s => s.initFromCache);
   const fetchActiveSession = useSessionStore(s => s.fetchActiveSession);
+  // Daftar session untuk dropdown. Di-init dari cache MMKV saat Home fokus
+  // (Statistik juga memakainya, jadi cukup panggil di satu tempat).
+  const initSessionListFromCache = useSessionStore(
+    s => s.initSessionListFromCache,
+  );
+  const [sessionOpen, setSessionOpen] = useState(false);
 
   useEffect(() => {
     // Tampilkan data cache secepatnya; Statistik (inline) yang memanggil
@@ -27,7 +34,8 @@ const Home = () => {
   useFocusEffect(
     useCallback(() => {
       fetchActiveSession();
-    }, [fetchActiveSession]),
+      initSessionListFromCache();
+    }, [fetchActiveSession, initSessionListFromCache]),
   );
 
   const summary = sessionSummary || {
@@ -113,6 +121,18 @@ const Home = () => {
           </View>
         </TouchableOpacity>
       )}
+
+      {/* Dropdown pilih session jastip (pilihan disimpan di zustand
+          selectedSession — dipakai oleh dashboard statistik & menu lain).
+          Default otomatis = session aktif (di-set store). */}
+      <View style={styles.sessionPickerWrap}>
+        <Text style={styles.sessionPickerLabel}>Session Jastip</Text>
+        <SessionDropdown
+          open={sessionOpen}
+          onToggle={setSessionOpen}
+          placeholder="Pilih session jastip"
+        />
+      </View>
 
       {/* Quick action: Customer, Price Code, Message Template & Country */}
       <View style={styles.quickRow}>
@@ -252,6 +272,16 @@ const styles = StyleSheet.create({
     color: color.white,
     fontSize: 12,
     fontWeight: '700',
+  },
+  sessionPickerWrap: {
+    marginTop: 12,
+    zIndex: 1000,
+  },
+  sessionPickerLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B6B6B',
+    marginBottom: 6,
   },
   quickRow: {
     flexDirection: 'row',

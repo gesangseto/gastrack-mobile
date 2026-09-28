@@ -95,7 +95,7 @@ const SessionView = () => {
 
   // Muat daftar negara (dari mst_country) + konfigurasi aplikasi
   useEffect(() => {
-    fetchCountries().then(list => {
+    fetchCountries({status: 'Active'}).then(list => {
       // Negara dari mst_country (name → currency_code/currency_symbol)
       const uniq = (list || []).filter(it => it.name);
       setCountries(uniq);

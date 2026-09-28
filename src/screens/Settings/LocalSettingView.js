@@ -59,7 +59,7 @@ const LocalSettingView = ({navigation, route}) => {
             showError={true}
             value={endpoint}
             onChangeText={setEndpointState}
-            placeholder="http://192.168.2.199:8001"
+            placeholder="http://192.168.2.199:8082"
             autoCapitalize="none"
             keyboardType="url"
           />

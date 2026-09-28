@@ -5,10 +5,11 @@ let url = `/api/v1/master/country`;
 
 // Ambil daftar negara (mst_country) yang aktif.
 // Resolve array: [{id, name, code, country_code, currency_code, currency_symbol}]
-export const fetchCountries = async (useAlert = false) => {
+export const fetchCountries = async (property = {}, useAlert = false) => {
+  var query_string = new URLSearchParams(property).toString();
   return new Promise(resolve => {
     $axios
-      .get(url)
+      .get(`${url}?${query_string}`)
       .then(result => {
         let data = result.data;
         if (data.error) {

@@ -16,10 +16,7 @@ import InputText from '../../components/InputText';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
-import {
-  getPaymentHistory,
-  getPaymentSummaryList,
-} from '../../resource/Payment';
+import {getPaymentHistory, getPaymentSummaryList} from '../../resource/Payment';
 import {useSessionStore} from '../../store/sessionStore';
 
 // Tab "Payment" — pembayaran bertahap PER CUSTOMER (module payment baru).
@@ -58,8 +55,8 @@ const STATUS_COLOR = {
 // Warna badge status payment record (-1 CANCELLED, 0 PENDING, 1 SUCCESS)
 const RECORD_STATUS = {
   '-1': {label: 'CANCELLED', color: color.danger},
-  '0': {label: 'PENDING', color: color.warning},
-  '1': {label: 'SUCCESS', color: color.success},
+  0: {label: 'PENDING', color: color.warning},
+  1: {label: 'SUCCESS', color: color.success},
 };
 
 const PaymentTab = () => {
@@ -209,7 +206,9 @@ const PaymentTab = () => {
           </View>
           <View style={styles.amountRow}>
             <Text style={styles.amountLabel}>Dibayar</Text>
-            <Text style={styles.amountPaid}>{formatRupiah(item.total_paid)}</Text>
+            <Text style={styles.amountPaid}>
+              {formatRupiah(item.total_paid)}
+            </Text>
           </View>
           <View style={styles.amountRow}>
             <Text style={styles.amountLabel}>Sisa</Text>
@@ -249,7 +248,11 @@ const PaymentTab = () => {
           </Text>
           <Text style={styles.amountValue}>{formatRupiah(item.amount)}</Text>
           <Text style={styles.date}>
-            {item.payment_date ? moment(item.payment_date).format('DD MMM YYYY, HH:mm') : item.created_date ? moment(item.created_date).format('DD MMM YYYY, HH:mm') : ''}
+            {item.payment_date
+              ? moment(item.payment_date).format('DD MMM YYYY, HH:mm')
+              : item.created_date
+              ? moment(item.created_date).format('DD MMM YYYY, HH:mm')
+              : ''}
           </Text>
         </View>
         <View style={[styles.badge, {backgroundColor: rec.color}]}>
@@ -260,13 +263,8 @@ const PaymentTab = () => {
   };
 
   const list =
-    activeTab === 'Pending'
-      ? pending
-      : activeTab === 'Paid'
-        ? paid
-        : history;
-  const renderItem =
-    activeTab === 'Riwayat' ? renderHistory : renderBill;
+    activeTab === 'Pending' ? pending : activeTab === 'Paid' ? paid : history;
+  const renderItem = activeTab === 'Riwayat' ? renderHistory : renderBill;
 
   const tabs = [
     {key: 'Pending', label: 'Pending', qty: pending.length},
@@ -278,8 +276,8 @@ const PaymentTab = () => {
     activeTab === 'Pending'
       ? 'Belum ada tagihan pending'
       : activeTab === 'Paid'
-        ? 'Belum ada customer lunas'
-        : 'Belum ada riwayat payment';
+      ? 'Belum ada customer lunas'
+      : 'Belum ada riwayat payment';
 
   // Items dropdown session — WAJIB di-memoize. DropDownPicker v5 memanggil
   // onChangeValue setiap kali referensi `items` berubah; array inline yang dibuat
@@ -353,7 +351,12 @@ const PaymentTab = () => {
         />
       )}
 
-      <SegmentedTabs items={tabs} value={activeTab} onChange={setActiveTab} />
+      <SegmentedTabs
+        items={tabs}
+        value={activeTab}
+        onChange={setActiveTab}
+        style={{marginTop: 0}}
+      />
 
       <View style={styles.listWrap}>
         {loading && list.length === 0 ? (

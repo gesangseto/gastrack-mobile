@@ -22,10 +22,7 @@ import {fetchDashboard} from '../../resource/Dashboard';
 import {fetchCountries} from '../../resource/Country';
 import {getEndpoint, getSysConfig} from '../../storage';
 import {getMimeType} from '../../helper/helper';
-import {
-  isValidLocalPhone,
-  normalizePhone,
-} from '../../helper/phone';
+import {isValidLocalPhone, normalizePhone} from '../../helper/phone';
 import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Toast from 'react-native-toast-message';
 import {useSessionStore} from '../../store/sessionStore';
@@ -71,7 +68,7 @@ const ItemCreate = ({navigation, route}) => {
   const [savingCustomer, setSavingCustomer] = useState(false);
   // Pembayaran langsung (opsional)
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
   const [paymentRef, setPaymentRef] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [showMethodPicker, setShowMethodPicker] = useState(false);
@@ -98,13 +95,13 @@ const ItemCreate = ({navigation, route}) => {
     fetchCountries().then(list => setCountries(list || []));
   }, []);
 
-useEffect(() => {
+  useEffect(() => {
     if (route && route?.params?.item) {
       let item = route?.params?.item;
       let param = {};
       param.id = item.id || null;
       param.customer_phone = toLocalDigits(item.customer_phone);
-      param.item_name = item.product_name || item.item_name || null;
+      param.item_name = item.item_name || item.product_name || null;
       param.quantity = item.quantity != null ? String(item.quantity) : null;
       // Harga dikirim sebagai kode (alphabet) — tampilkan cost_code/selling_code
       param.cost_code = item.cost_code || null;
@@ -314,7 +311,10 @@ useEffect(() => {
         if (selectedCustomer?.id) {
           form.append('customer_id', selectedCustomer.id);
         } else {
-          form.append('customer_phone', normalizePhone(formData.customer_phone));
+          form.append(
+            'customer_phone',
+            normalizePhone(formData.customer_phone),
+          );
         }
         // Unit harga per item (override default session/config)
         form.append('cost_unit', effectiveCostUnit);
@@ -323,8 +323,10 @@ useEffect(() => {
         if (!formData.id && Number(paymentAmount) > 0) {
           form.append('payment_amount', paymentAmount);
           form.append('payment_method', paymentMethod);
-          if (paymentRef.trim()) form.append('reference_number', paymentRef.trim());
-          if (paymentNotes.trim()) form.append('payment_notes', paymentNotes.trim());
+          if (paymentRef.trim())
+            form.append('reference_number', paymentRef.trim());
+          if (paymentNotes.trim())
+            form.append('payment_notes', paymentNotes.trim());
         }
         let submit = null;
         if (formData.id) {
@@ -362,7 +364,8 @@ useEffect(() => {
   const editItem = route?.params?.item;
   const costCurrency =
     editItem?.cost_currency || sessionInfo?.currency_code || 'IDR';
-  const sellingCurrency = editItem?.selling_currency || sysCfg.currency || 'IDR';
+  const sellingCurrency =
+    editItem?.selling_currency || sysCfg.currency || 'IDR';
   const effectiveCostUnit =
     costUnit || editItem?.cost_unit || sessionInfo?.price_code_unit || 'none';
   const effectiveSellingUnit =
@@ -675,7 +678,8 @@ useEffect(() => {
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                Pilih Unit Harga ({unitPickerFor === 'cost' ? 'Cost' : 'Selling'})
+                Pilih Unit Harga (
+                {unitPickerFor === 'cost' ? 'Cost' : 'Selling'})
               </Text>
               <TouchableOpacity onPress={() => setUnitPickerFor(null)}>
                 <Icon name="x" size={22} color="#666" />

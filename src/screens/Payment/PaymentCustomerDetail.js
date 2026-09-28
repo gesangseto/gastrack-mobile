@@ -15,13 +15,17 @@ import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import Toast from 'react-native-toast-message';
-import {getPaymentItems, getPaymentSummary, sendInvoice} from '../../resource/Payment';
+import {
+  getPaymentItems,
+  getPaymentSummary,
+  sendInvoice,
+} from '../../resource/Payment';
 import ImageThumbnail from '../../components/ImageThumbnail';
 
 // Detail tagihan customer — dibuka dari tab Pending/Paid di menu Payment.
 // Menampilkan ringkasan tagihan + daftar item yang dipesan customer pada
 // session terpilih, dengan tombol "Bayar" → PaymentCreate (customer terpilih).
-const formatCurrency = (value) => {
+const formatCurrency = value => {
   if (value == null || value === '') return '-';
   const n = Math.round(Number(value));
   if (isNaN(n)) return '-';
@@ -36,13 +40,13 @@ const STATUS_COLOR = {
 
 // Warna badge status item (mengikuti mst_epc_status)
 const ITEM_STATUS_COLOR = {
-  '200': color.success, // GRN
-  '201': color.warning, // In Transit
-  '202': color.warning, // Arrived
-  '203': color.success, // GRN
-  '204': color.danger, // Disposal
-  '205': color.danger, // Lost
-  '206': color.danger, // Damaged
+  200: color.success, // GRN
+  201: color.warning, // In Transit
+  202: color.warning, // Arrived
+  203: color.success, // GRN
+  204: color.danger, // Disposal
+  205: color.danger, // Lost
+  206: color.danger, // Damaged
 };
 
 const PaymentCustomerDetail = ({route}) => {
@@ -185,9 +189,7 @@ const PaymentCustomerDetail = ({route}) => {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Item Dipesan</Text>
               <View style={styles.countBadge}>
-                <Text style={styles.countBadgeText}>
-                  {items.length} item
-                </Text>
+                <Text style={styles.countBadgeText}>{items.length} item</Text>
               </View>
             </View>
             <ScrollView
@@ -212,28 +214,26 @@ const PaymentCustomerDetail = ({route}) => {
                       />
                       <View style={styles.itemInfo}>
                         <Text style={styles.itemName} numberOfLines={2}>
-                          {item.product_name || item.item_name || `Item #${item.id}`}
+                          {item.item_name ||
+                            item.product_name ||
+                            `Item #${item.id}`}
                         </Text>
-                        {item.barcode ? (
-                          <Text style={styles.itemBarcode}>
-                            {item.barcode}
-                          </Text>
-                        ) : null}
                         <Text style={styles.itemSub}>
-                          {item.quantity} pcs ×{' '}
-                          {formatCurrency(item.local_price)}
+                          {item.barcode || '-'}
                         </Text>
                         <View style={styles.itemPriceRow}>
-                          <Text style={styles.itemTotal}>
-                            {formatCurrency(total)}
-                          </Text>
                           <Text style={styles.itemForeign}>
-                            {Number(item.foreign_price || 0).toLocaleString('id-ID')}
+                            {Number(item.local_price || 0).toLocaleString(
+                              'id-ID',
+                            )}
                           </Text>
                         </View>
                       </View>
                       <View
-                        style={[styles.itemBadge, {backgroundColor: itemColor}]}>
+                        style={[
+                          styles.itemBadge,
+                          {backgroundColor: itemColor},
+                        ]}>
                         <Text style={styles.itemBadgeText}>
                           {item.status_name || item.status}
                         </Text>
@@ -265,7 +265,10 @@ const PaymentCustomerDetail = ({route}) => {
             <TouchableOpacity
               onPress={handleSendInvoice}
               disabled={sending}
-              style={[styles.sendButtonInline, sending && styles.saveButtonDisabled]}>
+              style={[
+                styles.sendButtonInline,
+                sending && styles.saveButtonDisabled,
+              ]}>
               <Icon
                 name="send"
                 size={18}
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     marginTop: -40,
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
-    padding: 30,
+    padding: 20,
   },
   loading: {
     marginTop: 40,
@@ -301,7 +304,7 @@ const styles = StyleSheet.create({
   customerBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 5,
   },
   customerIcon: {
     width: 44,
@@ -372,7 +375,7 @@ const styles = StyleSheet.create({
   summaryDivider: {
     height: 1,
     backgroundColor: color.primaryLighter,
-    marginVertical: 10,
+    marginBottom: 5,
   },
   summaryItems: {
     fontSize: 11,
