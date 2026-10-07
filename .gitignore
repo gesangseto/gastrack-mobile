@@ -68,9 +68,12 @@ yarn-error.log
 /coverage
 
 # Yarn
-.yarn/*
+.yarn/* 
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# temp folder for test files
+temp/
