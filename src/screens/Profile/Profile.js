@@ -13,7 +13,7 @@ import {
 import * as RootNavigation from '../../config/RootNavigation';
 import InputText from '../../components/InputText';
 import color from '../../constant/color';
-import {getProfile, removeProfile} from '../../storage';
+import {getProfile, removeProfile, removeTenantInfo} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
 
 const Profile = ({navigation, route}) => {
@@ -47,6 +47,7 @@ const Profile = ({navigation, route}) => {
             <TouchableOpacity
               onPress={() => {
                 removeProfile();
+                removeTenantInfo();
                 RootNavigation.navigateReplace('LoginView');
               }}
               style={{

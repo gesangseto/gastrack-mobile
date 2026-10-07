@@ -77,6 +77,50 @@ export const removeTenant = () => {
   }
 };
 
+// ===== Tenant Info (multi-tenant SaaS) =====
+// Salinan data tenant dari sys_tenant (didapat dari GET
+// /api/v1/system/tenant/subdomain/:kode). Dipakai untuk branding (nama, logo,
+// warna) & preferensi (currency, country, price_unit_code, dsb) TANPA perlu
+// memanggil Backend tiap kali. Berisi SEMUA kolom sys_tenant kecuali password.
+// Disimpan terpisah dari 'tenant' (kode) supaya logout tetap bisa menampilkan
+// nama tenant di layar login.
+export const setTenantInfo = data => {
+  try {
+    if (!data) return null;
+    // Buang field sensitif bila sewaktu-waktu ikut terkirim.
+    const {
+      password,
+      db_password_enc,
+      db_password,
+      db_host,
+      db_port,
+      db_name,
+      db_user,
+      username,
+      ...safe
+    } = data;
+    storage.set('tenant_info', JSON.stringify(safe));
+    return safe;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+export const getTenantInfo = () => {
+  try {
+    return JSON.parse(storage.getString('tenant_info'));
+  } catch (error) {
+    return null;
+  }
+};
+export const removeTenantInfo = () => {
+  try {
+    return storage.delete('tenant_info');
+  } catch (error) {
+    return null;
+  }
+};
+
 // Simpan konfigurasi aplikasi (sys_configuration_mst) ke MMKV.
 // Field sensitif (password) dan logo dibuang agar tidak tersimpan di device.
 export const setSysConfig = data => {

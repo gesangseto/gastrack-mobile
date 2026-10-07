@@ -25,6 +25,7 @@ import {
   setSysConfig,
   setTenant,
 } from '../storage';
+import {fetchTenantInfo} from '../resource/Tenant';
 
 const Field = React.forwardRef(({icon, ...props}, ref) => (
   <View style={styles.field}>
@@ -65,9 +66,14 @@ const LoginView = ({navigation, route}) => {
     if (!username || !password) return;
     setLoading(true);
     try {
+      // Simpan info tenant (branding) dari endpoint publik SEBELUM login,
+      // supaya aplikasi sudah tahu identitas tenant meski login gagal.
+      if (tenant) await fetchTenantInfo(tenant);
       const response = await loginSeller({username, password});
       if (response) {
         setProfile(response);
+        // Refresh info tenant dengan token (field kuota/features ikut).
+        await fetchTenantInfo(tenant);
         const config = await fetchSysConfig();
         if (config) setSysConfig(config);
         return navigation.replace('TabView');
@@ -80,7 +86,11 @@ const LoginView = ({navigation, route}) => {
   };
 
   useEffect(() => {
-    setTenantState(getTenant());
+    const code = getTenant();
+    setTenantState(code);
+    // Muat ulang info tenant (branding) dari Backend saat layar login tampil,
+    // memakai kode tenant yang tersimpan (tetap ada meski sudah logout).
+    if (code) fetchTenantInfo(code);
   }, []);
 
   useEffect(() => {

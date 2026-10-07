@@ -12,7 +12,7 @@ import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
 import {logoutUser} from '../../resource/Login';
-import {getProfile, removeProfile} from '../../storage';
+import {getProfile, removeProfile, removeTenantInfo} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
 
 const MENU = [
@@ -87,6 +87,9 @@ const SettingsView = ({navigation, route, inline = false}) => {
             setLoggingOut(true);
             RootNavigation.navigateReplace('LoginView');
             removeProfile();
+            // Bersihkan cache info tenant di perangkat (anti-kebocoran antar
+            // pengguna). Akan dimuat ulang oleh LoginView dari kode tenant.
+            removeTenantInfo();
             setLoggingOut(false);
             // Kirim ke Backend: hapus token sesi (sys_authentication)
             await logoutUser();
