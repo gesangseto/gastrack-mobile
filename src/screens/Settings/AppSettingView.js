@@ -46,7 +46,8 @@ const AppSettingView = ({navigation, route}) => {
   const [countrySearch, setCountrySearch] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // WhatsApp — single session 'main'
+  // WhatsApp — multi-session: session di-resolve backend dari tenant aktif
+  // (wa_tenant_<tenant_id>); klien tidak perlu mengirim id session.
   const [waStatus, setWaStatus] = useState(null);
   const [waQR, setWaQR] = useState(null);
   const [waLoading, setWaLoading] = useState(false);
@@ -190,7 +191,7 @@ const AppSettingView = ({navigation, route}) => {
       }
       setWaLoading(false);
     } else {
-      await deleteWhatsAppSession({id: 'main'});
+      await deleteWhatsAppSession({});
       setWaStatus(prev => ({
         ...(prev || {}),
         connected: false,

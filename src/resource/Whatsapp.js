@@ -4,7 +4,7 @@ import $axios from '../config/Api';
 const whatsappUrl = '/api/v1/helper/whatsapp';
 const sessionUrl = '/api/v1/helper/whatsapp-session';
 
-// Status koneksi WhatsApp (session tunggal 'main')
+// Status koneksi WhatsApp (session per tenant — backend resolve dari tenant aktif)
 export const fetchWhatsAppStatus = async (useAlert = false) => {
   return new Promise(resolve => {
     $axios
