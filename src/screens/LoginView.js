@@ -19,9 +19,11 @@ import {
   getEndpoint,
   getProfile,
   getSysConfig,
+  getTenant,
   setEndpoint,
   setProfile,
   setSysConfig,
+  setTenant,
 } from '../storage';
 
 const Field = React.forwardRef(({icon, ...props}, ref) => (
@@ -45,8 +47,11 @@ const normalizeEndpoint = url => {
 
 const LoginView = ({navigation, route}) => {
   const [api, setApi] = useState(getEndpoint());
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  // Kode tenant (subdomain backend) untuk multi-tenant SaaS. Wajib untuk
+  // tenant admin/user; boleh dikosongkan untuk super admin.
+  const [tenant, setTenantState] = React.useState('');
   const [showServer, setShowServer] = useState(false);
   const [loading, setLoading] = useState(false);
   const passwordInputRef = useRef(null);
@@ -54,6 +59,9 @@ const LoginView = ({navigation, route}) => {
   const handleLogin = async () => {
     const ep = normalizeEndpoint(api);
     if (ep) setEndpoint(ep);
+    // Simpan kode tenant lebih dulu supaya interceptor X-Tenant sudah
+    // terpasang saat request login dikirim (tenant admin/user wajib isi).
+    setTenant(tenant);
     if (!username || !password) return;
     setLoading(true);
     try {
@@ -70,6 +78,10 @@ const LoginView = ({navigation, route}) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setTenantState(getTenant());
+  }, []);
 
   useEffect(() => {
     const checkLogin = async () => {
@@ -117,6 +129,18 @@ const LoginView = ({navigation, route}) => {
 
         {/* Form */}
         <View style={styles.form}>
+          <Field
+            icon="building"
+            value={tenant}
+            onChangeText={setTenantState}
+            placeholder="Kode Tenant (kosongkan untuk super admin)"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => {
+              /* fokus ke username bila tersedia */
+            }}
+          />
           <Field
             icon="user"
             value={username}

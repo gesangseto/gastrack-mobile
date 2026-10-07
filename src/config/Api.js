@@ -1,14 +1,19 @@
 import axios from 'axios';
 import DeviceInfo from 'react-native-device-info';
 import * as RootNavigation from './RootNavigation';
-import {getEndpoint, getProfile, removeProfile} from '../storage';
+import {
+  getEndpoint,
+  getProfile,
+  getTenant,
+  removeProfile,
+} from '../storage';
 import Toast from 'react-native-toast-message';
 
 const generateToken = () => {
   let profile = getProfile();
   // Token berasal dari respons login Backend (sys_authentication).
   // Tanpa token → string kosong (request akan ditolak backend dengan 401).
-  return profile?.token || 'ax771p65T5CykAeTWXD4Js0pLr2lyDSz';
+  return profile?.token || '';
 };
 
 const $axios = axios.create();
@@ -23,6 +28,12 @@ $axios.interceptors.request.use(
       token: generateToken(),
       'User-Type': deviceProfile,
     };
+
+    // Identitas tenant untuk multi-tenant SaaS. Klien RN tidak bisa mengeset
+    // header 'Host', jadi Backend menerima subdomain lewat X-Tenant.
+    // Kosong (super admin / belum diisi) → header tidak dikirim.
+    const tenant = getTenant();
+    if (tenant) config.headers['X-Tenant'] = tenant;
 
     return config;
   },

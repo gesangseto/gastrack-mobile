@@ -1,7 +1,7 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 
-let url = `/api/v1/configuration/application`;
+let url = `/api/v1/system/sys-configuration`;
 
 // Ambil konfigurasi aplikasi (sys_configuration_mst) tanpa logo.
 // Resolve object konfigurasi (country, country_code, dll).

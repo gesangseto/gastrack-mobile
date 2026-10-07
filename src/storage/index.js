@@ -41,6 +41,42 @@ export const removeProfile = () => {
   }
 };
 
+// ===== Tenant (multi-tenant SaaS) =====
+// Kode tenant (subdomain Backend, mis. 'demo') diketik user di layar login.
+// Dikirim ke Backend lewat header X-Tenant pada SETIAP request, karena klien
+// React Native tidak bisa mengeset header 'Host' (diblokir native layer).
+// Kosong = jalur super admin (tanpa tenant).
+export const getTenant = () => {
+  try {
+    return storage.getString('tenant') || '';
+  } catch (error) {
+    return '';
+  }
+};
+export const setTenant = code => {
+  try {
+    const clean = String(code || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '');
+    if (!clean) {
+      storage.delete('tenant');
+      return '';
+    }
+    storage.set('tenant', clean);
+    return clean;
+  } catch (error) {
+    return '';
+  }
+};
+export const removeTenant = () => {
+  try {
+    return storage.delete('tenant');
+  } catch (error) {
+    return null;
+  }
+};
+
 // Simpan konfigurasi aplikasi (sys_configuration_mst) ke MMKV.
 // Field sensitif (password) dan logo dibuang agar tidak tersimpan di device.
 export const setSysConfig = data => {
