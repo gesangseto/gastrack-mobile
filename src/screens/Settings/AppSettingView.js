@@ -17,7 +17,7 @@ import color from '../../constant/color';
 import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import Header from '../../layouts/Header';
 import {fetchCountries} from '../../resource/Country';
-import {updateSysConfig} from '../../resource/Configuration';
+import {fetchSysConfig, updateSysConfig} from '../../resource/Configuration';
 import {getSysConfig, setSysConfig} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
 import Toast from 'react-native-toast-message';
@@ -71,6 +71,30 @@ const AppSettingView = ({navigation, route}) => {
     fetchWhatsAppStatus().then(st => {
       if (st) setWaStatus(st);
     });
+    // Ambil "Pengaturan Aplikasi" terbaru dari server (sys_tenant) agar form
+    // tidak memakai cache MMKV yang mungkin basi setelah perubahan multi-tenant.
+    fetchSysConfig().then(cfg => {
+      if (!cfg) return;
+      setForm(prev => ({
+        ...prev,
+        identity_name: cfg.identity_name ?? prev.identity_name,
+        identity_number: cfg.identity_number ?? prev.identity_number,
+        identity_phone: cfg.identity_phone ?? prev.identity_phone,
+        identity_address: cfg.identity_address ?? prev.identity_address,
+        country: cfg.country ?? prev.country,
+        country_code: cfg.country_code ?? prev.country_code,
+        currency: cfg.currency ?? prev.currency,
+        price_unit_code: cfg.price_unit_code ?? prev.price_unit_code,
+        notification_whatsapp:
+          cfg.notification_whatsapp === true
+            ? true
+            : cfg.notification_whatsapp === false
+            ? false
+            : prev.notification_whatsapp,
+      }));
+      // Sinkronkan cache lokal agar layar lain (mis. prefix nomor HP) ikut segar.
+      setSysConfig({...(getSysConfig() || {}), ...cfg});
+    });
   }, []);
 
   const save = async () => {
@@ -84,7 +108,6 @@ const AppSettingView = ({navigation, route}) => {
     }
     setSaving(true);
     const payload = {
-      users_name: config.users_name,
       identity_name: form.identity_name,
       identity_number: form.identity_number,
       identity_phone: form.identity_phone,
@@ -119,7 +142,6 @@ const AppSettingView = ({navigation, route}) => {
       setWaLoading(true);
       // 1. Simpan toggle ke backend dulu (biar initWhatsApp jalan)
       await updateSysConfig({
-        users_name: config.users_name,
         notification_whatsapp: true,
       });
       // 2. Cek status setelah backend inisialisasi WA
@@ -179,7 +201,6 @@ const AppSettingView = ({navigation, route}) => {
       setQrModalVisible(false);
       // Matikan toggle di backend juga
       await updateSysConfig({
-        users_name: config.users_name,
         notification_whatsapp: false,
       });
     }
@@ -256,8 +277,8 @@ const AppSettingView = ({navigation, route}) => {
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Pengaturan Aplikasi</Text>
           <Text style={styles.sectionDesc}>
-            Konfigurasi ini dikirim ke Backend (sys_configuration_mst) dan
-            dipakai aplikasi (mis. kode negara untuk nomor HP).
+            Konfigurasi ini disimpan ke data tenant (sys_tenant) dan dipakai
+            aplikasi (mis. kode negara untuk nomor HP).
           </Text>
 
           <InputText
@@ -355,8 +376,8 @@ const AppSettingView = ({navigation, route}) => {
             })}
           </View>
           <Text style={styles.fieldHint}>
-            Unit selling price global (sys_configuration); cost price memakai
-            unit dari session.
+            Unit selling price per tenant (sys_tenant); cost price memakai unit
+            dari session.
           </Text>
 
           {/* Koneksi WhatsApp */}

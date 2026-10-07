@@ -1,14 +1,14 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 
-let url = `/api/v1/system/sys-configuration`;
+let url = `/api/v1/system/tenant/self-config`;
 
-// Ambil konfigurasi aplikasi (sys_configuration_mst) tanpa logo.
-// Resolve object konfigurasi (country, country_code, dll).
+// Ambil "Pengaturan Aplikasi" TENANT (identitas + preferensi) dari sys_tenant.
+// Tenant ditentukan oleh header X-Tenant pada klien axios.
 export const fetchSysConfig = async (useAlert = false) => {
   return new Promise(resolve => {
     $axios
-      .get(`${url}?without_logo=1`)
+      .get(url)
       .then(result => {
         let data = result.data;
         if (data.error) {
@@ -34,8 +34,8 @@ export const fetchSysConfig = async (useAlert = false) => {
   });
 };
 
-// Update konfigurasi aplikasi (sys_configuration_mst) — POST parsial.
-// Wajib menyertakan users_name; field lain opsional.
+// Update "Pengaturan Aplikasi" TENANT di sys_tenant (POST parsial).
+// Kirim hanya field yang berubah; identity_name wajib tidak kosong.
 export const updateSysConfig = async (Params = {}) => {
   return new Promise(resolve => {
     $axios
