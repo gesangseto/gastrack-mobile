@@ -36,8 +36,8 @@ const MENU = [
   },
   {
     key: 'setting',
-    title: 'Setting',
-    desc: 'Pengaturan aplikasi',
+    title: 'Pengaturan Aplikasi',
+    desc: 'Identitas & preferensi tenant + WhatsApp',
     icon: 'sliders-horizontal',
     tint: '#F59E0B',
     bg: '#FEF3C7',

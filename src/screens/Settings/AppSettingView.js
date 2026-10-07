@@ -273,7 +273,7 @@ const AppSettingView = ({navigation, route}) => {
         barStyle={'light-content'}
         backgroundColor={color.primaryColor}
       />
-      <Header title="Setting" />
+      <Header title="Pengaturan Aplikasi" />
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Pengaturan Aplikasi</Text>
