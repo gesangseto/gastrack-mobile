@@ -3,20 +3,27 @@ import {useFocusEffect} from '@react-navigation/native';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import moment from 'moment';
+import Toast from 'react-native-toast-message';
 import InputText from '../../components/InputText';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
-import {getPaymentHistory, getPaymentSummaryList} from '../../resource/Payment';
+import {
+  getPaymentHistory,
+  getPaymentSummaryList,
+  sendInvoiceBlast,
+} from '../../resource/Payment';
 import {useSessionStore} from '../../store/sessionStore';
 
 // Tab "Payment" — pembayaran bertahap PER CUSTOMER (module payment baru).
@@ -66,6 +73,9 @@ const PaymentTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
+  // Blast tagihan (kirim invoice ke semua customer belum lunas pada session
+  // terpilih) — state `blasting` menahan tombol saat request berjalan.
+  const [blasting, setBlasting] = useState(false);
 
   // Session dropdown — daftar session dari store (cache MMKV). Tidak
   // di-fetch ulang saat kembali ke layar; refresh hanya via pull-to-refresh.
@@ -163,6 +173,67 @@ const PaymentTab = () => {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  // ===== Blast tagihan (FAB) — kirim invoice ke semua customer belum lunas =====
+  // Jalankan request blast. Session id diambil dari session terpilih di store
+  // (sumber yang sama dengan filter list & navigasi detail), bukan hardcode.
+  const handleBlast = async () => {
+    if (blasting) {
+      return;
+    }
+    setBlasting(true);
+    const result = await sendInvoiceBlast({session_id: sessionValue}, false);
+    setBlasting(false);
+    if (!mountedRef.current) {
+      return;
+    }
+    if (!result || result.error) {
+      Alert.alert(
+        'Gagal',
+        (result && result.message) || 'Gagal kirim tagihan blast',
+      );
+      return;
+    }
+    // Ringkasan hasil: hitung dari rows (sent/failed/skipped); fallback ke
+    // pesan dari backend bila rows tidak ada.
+    const rows = Array.isArray(result.rows) ? result.rows : [];
+    const counts = rows.reduce(
+      (acc, row) => {
+        if (row.status === 'sent') {
+          acc.sent += 1;
+        } else if (row.status === 'failed') {
+          acc.failed += 1;
+        } else if (row.status === 'skipped') {
+          acc.skipped += 1;
+        }
+        return acc;
+      },
+      {sent: 0, failed: 0, skipped: 0},
+    );
+    const summary = rows.length
+      ? `${counts.sent} terkirim, ${counts.failed} gagal, ${counts.skipped} dilewati`
+      : result.message || 'Tagihan terkirim';
+    Toast.show({type: 'success', text1: 'Berhasil', text2: summary});
+  };
+
+  // Konfirmasi sebelum blast (tombol Batal / Kirim).
+  const handleConfirmBlast = () => {
+    if (blasting) {
+      return;
+    }
+    if (!sessionValue) {
+      Alert.alert('Blast Tagihan', 'Pilih session terlebih dahulu.');
+      return;
+    }
+    Alert.alert(
+      'Blast Tagihan',
+      'Kirim tagihan ke semua customer yang belum lunas di session ini?',
+      [
+        {text: 'Batal', style: 'cancel'},
+        {text: 'Kirim', onPress: handleBlast},
+      ],
+    );
   };
 
   // Filter customer by nama / no. HP (tab Pending & Paid)
@@ -383,6 +454,25 @@ const PaymentTab = () => {
             ListEmptyComponent={<Text style={styles.empty}>{emptyText}</Text>}
           />
         )}
+
+        {/* FAB Blast — kirim tagihan ke semua customer belum lunas pada
+            session terpilih (tab Pending). Di-disable selama request jalan. */}
+        {activeTab === 'Pending' && (
+          <TouchableOpacity
+            style={[styles.fab, blasting && styles.fabDisabled]}
+            onPress={handleConfirmBlast}
+            disabled={blasting}
+            activeOpacity={0.8}>
+            {blasting ? (
+              <ActivityIndicator size="small" color={color.white} />
+            ) : (
+              <>
+                <Icon name="send" size={20} color={color.white} />
+                <Text style={styles.fabText}>Blast</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -569,5 +659,35 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: color.white,
+  },
+  // FAB Blast — mengikuti gaya FAB list lain (CustomerList/PriceCodeList):
+  // bulat, warna primary, shadow/elevation. Bentuk pill agar muat label.
+  // right: 0 (bukan 20) karena FAB ada di dalam listWrap yang sudah
+  // terkena paddingHorizontal container = 20 → tepi FAB 20px dari layar.
+  fab: {
+    position: 'absolute',
+    right: 0,
+    bottom: 16,
+    height: 56,
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: color.primaryColor,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+  },
+  fabDisabled: {
+    opacity: 0.7,
+  },
+  fabText: {
+    color: color.white,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
