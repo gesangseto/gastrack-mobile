@@ -12,14 +12,16 @@ import {
 import color from '../constant/color';
 import {syncContactsIfNeeded} from '../helper/contactSync';
 import BatchTab from './Batchs/BatchTab';
+import ChatTab from './Chat/ChatTab';
 import Home from './Home/Home';
 import ItemTab from './Items/ItemTab';
 import PaymentTab from './Payment/PaymentTab';
 import SettingsView from './Settings/SettingsView';
 
-// Urutan bottom navigation: Home • Batch • Item • Payment • Setting
+// Urutan bottom navigation: Home • Chat • Batch • Item • Payment • Setting
 const TAB_ITEMS = [
   {name: 'Home', icon: 'house', label: 'Home'},
+  {name: 'Chat', icon: 'message-circle', label: 'Chat'},
   {name: 'Batch', icon: 'layers', label: 'Batch'},
   {name: 'Item', icon: 'package', label: 'Item'},
   {name: 'Payment', icon: 'wallet', label: 'Payment'},
@@ -62,6 +64,7 @@ const TabView = () => {
     <SafeAreaView style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar barStyle={'dark-content'} backgroundColor={color.white} />
       {activeTab === 'Home' && <Home />}
+      {activeTab === 'Chat' && <ChatTab />}
       {activeTab === 'Batch' && <BatchTab />}
       {activeTab === 'Item' && <ItemTab />}
       {activeTab === 'Payment' && <PaymentTab />}
