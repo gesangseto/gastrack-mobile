@@ -73,6 +73,7 @@ const PaymentTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
+  const [historyQuery, setHistoryQuery] = useState('');
   // Blast tagihan (kirim invoice ke semua customer belum lunas pada session
   // terpilih) — state `blasting` menahan tombol saat request berjalan.
   const [blasting, setBlasting] = useState(false);
@@ -247,6 +248,16 @@ const PaymentTab = () => {
   const pending = filteredBills.filter(b => Number(b.remaining_amount) > 0);
   const paid = filteredBills.filter(b => Number(b.remaining_amount) <= 0);
 
+  // Filter riwayat by nama / no. HP / referensi
+  const hkw = historyQuery.trim().toLowerCase();
+  const filteredHistory = history.filter(
+    h =>
+      !hkw ||
+      (h.customer_name || '').toLowerCase().includes(hkw) ||
+      (h.customer_phone || '').toLowerCase().includes(hkw) ||
+      (h.reference_number || '').toLowerCase().includes(hkw),
+  );
+
   const renderBill = item => {
     const status = item.payment_status || 'UNPAID';
     return (
@@ -334,7 +345,7 @@ const PaymentTab = () => {
   };
 
   const list =
-    activeTab === 'Pending' ? pending : activeTab === 'Paid' ? paid : history;
+    activeTab === 'Pending' ? pending : activeTab === 'Paid' ? paid : filteredHistory;
   const renderItem = activeTab === 'Riwayat' ? renderHistory : renderBill;
 
   const tabs = [
@@ -418,6 +429,16 @@ const PaymentTab = () => {
           value={query}
           onChangeText={setQuery}
           placeholder="Cari customer..."
+          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
+        />
+      )}
+
+      {/* Pencarian riwayat */}
+      {activeTab === 'Riwayat' && (
+        <InputText
+          value={historyQuery}
+          onChangeText={setHistoryQuery}
+          placeholder="Cari nama / no HP / referensi..."
           rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
         />
       )}
