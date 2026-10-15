@@ -59,7 +59,7 @@ const LocalSettingView = ({navigation, route}) => {
             showError={true}
             value={endpoint}
             onChangeText={setEndpointState}
-            placeholder="http://192.168.2.199:8082"
+            placeholder="https://api.jastipcenter.com"
             autoCapitalize="none"
             keyboardType="url"
           />

@@ -158,7 +158,7 @@ const LoginView = ({navigation, route}) => {
               icon="globe"
               value={api}
               onChangeText={setApi}
-              placeholder="http://192.168.0.233:8000"
+              placeholder="https://api.jastipcenter.com"
               autoCapitalize="none"
               autoCorrect={false}
             />
