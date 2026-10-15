@@ -1,15 +1,17 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const {getDefaultConfig} = require('expo/metro-config');
 
 /**
- * Metro configuration
- * https://reactnative.dev/docs/metro
+ * Metro configuration (Expo) — dipakai untuk native Android & web/PWA.
+ * https://docs.expo.dev/guides/customizing-metro/
  *
- * @type {import('@react-native/metro-config').MetroConfig}
+ * @type {import('expo/metro-config').MetroConfig}
  */
-const config = {
-  server: {
-    port: 8082,
-  },
+const config = getDefaultConfig(__dirname);
+
+// Pertahankan port lama agar workflow Android (react-native start) tidak berubah.
+config.server = {
+  ...(config.server || {}),
+  port: 8082,
 };
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = config;

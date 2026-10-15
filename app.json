@@ -1,4 +1,16 @@
 {
   "name": "JastipCenter",
-  "displayName": "Jastip Center"
+  "displayName": "Jastip Center",
+  "expo": {
+    "name": "Jastip Center",
+    "slug": "jastip-center",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    }
+  }
 }
