@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.5",
     "@pushpendersingh/react-native-scanner": "^1.5.0",
     "@react-native-vector-icons/evil-icons": "^12.0.0",
     "@react-native-vector-icons/fontawesome6": "^12.0.0",
@@ -24,6 +25,7 @@
     "expo": "~53.0.27",
     "moment": "^2.30.1",
     "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-native": "0.79.2",
     "react-native-contacts": "^8.0.10",
     "react-native-device-info": "^14.0.4",
@@ -37,6 +39,7 @@
     "react-native-screens": "^4.10.0",
     "react-native-thermal-printer": "^2.3.6",
     "react-native-toast-message": "^2.3.0",
+    "react-native-web": "^0.20.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
