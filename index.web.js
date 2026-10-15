@@ -8,5 +8,9 @@
  */
 import registerRootComponent from 'expo/src/launch/registerRootComponent';
 import App from './App';
+import installAlertPolyfill from './src/helper/alertPolyfill.web';
+
+// Aktifkan Alert.alert berbasis window.confirm/alert sebelum app dirender.
+installAlertPolyfill();
 
 registerRootComponent(App);
