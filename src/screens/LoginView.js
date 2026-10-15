@@ -111,7 +111,7 @@ const LoginView = ({navigation, route}) => {
               resizeMode="cover"
             />
           </View>
-          <Text style={styles.title}>GasTrack</Text>
+          <Text style={styles.title}>Jastip Center</Text>
           <Text style={styles.subtitle}>Your Warehouse Partner</Text>
         </View>
 
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 24,
-    backgroundColor: color.primaryColor,
+    backgroundColor: color.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,

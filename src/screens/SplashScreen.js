@@ -50,7 +50,7 @@ const SplashScreen = ({onFinish}) => {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.title}>GasTrack</Text>
+        <Text style={styles.title}>Jastip Center</Text>
         <Text style={styles.subtitle}>Your Warehouse Partner</Text>
       </Animated.View>
       <View style={styles.footer}>

@@ -1,4 +1,4 @@
-# GasTrack — Track & Trace Jastip
+# Jastip Center — Track & Trace Jastip
 
 Aplikasi Android untuk tracking & tracing barang jastip (jasa titip) oleh **Gesang Aji Seto**.
 

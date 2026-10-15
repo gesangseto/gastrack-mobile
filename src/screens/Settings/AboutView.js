@@ -79,7 +79,7 @@ const AboutView = () => {
             resizeMode="cover"
           />
         </View>
-        <Text style={styles.appName}>GasTrack</Text>
+        <Text style={styles.appName}>Jastip Center</Text>
         <Text style={styles.appDesc}>
           Aplikasi Jasa Titip Belanja — kami yang urus.
         </Text>
@@ -97,7 +97,7 @@ const AboutView = () => {
           <View style={styles.divider} />
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Developer</Text>
-            <Text style={styles.infoValue}>GasTrack Team</Text>
+            <Text style={styles.infoValue}>Jastip Center Team</Text>
           </View>
         </View>
 
@@ -131,7 +131,7 @@ const AboutView = () => {
         </View>
 
         <Text style={styles.copyright}>
-          © 2026 GasTrack. All rights reserved.
+          © 2026 Jastip Center. All rights reserved.
         </Text>
       </ScrollView>
     </View>
