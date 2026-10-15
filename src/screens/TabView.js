@@ -21,7 +21,7 @@ import SettingsView from './Settings/SettingsView';
 // Urutan bottom navigation: Home • Chat • Batch • Item • Payment • Setting
 const TAB_ITEMS = [
   {name: 'Home', icon: 'house', label: 'Home'},
-  {name: 'Chat', icon: 'message-circle', label: 'Chat'},
+  // {name: 'Chat', icon: 'message-circle', label: 'Chat'},
   {name: 'Batch', icon: 'layers', label: 'Batch'},
   {name: 'Item', icon: 'package', label: 'Item'},
   {name: 'Payment', icon: 'wallet', label: 'Payment'},
