@@ -7,10 +7,21 @@
     "version": "0.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Jastip Center",
+      "shortName": "Jastip",
+      "lang": "id",
+      "scope": "/",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "themeColor": "#1E3A8A",
+      "backgroundColor": "#FFFFFF",
+      "description": "Jastip Center - Your Warehouse Partner"
     }
   }
 }
