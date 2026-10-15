@@ -48,7 +48,7 @@ const DetailsDate = () => {
             }}>
             April 2024
           </Text>
-          <Icon name="pencil" size={22} color="gray" />
+          <Icon name="pencil" iconStyle="solid" size={22} color="gray" />
         </TouchableOpacity>
       </View>
 

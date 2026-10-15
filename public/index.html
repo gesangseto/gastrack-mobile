@@ -24,6 +24,47 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
 
+    <!-- ===== Font ikon =====
+         react-native-vector-icons tidak menyediakan @font-face di web
+         (dynamic font loading tidak didukung), sehingga font harus
+         dideklarasikan manual. Nama family HARUS sama dengan yang dipakai
+         createIconSet (fontBasename tanpa ekstensi):
+           Lucide                  -> Lucide.ttf
+           FontAwesome6_Regular    -> FontAwesome6_Regular.ttf
+           FontAwesome6_Solid      -> FontAwesome6_Solid.ttf
+           FontAwesome6_Brands     -> FontAwesome6_Brands.ttf
+    -->
+    <style>
+      @font-face {
+        font-family: 'Lucide';
+        src: url('/fonts/Lucide.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'FontAwesome6_Regular';
+        src: url('/fonts/FontAwesome6_Regular.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'FontAwesome6_Solid';
+        src: url('/fonts/FontAwesome6_Solid.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'FontAwesome6_Brands';
+        src: url('/fonts/FontAwesome6_Brands.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+    </style>
+
     <!-- react-native-web: style reset (dari template Expo) -->
     <style id="expo-reset">
       html,

@@ -26,7 +26,7 @@ const DetailsHeader = () => {
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Icon name="arrow-back" size={15} color={color.white} />
+          <Icon name="arrow-left" iconStyle="solid" size={15} color={color.white} />
         </TouchableOpacity>
       </View>
       <View>
@@ -40,7 +40,7 @@ const DetailsHeader = () => {
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Icon name="sharealt" size={15} color={color.white} />
+          <Icon name="share-nodes" iconStyle="solid" size={15} color={color.white} />
         </TouchableOpacity>
       </View>
     </View>
