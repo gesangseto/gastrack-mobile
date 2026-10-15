@@ -154,7 +154,10 @@ const ItemCreate = ({navigation, route}) => {
     const seq = ++searchSeqRef.current;
     setCustomerSearching(true);
     setShowSuggestions(true);
-    let result = await getListCustomer({search: phone}, false);
+    let result = await getListCustomer(
+      {search: phone, page: 1, limit: 5},
+      false,
+    );
     setCustomerSearching(false);
     // Hasil basi (input berubah / customer sudah dipilih) — jangan tampilkan
     if (seq !== searchSeqRef.current) return;
