@@ -5,6 +5,8 @@ import Toast from 'react-native-toast-message';
 
 // Versi WEB dari Api.js.
 // react-native-device-info tidak tersedia di browser → User-Type diisi info browser.
+// PENTING: backend hanya mengenali user_type 'android app' | 'website app' | 'station'.
+// Jika tidak cocok, request dianggap "static user" dan ditolak (401 no permission).
 const getDeviceProfile = () => {
   try {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
@@ -12,9 +14,9 @@ const getDeviceProfile = () => {
       typeof navigator !== 'undefined' && navigator.platform
         ? navigator.platform
         : 'Web';
-    return `Web App: ${platform} (${ua})`;
+    return `Website App: ${platform} (${ua})`;
   } catch (error) {
-    return 'Web App';
+    return 'Website App';
   }
 };
 
