@@ -82,3 +82,9 @@ temp/
 /dist
 /web-build
 .expo
+
+# Environment (jangan commit nilai lokal; .env.example tetap di-commit)
+.env
+.env.local
+.env.*.local
+!.env.example

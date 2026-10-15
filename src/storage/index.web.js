@@ -1,10 +1,15 @@
 import {MMKV} from 'react-native-mmkv';
 export const storage = new MMKV(); // Returns an MMKV Instance (di web → localStorage)
 
-// Endpoint default KHUSUS WEB (development).
-// Di Android default-nya https://api.jastipcenter.com; untuk PWA dev dipakai
-// IP server development agar bisa langsung dites.
-const DEFAULT_ENDPOINT = 'http://192.168.0.192:8081';
+// Endpoint default untuk WEB diambil dari .env.
+// Prioritas:
+//   1. EXPO_PUBLIC_API_URL_WEB  (khusus web, mis. IP dev saat testing)
+//   2. EXPO_PUBLIC_API_URL      (nilai umum)
+//   3. fallback production
+const DEFAULT_ENDPOINT =
+  process.env.EXPO_PUBLIC_API_URL_WEB ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  'https://api.jastipcenter.com';
 
 export const setProfile = data => {
   try {
