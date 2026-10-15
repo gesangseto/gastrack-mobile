@@ -8,7 +8,7 @@
  *
  * Naikkan CACHE_VERSION setiap kali build agar cache lama dibuang.
  */
-const CACHE_VERSION = 'jastip-v1';
+const CACHE_VERSION = 'jastip-v2';
 const APP_SHELL = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', event => {
