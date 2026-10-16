@@ -20,6 +20,33 @@ import {
   updateMessageTemplate,
 } from '../../resource/MessageTemplate';
 
+// Formatasi contoh nilai mengikuti `data_type` di mst_template_variable.
+// Mengg-logic yang sama dengan services/template-renderer.js di backend agar
+// contoh di Android cocok dengan hasil render sebenarnya.
+const formatSample = (value, dataType) => {
+  if (value === undefined || value === null || value === '') return '-';
+  const num = Number(value);
+  switch (dataType) {
+    case 'currency':
+      return Number.isNaN(num)
+        ? String(value)
+        : 'Rp ' + num.toLocaleString('id-ID');
+    case 'number':
+      return Number.isNaN(num) ? String(value) : num.toLocaleString('id-ID');
+    case 'date': {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+    default:
+      return String(value);
+  }
+};
+
 const CHANNEL_OPTIONS = ['wa', 'email', 'sms'];
 const CONTENT_TYPE_OPTIONS = ['text', 'html'];
 const RECIPIENT_TYPE_OPTIONS = ['customer', 'all', 'segment'];
@@ -195,28 +222,42 @@ const MessageTemplateEdit = ({route}) => {
         <InputText
           value={formData.content_template}
           onChangeText={text => setField('content_template', text)}
-          placeholder="Masukkan template dengan {{variable}}"
+          placeholder="Tulis isi pesan. Placeholder diisi otomatis saat kirim."
           multiline={true}
-          numberOfLines={6}
+          numberOfLines={8}
           textAlignVertical="top"
           style={styles.contentInput}
         />
         <Text style={styles.hint}>
-          Gunakan {'{{variable}}'} untuk placeholder. Contoh:{' '}
-          {'{{customer_name}}'}, {'{{order_number}}'}, {'{{amount}}'}
+          Placeholder ditulis dengan kurung kurawal ganda, contoh{' '}
+          {'{{customer_name}}'}. Nilai placeholder diisi otomatis saat pesan
+          dikirim. Daftar variabel yang tersedia ada di bawah — tap untuk
+          menyisipkannya.
         </Text>
 
-        {/* Variable picker */}
+        {/* Daftar variabel beserta contoh nilainya. */}
         {variables.length > 0 && (
           <>
-            <Text style={styles.label}>Sisipkan Variabel</Text>
+            <Text style={styles.label}>
+              Variabel tersedia ({variables.length})
+            </Text>
             <View style={styles.varWrap}>
               {variables.map(v => (
                 <TouchableOpacity
                   key={v.key}
                   onPress={() => insertVariable(v.key)}
-                  style={styles.varChip}>
-                  <Text style={styles.varChipText}>{v.key}</Text>
+                  style={styles.varChip}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sisipkan ${v.label || v.key}`}>
+                  <View style={styles.varChipHead}>
+                    <Text style={styles.varChipKey}>{`{{${v.key}}}`}</Text>
+                    {!!v.label && (
+                      <Text style={styles.varChipLabel}>{v.label}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.varChipSample} numberOfLines={1}>
+                    Contoh: {formatSample(v.sample_value, v.data_type)}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -298,26 +339,46 @@ const styles = StyleSheet.create({
   },
   contentInput: {
     fontSize: 14,
-    lineHeight: 20,
+    // Harus sama dengan asumsi lineHeight di InputText (22px/baris) agar
+    // tinggi minimum field pas dengan jumlah baris yang ditampilkan.
+    lineHeight: 22,
   },
   varWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
     marginBottom: 14,
   },
   varChip: {
+    // Lebar penuh satu baris supaya contoh nilai tidak terpotong.
+    width: '100%',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: '#EEF2FF',
     borderWidth: 1,
     borderColor: '#C7D2FE',
+    marginBottom: 6,
   },
-  varChipText: {
+  varChipHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  varChipKey: {
     fontSize: 12,
     color: '#4338CA',
+    fontWeight: '700',
+  },
+  varChipLabel: {
+    flex: 1,
+    fontSize: 11,
+    color: '#4B5563',
     fontWeight: '500',
+    textAlign: 'right',
+  },
+  varChipSample: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
   },
   saveButton: {
     marginTop: 14,

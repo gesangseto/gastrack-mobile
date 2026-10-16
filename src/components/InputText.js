@@ -25,11 +25,21 @@ const InputText = React.forwardRef((props = {}, ref) => {
     onPressRightIcon,
     onFocus,
     onBlur,
+    multiline,
+    numberOfLines,
+    minHeight,
+    // Style dari pemanggil harus di-merge, bukan menimpa. Kalau tidak
+    // destructured di sini, `{...rest}` menimpa seluruh array style di bawah.
+    style,
     ...rest
   } = props;
 
   const [focused, setFocused] = useState(false);
   const hasError = showError && required && !value;
+  // Tinggi minimum untuk field multiline. Tanpa ini wrapper `alignItems:
+  // 'center'` membuat baris pertama terlihat di tengah dan isi panjang
+  // terpotong (teks tampak setengah).
+  const multilineMinHeight = minHeight || (numberOfLines || 6) * 22 + 16;
 
   const handleFocus = e => {
     setFocused(true);
@@ -50,6 +60,9 @@ const InputText = React.forwardRef((props = {}, ref) => {
       <View
         style={[
           styles.inputWrapper,
+          // Multiline butuh alignItems 'flex-start' supaya isi panjang
+          // tidak ter-center vertikal dan tergotong oleh wrapper.
+          multiline && styles.inputWrapperMultiline,
           focused && styles.inputWrapperFocused,
           hasError && styles.inputWrapperError,
         ]}>
@@ -61,7 +74,15 @@ const InputText = React.forwardRef((props = {}, ref) => {
           placeholder={placeholder}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          style={styles.input}
+          multiline={multiline}
+          numberOfLines={multiline ? numberOfLines || 6 : undefined}
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            multiline && {minHeight: multilineMinHeight},
+            // Terakhir: style dari pemanggil (e.g. lineHeight khusus).
+            style,
+          ]}
           placeholderTextColor="#B0B0B0"
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -115,6 +136,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#fff',
   },
+  inputWrapperMultiline: {
+    // Wrapper untuk multiline: align ke atas, bukan center.
+    alignItems: 'flex-start',
+  },
   inputWrapperFocused: {
     borderColor: color.primaryColor,
   },
@@ -141,6 +166,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F1F1F',
     backgroundColor: 'transparent',
+  },
+  inputMultiline: {
+    // Padding vertikal dikecilkan supaya tinggi baris konsisten dengan
+    // perhitungan minHeight (lineHeight 22 per baris).
+    paddingTop: 10,
+    paddingBottom: 10,
+    textAlignVertical: 'top',
+    outlineStyle: 'none',
   },
   rightIcon: {
     paddingRight: 12,
