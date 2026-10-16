@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import InputText from '../../components/InputText';
+import LoadingButton from '../../components/LoadingButton';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -42,7 +44,8 @@ const MessageTemplateEdit = ({route}) => {
     recipient_type: 'customer',
     status: 'Active',
   });
-  const [saving, setSaving] = useState(false);
+  // Guard anti-duplikat submit (ref lock sinkron + status untuk tombol)
+  const {busy: saving, submit} = useSubmitGuard();
   const [variables, setVariables] = useState([]);
 
   useFocusEffect(
@@ -80,26 +83,26 @@ const MessageTemplateEdit = ({route}) => {
     if (!formData.name || !formData.content_template) {
       return;
     }
-    setSaving(true);
-    const payload = {
-      code: formData.code,
-      name: formData.name,
-      channel: formData.channel,
-      content_template: formData.content_template,
-      description: formData.description || null,
-      subject: formData.subject || null,
-      content_type: formData.content_type,
-      trigger_event: formData.trigger_event || null,
-      recipient_type: formData.recipient_type,
-      status: formData.status,
-    };
-    let response = isEdit
-      ? await updateMessageTemplate({id: formData.id, ...payload})
-      : await createMessageTemplate(payload);
-    setSaving(false);
-    if (response) {
-      RootNavigation.goBack();
-    }
+    await submit(async () => {
+      const payload = {
+        code: formData.code,
+        name: formData.name,
+        channel: formData.channel,
+        content_template: formData.content_template,
+        description: formData.description || null,
+        subject: formData.subject || null,
+        content_type: formData.content_type,
+        trigger_event: formData.trigger_event || null,
+        recipient_type: formData.recipient_type,
+        status: formData.status,
+      };
+      const response = isEdit
+        ? await updateMessageTemplate({id: formData.id, ...payload})
+        : await createMessageTemplate(payload);
+      if (response) {
+        RootNavigation.goBack();
+      }
+    });
   };
 
   const insertVariable = key => {
@@ -222,14 +225,14 @@ const MessageTemplateEdit = ({route}) => {
 
         {renderChipGroup('Status', STATUS_OPTIONS, 'status')}
 
-        <TouchableOpacity
+        <LoadingButton
           onPress={handleSave}
-          disabled={saving}
-          style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Menyimpan...' : 'Simpan'}
-          </Text>
-        </TouchableOpacity>
+          busy={saving}
+          label="Simpan"
+          busyLabel="Menyimpan..."
+          icon="check"
+          style={styles.saveButton}
+        />
       </ScrollView>
     </View>
   );

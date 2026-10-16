@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import InputText from '../../components/InputText';
+import LoadingButton from '../../components/LoadingButton';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -26,7 +28,8 @@ const PriceCodeEdit = ({navigation, route}) => {
     number: '',
     status: 'Active',
   });
-  const [saving, setSaving] = useState(false);
+  // Guard anti-duplikat submit (ref lock sinkron + status untuk tombol)
+  const {busy: saving, submit} = useSubmitGuard();
 
   useEffect(() => {
     if (route?.params?.item) {
@@ -51,20 +54,20 @@ const PriceCodeEdit = ({navigation, route}) => {
     if (!formData.name || !formData.code || formData.number === '') {
       return;
     }
-    setSaving(true);
-    const payload = {
-      name: formData.name,
-      code: formData.code,
-      number: Number(formData.number),
-      status: formData.status,
-    };
-    let response = isEdit
-      ? await updatePriceCode({id: formData.id, ...payload})
-      : await createPriceCode(payload);
-    setSaving(false);
-    if (response) {
-      RootNavigation.goBack();
-    }
+    await submit(async () => {
+      const payload = {
+        name: formData.name,
+        code: formData.code,
+        number: Number(formData.number),
+        status: formData.status,
+      };
+      const response = isEdit
+        ? await updatePriceCode({id: formData.id, ...payload})
+        : await createPriceCode(payload);
+      if (response) {
+        RootNavigation.goBack();
+      }
+    });
   };
 
   return (
@@ -125,14 +128,14 @@ const PriceCodeEdit = ({navigation, route}) => {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity
+        <LoadingButton
           onPress={handleSave}
-          disabled={saving}
-          style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Menyimpan...' : 'Simpan'}
-          </Text>
-        </TouchableOpacity>
+          busy={saving}
+          label="Simpan"
+          busyLabel="Menyimpan..."
+          icon="check"
+          style={styles.saveButton}
+        />
       </ScrollView>
     </View>
   );

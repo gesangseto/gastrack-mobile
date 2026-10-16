@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/lucide';
 import InputText from '../../components/InputText';
+import LoadingButton from '../../components/LoadingButton';
 import UploadImage from '../../components/UploadImage';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -86,6 +88,9 @@ const ItemCreate = ({navigation, route}) => {
   const [unitPickerFor, setUnitPickerFor] = useState(null);
   // Daftar negara untuk symbol mata uang selling
   const [countries, setCountries] = useState([]);
+  // Guard anti-duplikat submit: `busy` untuk tampilan tombol, `submit`
+  // menolak request kedua secara sinkron (ref lock) walau double-tap.
+  const {busy: savingItem, submit} = useSubmitGuard();
 
   useEffect(() => {
     // Ambil session aktif untuk menampilkan mata uang/unit cost (read-only)
@@ -265,6 +270,15 @@ const ItemCreate = ({navigation, route}) => {
     return photo;
   };
   const save = async () => {
+    // Validasi nomor telp (9-15 digit setelah +62)
+    if (!isValidPhone(formData.customer_phone)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Nomor telp tidak valid (9-15 digit)',
+      });
+      return;
+    }
     // Guard create: wajib ada session aktif (edit item tidak butuh session baru)
     if (!formData.id) {
       const session = await useSessionStore.getState().ensureActiveSession();
@@ -277,16 +291,11 @@ const ItemCreate = ({navigation, route}) => {
         return;
       }
     }
-    // Validasi nomor telp (9-15 digit setelah +62)
-    if (!isValidPhone(formData.customer_phone)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Nomor telp tidak valid (9-15 digit)',
-      });
-      return;
-    }
-    const doSubmit = async () => {
+    // Bungkus seluruh request dengan guard anti-duplikat. `submit` menolak
+    // pemanggilan kedua secara sinkron (ref lock), jadi double-tap di tombol
+    // Save Item tidak pernah mengirim dua request.
+    const doSubmit = () =>
+      submit(async () => {
       const form = new FormData();
       // Isi FormData dengan semua properti dari Params
       try {
@@ -331,22 +340,21 @@ const ItemCreate = ({navigation, route}) => {
           if (paymentNotes.trim())
             form.append('payment_notes', paymentNotes.trim());
         }
-        let submit = null;
+        let result = null;
         if (formData.id) {
-          submit = await updateItem(form);
+          result = await updateItem(form);
         } else {
-          submit = await createItem(form);
+          result = await createItem(form);
         }
-        if (submit) RootNavigation.goBack();
+        if (result) RootNavigation.goBack();
       } catch (error) {
-        console.log('Save item error:', error);
         Toast.show({
           type: 'error',
           text1: 'Error',
           text2: error?.message || 'Item gagal disimpan',
         });
       }
-    };
+    });
     // Saat edit: konfirmasi dulu sebelum perubahan disimpan
     if (formData.id) {
       Alert.alert(
@@ -648,26 +656,15 @@ const ItemCreate = ({navigation, route}) => {
               )}
             </View>
           </View>
-          <TouchableOpacity
-            onPress={() => save()}
-            style={{
-              marginTop: 6,
-              borderRadius: 16,
-              backgroundColor: color.primaryColor,
-              height: 42,
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-            }}>
-            <Text
-              style={{
-                color: color.white,
-                fontSize: 16,
-                fontWeight: 'bold',
-              }}>
-              Save Item
-            </Text>
-          </TouchableOpacity>
+          <LoadingButton
+            onPress={save}
+            busy={savingItem}
+            disabled={savingCustomer}
+            label="Save Item"
+            busyLabel="Menyimpan..."
+            icon="check"
+            style={{marginTop: 6}}
+          />
         </ScrollView>
       </View>
 

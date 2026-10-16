@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import InputText from '../../components/InputText';
+import LoadingButton from '../../components/LoadingButton';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -65,7 +67,8 @@ const PaymentCreate = ({route}) => {
   const [paymentDate, setPaymentDate] = useState(today());
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
+  // Guard anti-duplikat submit (ref lock sinkron + status untuk tombol)
+  const {busy: saving, submit} = useSubmitGuard();
 
   const searchSeqRef = useRef(0);
 
@@ -189,20 +192,21 @@ const PaymentCreate = ({route}) => {
       });
       return;
     }
-    if (saving) {return;}
-    setSaving(true);
-    const ok = await createPayment({
-      customer_id: selectedCustomer.id,
-      session_id: sessionId,
-      amount: value,
-      payment_method: method,
-      payment_date: paymentDate.trim() || null,
-      reference_number: referenceNumber.trim() || null,
-      notes: notes.trim() || null,
-      created_by: getProfile()?.id || 0,
+    // Guard anti-duplikat: menolak request kedua secara sinkron (ref lock),
+    // bukan hanya lewat state yang baru berlaku setelah render.
+    await submit(async () => {
+      const ok = await createPayment({
+        customer_id: selectedCustomer.id,
+        session_id: sessionId,
+        amount: value,
+        payment_method: method,
+        payment_date: paymentDate.trim() || null,
+        reference_number: referenceNumber.trim() || null,
+        notes: notes.trim() || null,
+        created_by: getProfile()?.id || 0,
+      });
+      if (ok) {RootNavigation.goBack();}
     });
-    setSaving(false);
-    if (ok) {RootNavigation.goBack();}
   };
 
   return (
@@ -372,14 +376,14 @@ const PaymentCreate = ({route}) => {
             placeholder="Opsional"
           />
 
-          <TouchableOpacity
+          <LoadingButton
             onPress={save}
-            disabled={saving}
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}>
-            <Text style={styles.saveButtonText}>
-              {saving ? 'Menyimpan...' : 'Simpan Payment'}
-            </Text>
-          </TouchableOpacity>
+            busy={saving}
+            label="Simpan Payment"
+            busyLabel="Menyimpan..."
+            icon="wallet"
+            style={styles.saveButton}
+          />
         </ScrollView>
       </View>
     </View>

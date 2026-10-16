@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import InputText from '../../components/InputText';
+import LoadingButton from '../../components/LoadingButton';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -25,7 +27,8 @@ const CountryEdit = ({navigation, route}) => {
     currency_symbol: '',
     status: 'Active',
   });
-  const [saving, setSaving] = useState(false);
+  // Guard anti-duplikat submit (ref lock sinkron + status untuk tombol)
+  const {busy: saving, submit} = useSubmitGuard();
 
   useEffect(() => {
     if (route?.params?.item) {
@@ -52,22 +55,22 @@ const CountryEdit = ({navigation, route}) => {
     if (!formData.name) {
       return;
     }
-    setSaving(true);
-    const payload = {
-      name: formData.name,
-      code: formData.code || null,
-      country_code: formData.country_code || null,
-      currency_code: formData.currency_code || null,
-      currency_symbol: formData.currency_symbol || null,
-      status: formData.status,
-    };
-    let response = isEdit
-      ? await updateCountry({id: formData.id, ...payload})
-      : await createCountry(payload);
-    setSaving(false);
-    if (response) {
-      RootNavigation.goBack();
-    }
+    await submit(async () => {
+      const payload = {
+        name: formData.name,
+        code: formData.code || null,
+        country_code: formData.country_code || null,
+        currency_code: formData.currency_code || null,
+        currency_symbol: formData.currency_symbol || null,
+        status: formData.status,
+      };
+      const response = isEdit
+        ? await updateCountry({id: formData.id, ...payload})
+        : await createCountry(payload);
+      if (response) {
+        RootNavigation.goBack();
+      }
+    });
   };
 
   return (
@@ -133,14 +136,14 @@ const CountryEdit = ({navigation, route}) => {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity
+        <LoadingButton
           onPress={handleSave}
-          disabled={saving}
-          style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Menyimpan...' : 'Simpan'}
-          </Text>
-        </TouchableOpacity>
+          busy={saving}
+          label="Simpan"
+          busyLabel="Menyimpan..."
+          icon="check"
+          style={styles.saveButton}
+        />
       </ScrollView>
     </View>
   );
