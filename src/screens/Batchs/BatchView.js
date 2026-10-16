@@ -25,7 +25,6 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {getListMstWarehouse} from '../../resource/MstWarehouse';
-import {fetchDashboard} from '../../resource/Dashboard';
 import {getSysConfig} from '../../storage';
 
 const BatchView = ({navigation, route}) => {
@@ -62,21 +61,13 @@ const BatchView = ({navigation, route}) => {
   };
 
   // Currency default untuk form shipping.
-  // Prioritas:
-  //   1. Currency session jastip aktif (konteks pengiriman saat ini).
-  //   2. `sys_configuration_mst.currency` bila tidak ada session aktif.
-  //   3. 'IDR' sebagai jaring pengaman terakhir.
-  // Field yang sudah diisi user tidak ditimpa.
+  //
+  // Sumber TUNGGAL: `sys_configuration_mst.currency`. Currency session jastip
+  // aktif TIDAK dipakai lagi — session memakai mata uang negara tujuan
+  // (mis. THB untuk Thailand), sedangkan ongkos kirim selalu dalam mata uang
+  // default aplikasi. Field yang sudah diisi user tidak ditimpa.
   const loadSessionCurrency = async () => {
-    const sysCurrency = getSysConfig()?.currency || 'IDR';
-    let d = null;
-    try {
-      d = await fetchDashboard(false);
-    } catch (_) {
-      d = null;
-    }
-    const sessionCurrency = d?.active_session?.currency_code;
-    setShipmentCurrency(prev => prev || sessionCurrency || sysCurrency);
+    setShipmentCurrency(prev => prev || getSysConfig()?.currency || 'IDR');
   };
 
   const loadData = async () => {
@@ -383,7 +374,7 @@ const BatchView = ({navigation, route}) => {
                 autoCapitalize="characters"
               />
               <Text style={styles.currencyHint}>
-                Default dari session aktif / pengaturan aplikasi ({shipmentCurrency}).
+                Default dari pengaturan aplikasi ({shipmentCurrency}).
               </Text>
               <View style={styles.formActions}>
                 <TouchableOpacity
