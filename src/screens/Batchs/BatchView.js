@@ -26,6 +26,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {getListMstWarehouse} from '../../resource/MstWarehouse';
 import {fetchDashboard} from '../../resource/Dashboard';
+import {getSysConfig} from '../../storage';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};
@@ -34,7 +35,12 @@ const BatchView = ({navigation, route}) => {
   const [weight, setWeight] = useState('');
   const [shipmentNumber, setShipmentNumber] = useState('');
   const [shipmentPrice, setShipmentPrice] = useState('');
-  const [shipmentCurrency, setShipmentCurrency] = useState('IDR');
+  // Default currency mengikuti `sys_configuration_mst.currency` (setting
+  // aplikasi), bukan hardcode. Nilai ini dibaca sinkron dari MMKV sehingga
+  // field terisi tepat sejak form dibuka — tanpa menunggu request dashboard.
+  const [shipmentCurrency, setShipmentCurrency] = useState(
+    () => getSysConfig()?.currency || 'IDR',
+  );
   const [showShipForm, setShowShipForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shipping, setShipping] = useState(false);
@@ -55,13 +61,22 @@ const BatchView = ({navigation, route}) => {
     }
   };
 
-  // Default shipment currency dari session jastip aktif
+  // Currency default untuk form shipping.
+  // Prioritas:
+  //   1. Currency session jastip aktif (konteks pengiriman saat ini).
+  //   2. `sys_configuration_mst.currency` bila tidak ada session aktif.
+  //   3. 'IDR' sebagai jaring pengaman terakhir.
+  // Field yang sudah diisi user tidak ditimpa.
   const loadSessionCurrency = async () => {
-    const d = await fetchDashboard(false);
-    const cur = d?.active_session?.currency_code;
-    if (cur) {
-      setShipmentCurrency(cur);
+    const sysCurrency = getSysConfig()?.currency || 'IDR';
+    let d = null;
+    try {
+      d = await fetchDashboard(false);
+    } catch (_) {
+      d = null;
     }
+    const sessionCurrency = d?.active_session?.currency_code;
+    setShipmentCurrency(prev => prev || sessionCurrency || sysCurrency);
   };
 
   const loadData = async () => {
@@ -368,7 +383,7 @@ const BatchView = ({navigation, route}) => {
                 autoCapitalize="characters"
               />
               <Text style={styles.currencyHint}>
-                Default dari session jastip aktif ({shipmentCurrency}).
+                Default dari session aktif / pengaturan aplikasi ({shipmentCurrency}).
               </Text>
               <View style={styles.formActions}>
                 <TouchableOpacity

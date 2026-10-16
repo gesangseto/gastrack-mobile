@@ -15,6 +15,7 @@ import {
 import DropDownPicker from 'react-native-dropdown-picker';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
+import BlastCustomerPicker from '../../components/BlastCustomerPicker';
 import InputText from '../../components/InputText';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
@@ -77,6 +78,8 @@ const PaymentTab = () => {
   // Blast tagihan (kirim invoice ke semua customer belum lunas pada session
   // terpilih) — state `blasting` menahan tombol saat request berjalan.
   const [blasting, setBlasting] = useState(false);
+  // Modal checklist customer — fab Blast membukanya, bukan langsung mengirim.
+  const [blastPickerOpen, setBlastPickerOpen] = useState(false);
 
   // Session dropdown — daftar session dari store (cache MMKV). Tidak
   // di-fetch ulang saat kembali ke layar; refresh hanya via pull-to-refresh.
@@ -179,12 +182,26 @@ const PaymentTab = () => {
   // ===== Blast tagihan (FAB) — kirim invoice ke semua customer belum lunas =====
   // Jalankan request blast. Session id diambil dari session terpilih di store
   // (sumber yang sama dengan filter list & navigasi detail), bukan hardcode.
-  const handleBlast = async () => {
+  const handleBlast = async customerIds => {
     if (blasting) {
       return;
     }
+    if (!customerIds || customerIds.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Blast Tagihan',
+        text2: 'Pilih minimal satu customer terlebih dahulu',
+      });
+      return;
+    }
     setBlasting(true);
-    const result = await sendInvoiceBlast({session_id: sessionValue}, false);
+    setBlastPickerOpen(false);
+    // Kirim HANYA customer yang dicentang — backend menerima `customer_ids`
+    // sebagai subset filter (lihat payment.js::sendInvoiceBlast).
+    const result = await sendInvoiceBlast(
+      {session_id: sessionValue, customer_ids: customerIds},
+      false,
+    );
     setBlasting(false);
     if (!mountedRef.current) {
       return;
@@ -218,8 +235,10 @@ const PaymentTab = () => {
     Toast.show({type: 'success', text1: 'Berhasil', text2: summary});
   };
 
-  // Konfirmasi sebelum blast (tombol Batal / Kirim).
-  const handleConfirmBlast = () => {
+  // FAB Blast membuka modal checklist. Lista customer yang bisa dipilih =
+  // customer dengan sisa tagihan > 0 pada tab Pending (data yang sudah
+  // difilter di `pending`). Tanpa session terpilih tidak ada yang bisa dikirim.
+  const handleOpenBlastPicker = () => {
     if (blasting) {
       return;
     }
@@ -227,14 +246,7 @@ const PaymentTab = () => {
       Alert.alert('Blast Tagihan', 'Pilih session terlebih dahulu.');
       return;
     }
-    Alert.alert(
-      'Blast Tagihan',
-      'Kirim tagihan ke semua customer yang belum lunas di session ini?',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {text: 'Kirim', onPress: handleBlast},
-      ],
-    );
+    setBlastPickerOpen(true);
   };
 
   // Filter customer by nama / no. HP (tab Pending & Paid)
@@ -476,12 +488,12 @@ const PaymentTab = () => {
           />
         )}
 
-        {/* FAB Blast — kirim tagihan ke semua customer belum lunas pada
-            session terpilih (tab Pending). Di-disable selama request jalan. */}
+        {/* FAB Blast — membuka modal checklist customer. Di-disable selama
+            request blast berjalan. */}
         {activeTab === 'Pending' && (
           <TouchableOpacity
             style={[styles.fab, blasting && styles.fabDisabled]}
-            onPress={handleConfirmBlast}
+            onPress={handleOpenBlastPicker}
             disabled={blasting}
             activeOpacity={0.8}>
             {blasting ? (
@@ -494,6 +506,15 @@ const PaymentTab = () => {
             )}
           </TouchableOpacity>
         )}
+
+        {/* Modal checklist customer untuk blast tagihan. */}
+        <BlastCustomerPicker
+          visible={blastPickerOpen}
+          customers={pending}
+          busy={blasting}
+          onClose={() => setBlastPickerOpen(false)}
+          onConfirm={handleBlast}
+        />
       </View>
     </View>
   );
