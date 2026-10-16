@@ -83,9 +83,6 @@ const ProfileView = ({navigation, route}) => {
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Informasi Login User</Text>
-          <Text style={styles.sectionDesc}>
-            Data ini tersimpan di mst_user dan dipakai untuk login aplikasi.
-          </Text>
 
           <InputText
             label="Username"
@@ -148,11 +145,6 @@ const styles = StyleSheet.create({
     color: color.primaryColor,
     fontSize: 18,
     fontWeight: '700',
-  },
-  sectionDesc: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
     marginBottom: 18,
   },
   saveButton: {

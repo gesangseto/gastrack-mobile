@@ -255,10 +255,6 @@ const AppSettingView = ({navigation, route}) => {
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Pengaturan Aplikasi</Text>
-          <Text style={styles.sectionDesc}>
-            Konfigurasi ini dikirim ke Backend (sys_configuration_mst) dan
-            dipakai aplikasi (mis. kode negara untuk nomor HP).
-          </Text>
 
           <InputText
             label="Nama Perusahaan"
@@ -513,11 +509,6 @@ const styles = StyleSheet.create({
     color: color.primaryColor,
     fontSize: 18,
     fontWeight: '700',
-  },
-  sectionDesc: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
     marginBottom: 18,
   },
   fieldLabel: {
