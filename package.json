@@ -12,9 +12,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~5.0.5",
     "@pushpendersingh/react-native-scanner": "^1.5.0",
-    "@react-native-vector-icons/evil-icons": "^12.0.0",
     "@react-native-vector-icons/fontawesome6": "^12.0.0",
-    "@react-native-vector-icons/ionicons": "^12.0.0",
     "@react-native-vector-icons/lucide": "^12.0.0",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
