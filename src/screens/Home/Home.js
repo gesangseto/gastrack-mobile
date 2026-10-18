@@ -122,17 +122,6 @@ const Home = () => {
         </TouchableOpacity>
       )}
 
-      {/* Dropdown pilih session jastip (pilihan disimpan di zustand
-          selectedSession — dipakai oleh dashboard statistik & menu lain).
-          Default otomatis = session aktif (di-set store). */}
-      <View style={styles.sessionPickerWrap}>
-        <Text style={styles.sessionPickerLabel}>Session Jastip</Text>
-        <SessionDropdown
-          open={sessionOpen}
-          onToggle={setSessionOpen}
-          placeholder="Pilih session jastip"
-        />
-      </View>
 
       {/* Quick action: Customer, Price Code, Message Template & Country */}
       <View style={styles.quickRow}>
@@ -168,6 +157,19 @@ const Home = () => {
           </View>
           <Text style={styles.quickLabel}>Country</Text>
         </TouchableOpacity>
+      </View>
+
+      
+      {/* Dropdown pilih session jastip (pilihan disimpan di zustand
+          selectedSession — dipakai oleh dashboard statistik & menu lain).
+          Default otomatis = session aktif (di-set store). */}
+      <View style={styles.sessionPickerWrap}>
+        <Text style={styles.sessionPickerLabel}>Session Jastip</Text>
+        <SessionDropdown
+          open={sessionOpen}
+          onToggle={setSessionOpen}
+          placeholder="Pilih session jastip"
+        />
       </View>
     </View>
   );

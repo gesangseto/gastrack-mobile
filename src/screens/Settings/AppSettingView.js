@@ -328,6 +328,31 @@ const AppSettingView = ({navigation, route}) => {
             }
             placeholder="Alamat perusahaan"
           />
+          
+          <InputText
+            label="Link Tiktok"
+            value={form.link_tiktok}
+            onChangeText={value =>
+              setForm({...form, link_tiktok: value})
+            }
+            placeholder="Link Tiktok"
+          />
+          <InputText
+            label="Link Instagram"
+            value={form.link_instagram}
+            onChangeText={value =>
+              setForm({...form, link_instagram: value})
+            }
+            placeholder="Link Instagram"
+          />
+          <InputText
+            label="Link Lainnya"
+            value={form.link_other}
+            onChangeText={value =>
+              setForm({...form, link_other: value})
+            }
+            placeholder="Link Lainnya"
+          />
           {/* Negara */}
           <Text style={styles.fieldLabel}>Negara</Text>
           <TouchableOpacity
