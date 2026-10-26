@@ -218,7 +218,7 @@ export const updateItem = async (Params = {}) => {
         Toast.show({
           type: 'error',
           text1: 'Error',
-          text2: e.message,
+          text2: e.response?.data?.message || e.message,
         });
         return resolve(false);
       });

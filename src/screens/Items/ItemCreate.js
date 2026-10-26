@@ -307,7 +307,12 @@ const ItemCreate = ({navigation, route}) => {
             }
           } else if (value !== null && value !== undefined && value !== '') {
             // Jika value bukan null
-            form.append(key, value);
+            const normalizedValue =
+              ['cost_code', 'selling_code'].includes(key) &&
+              typeof value === 'string'
+                ? value.trim().toUpperCase()
+                : value;
+            form.append(key, normalizedValue);
           }
         }
         // customer_id diambil dari database berdasarkan nomor telpon yang dipilih

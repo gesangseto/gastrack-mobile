@@ -1,6 +1,7 @@
+import {useFocusEffect} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/lucide';
 import moment from 'moment';
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import {
   Alert,
   Platform,
@@ -44,6 +45,20 @@ const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
   const [visibleImageViewer, setVisibleImageViewer] = useState(false);
   const [profitMode, setProfitMode] = useState('local'); // 'local' | 'foreign'
+
+  useFocusEffect(
+    useCallback(() => {
+      let isFocused = true;
+      getListItem({item_id: item.id}).then(response => {
+        if (isFocused && response?.[0]) {
+          navigation.setParams({item: response[0]});
+        }
+      });
+      return () => {
+        isFocused = false;
+      };
+    }, [item.id, navigation]),
+  );
 
   const handlePressDelete = () => {
     Alert.alert('Hapus Item', 'Apakah anda yakin ingin menghapus item ini?', [
@@ -104,7 +119,7 @@ const ItemView = ({navigation, route}) => {
             <Icon name="arrow-left" size={22} color={color.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Detail Item</Text>
-          {item?.status === 200 ? (
+          {Number(item?.status) === 200 ? (
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={handlePressEdit}
