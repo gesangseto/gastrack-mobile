@@ -1,5 +1,6 @@
 import {useEffect, useState, useRef} from 'react';
 import {
+  Alert,
   Modal,
   ScrollView,
   StatusBar,
@@ -50,6 +51,7 @@ const AppSettingView = ({navigation, route}) => {
   const [waStatus, setWaStatus] = useState(null);
   const [waQR, setWaQR] = useState(null);
   const [waLoading, setWaLoading] = useState(false);
+  const [waDestroying, setWaDestroying] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
 
   useEffect(() => {
@@ -183,6 +185,41 @@ const AppSettingView = ({navigation, route}) => {
         notification_whatsapp: false,
       });
     }
+  };
+
+  const handleDestroyWhatsAppSession = () => {
+    Alert.alert(
+      'Hapus session WhatsApp?',
+      'Akun WhatsApp akan terputus dari aplikasi. Anda perlu scan QR lagi untuk menghubungkannya.',
+      [
+        {text: 'Batal', style: 'cancel'},
+        {
+          text: 'Hapus Session',
+          style: 'destructive',
+          onPress: async () => {
+            setWaDestroying(true);
+            const destroyed = await deleteWhatsAppSession({id: 'main'});
+            setWaDestroying(false);
+            if (!destroyed) {
+              return;
+            }
+            setWaStatus({
+              connected: false,
+              session_exists: false,
+              phone_number: null,
+            });
+            setWaQR(null);
+            setQrModalVisible(false);
+            Toast.show({
+              type: 'success',
+              text1: 'Session dihapus',
+              text2: 'Hubungkan kembali WhatsApp dengan memindai QR.',
+            });
+          },
+        },
+      ],
+      {cancelable: true},
+    );
   };
 
   // Polling QR: cek status setiap 3 detik sampai connected atau user cancel
@@ -380,13 +417,24 @@ const AppSettingView = ({navigation, route}) => {
               <Switch
                 value={form.notification_whatsapp}
                 onValueChange={handleToggleWhatsApp}
-                disabled={waLoading}
+                disabled={waLoading || waDestroying}
                 trackColor={{false: '#E5E5E5', true: '#D8CCF3'}}
                 thumbColor={
                   form.notification_whatsapp ? color.primaryColor : '#f4f4f4'
                 }
               />
             </View>
+            {(waStatus?.session_exists || waStatus?.connected) && (
+              <TouchableOpacity
+                style={styles.waDeleteButton}
+                onPress={handleDestroyWhatsAppSession}
+                disabled={waLoading || waDestroying}>
+                <Icon name="trash-2" size={16} color="#EF4444" />
+                <Text style={styles.waDeleteText}>
+                  {waDestroying ? 'Menghapus session...' : 'Hapus Session'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           <Text style={styles.fieldHint}>
             {form.notification_whatsapp
@@ -702,6 +750,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#8A8A8A',
     marginTop: 3,
+  },
+  waDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+  },
+  waDeleteText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
   },
   qrOverlay: {
     flex: 1,

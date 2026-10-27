@@ -72,12 +72,12 @@ export const createWhatsAppSession = async (params = {}) => {
   });
 };
 
-// Hapus session WhatsApp (disconnect).
-// Kirim DELETE ke /whatsapp/session (body: {id:'main'}).
+// Hapus session WhatsApp secara permanen (auth state dan key).
+// Kirim DELETE ke /whatsapp/session/destroy.
 export const deleteWhatsAppSession = async (params = {}) => {
   return new Promise(resolve => {
     $axios
-      .delete(`${whatsappUrl}/session`, {data: params})
+      .delete(`${whatsappUrl}/session/destroy`, {data: params})
       .then(result => {
         const data = result.data;
         if (data.error) {
