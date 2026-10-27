@@ -47,9 +47,9 @@ const formatSample = (value, dataType) => {
   }
 };
 
-const CHANNEL_OPTIONS = ['wa', 'email', 'sms'];
+const CHANNEL_OPTIONS = ['wa', 'email', 'sms']; // deprecated: tidak lagi dipakai UI
 const CONTENT_TYPE_OPTIONS = ['text', 'html'];
-const RECIPIENT_TYPE_OPTIONS = ['customer', 'all', 'segment'];
+const RECIPIENT_TYPE_OPTIONS = ['customer', 'all', 'segment']; // deprecated
 const STATUS_OPTIONS = ['Active', 'Inactive'];
 
 // Form Template.
@@ -111,6 +111,11 @@ const MessageTemplateEdit = ({route}) => {
       return;
     }
     await submit(async () => {
+      // trigger_event DILARANG diubah dari Android — trigger yang salah
+      // bisa membuat message send tidak bekerja. Hanya dikirim bila mode
+      // Tambah (insert), di mana Android tidak mengizinkan set nilai baru
+      // kecuali dari Website/ERP. Di mode Edit, trigger tetap dibawa dari
+      // server as-is (read-only).
       const payload = {
         code: formData.code,
         name: formData.name,
@@ -119,7 +124,7 @@ const MessageTemplateEdit = ({route}) => {
         description: formData.description || null,
         subject: formData.subject || null,
         content_type: formData.content_type,
-        trigger_event: formData.trigger_event || null,
+        trigger_event: isEdit ? undefined : (formData.trigger_event || null),
         recipient_type: formData.recipient_type,
         status: formData.status,
       };
@@ -176,7 +181,16 @@ const MessageTemplateEdit = ({route}) => {
           required={true}
           value={formData.code}
           editable={false}
+          disabled={true}
           placeholder="REQUEST_PAYMENT"
+        />
+        <InputText
+          label="Trigger Event"
+          value={formData.trigger_event}
+          editable={false}
+          disabled={true}
+          placeholder="request_payment"
+          autoCapitalize="none"
         />
         <InputText
           label="Nama"
@@ -184,26 +198,6 @@ const MessageTemplateEdit = ({route}) => {
           value={formData.name}
           onChangeText={text => setField('name', text)}
           placeholder="Nama template"
-        />
-        <InputText
-          label="Trigger Event"
-          value={formData.trigger_event}
-          onChangeText={text => setField('trigger_event', text)}
-          placeholder="request_payment"
-          autoCapitalize="none"
-        />
-        {renderChipGroup('Channel', CHANNEL_OPTIONS, 'channel')}
-        {renderChipGroup('Content Type', CONTENT_TYPE_OPTIONS, 'content_type')}
-        {renderChipGroup(
-          'Recipient Type',
-          RECIPIENT_TYPE_OPTIONS,
-          'recipient_type',
-        )}
-        <InputText
-          label="Subject (Email)"
-          value={formData.subject}
-          onChangeText={text => setField('subject', text)}
-          placeholder="Email subject line"
         />
         <InputText
           label="Deskripsi"
@@ -214,6 +208,8 @@ const MessageTemplateEdit = ({route}) => {
           numberOfLines={3}
           textAlignVertical="top"
         />
+        {renderChipGroup('Content Type', CONTENT_TYPE_OPTIONS, 'content_type')}
+
 
         {/* Content Template */}
         <Text style={styles.label}>
