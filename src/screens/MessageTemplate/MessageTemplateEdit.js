@@ -9,8 +9,6 @@ import {
   View,
 } from 'react-native';
 import InputText from '../../components/InputText';
-import LoadingButton from '../../components/LoadingButton';
-import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -20,36 +18,9 @@ import {
   updateMessageTemplate,
 } from '../../resource/MessageTemplate';
 
-// Formatasi contoh nilai mengikuti `data_type` di mst_template_variable.
-// Mengg-logic yang sama dengan services/template-renderer.js di backend agar
-// contoh di Android cocok dengan hasil render sebenarnya.
-const formatSample = (value, dataType) => {
-  if (value === undefined || value === null || value === '') return '-';
-  const num = Number(value);
-  switch (dataType) {
-    case 'currency':
-      return Number.isNaN(num)
-        ? String(value)
-        : 'Rp ' + num.toLocaleString('id-ID');
-    case 'number':
-      return Number.isNaN(num) ? String(value) : num.toLocaleString('id-ID');
-    case 'date': {
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return String(value);
-      return d.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-    default:
-      return String(value);
-  }
-};
-
-const CHANNEL_OPTIONS = ['wa', 'email', 'sms']; // deprecated: tidak lagi dipakai UI
+const CHANNEL_OPTIONS = ['wa', 'email', 'sms'];
 const CONTENT_TYPE_OPTIONS = ['text', 'html'];
-const RECIPIENT_TYPE_OPTIONS = ['customer', 'all', 'segment']; // deprecated
+const RECIPIENT_TYPE_OPTIONS = ['customer', 'all', 'segment'];
 const STATUS_OPTIONS = ['Active', 'Inactive'];
 
 // Form Template.
@@ -71,8 +42,7 @@ const MessageTemplateEdit = ({route}) => {
     recipient_type: 'customer',
     status: 'Active',
   });
-  // Guard anti-duplikat submit (ref lock sinkron + status untuk tombol)
-  const {busy: saving, submit} = useSubmitGuard();
+  const [saving, setSaving] = useState(false);
   const [variables, setVariables] = useState([]);
 
   useFocusEffect(
@@ -110,31 +80,26 @@ const MessageTemplateEdit = ({route}) => {
     if (!formData.name || !formData.content_template) {
       return;
     }
-    await submit(async () => {
-      // trigger_event DILARANG diubah dari Android — trigger yang salah
-      // bisa membuat message send tidak bekerja. Hanya dikirim bila mode
-      // Tambah (insert), di mana Android tidak mengizinkan set nilai baru
-      // kecuali dari Website/ERP. Di mode Edit, trigger tetap dibawa dari
-      // server as-is (read-only).
-      const payload = {
-        code: formData.code,
-        name: formData.name,
-        channel: formData.channel,
-        content_template: formData.content_template,
-        description: formData.description || null,
-        subject: formData.subject || null,
-        content_type: formData.content_type,
-        trigger_event: isEdit ? undefined : (formData.trigger_event || null),
-        recipient_type: formData.recipient_type,
-        status: formData.status,
-      };
-      const response = isEdit
-        ? await updateMessageTemplate({id: formData.id, ...payload})
-        : await createMessageTemplate(payload);
-      if (response) {
-        RootNavigation.goBack();
-      }
-    });
+    setSaving(true);
+    const payload = {
+      code: formData.code,
+      name: formData.name,
+      channel: formData.channel,
+      content_template: formData.content_template,
+      description: formData.description || null,
+      subject: formData.subject || null,
+      content_type: formData.content_type,
+      trigger_event: formData.trigger_event || null,
+      recipient_type: formData.recipient_type,
+      status: formData.status,
+    };
+    let response = isEdit
+      ? await updateMessageTemplate({id: formData.id, ...payload})
+      : await createMessageTemplate(payload);
+    setSaving(false);
+    if (response) {
+      RootNavigation.goBack();
+    }
   };
 
   const insertVariable = key => {
@@ -181,16 +146,7 @@ const MessageTemplateEdit = ({route}) => {
           required={true}
           value={formData.code}
           editable={false}
-          disabled={true}
           placeholder="REQUEST_PAYMENT"
-        />
-        <InputText
-          label="Trigger Event"
-          value={formData.trigger_event}
-          editable={false}
-          disabled={true}
-          placeholder="request_payment"
-          autoCapitalize="none"
         />
         <InputText
           label="Nama"
@@ -198,6 +154,26 @@ const MessageTemplateEdit = ({route}) => {
           value={formData.name}
           onChangeText={text => setField('name', text)}
           placeholder="Nama template"
+        />
+        <InputText
+          label="Trigger Event"
+          value={formData.trigger_event}
+          onChangeText={text => setField('trigger_event', text)}
+          placeholder="request_payment"
+          autoCapitalize="none"
+        />
+        {renderChipGroup('Channel', CHANNEL_OPTIONS, 'channel')}
+        {renderChipGroup('Content Type', CONTENT_TYPE_OPTIONS, 'content_type')}
+        {renderChipGroup(
+          'Recipient Type',
+          RECIPIENT_TYPE_OPTIONS,
+          'recipient_type',
+        )}
+        <InputText
+          label="Subject (Email)"
+          value={formData.subject}
+          onChangeText={text => setField('subject', text)}
+          placeholder="Email subject line"
         />
         <InputText
           label="Deskripsi"
@@ -208,8 +184,6 @@ const MessageTemplateEdit = ({route}) => {
           numberOfLines={3}
           textAlignVertical="top"
         />
-        {renderChipGroup('Content Type', CONTENT_TYPE_OPTIONS, 'content_type')}
-        
 
         {/* Content Template */}
         <Text style={styles.label}>
@@ -218,42 +192,28 @@ const MessageTemplateEdit = ({route}) => {
         <InputText
           value={formData.content_template}
           onChangeText={text => setField('content_template', text)}
-          placeholder="Tulis isi pesan. Placeholder diisi otomatis saat kirim."
+          placeholder="Masukkan template dengan {{variable}}"
           multiline={true}
-          numberOfLines={8}
+          numberOfLines={6}
           textAlignVertical="top"
           style={styles.contentInput}
         />
         <Text style={styles.hint}>
-          Placeholder ditulis dengan kurung kurawal ganda, contoh{' '}
-          {'{{customer_name}}'}. Nilai placeholder diisi otomatis saat pesan
-          dikirim. Daftar variabel yang tersedia ada di bawah — tap untuk
-          menyisipkannya.
+          Gunakan {'{{variable}}'} untuk placeholder. Contoh:{' '}
+          {'{{customer_name}}'}, {'{{order_number}}'}, {'{{amount}}'}
         </Text>
 
-        {/* Daftar variabel beserta contoh nilainya. */}
+        {/* Variable picker */}
         {variables.length > 0 && (
           <>
-            <Text style={styles.label}>
-              Variabel tersedia ({variables.length})
-            </Text>
+            <Text style={styles.label}>Sisipkan Variabel</Text>
             <View style={styles.varWrap}>
               {variables.map(v => (
                 <TouchableOpacity
                   key={v.key}
                   onPress={() => insertVariable(v.key)}
-                  style={styles.varChip}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Sisipkan ${v.label || v.key}`}>
-                  <View style={styles.varChipHead}>
-                    <Text style={styles.varChipKey}>{`{{${v.key}}}`}</Text>
-                    {!!v.label && (
-                      <Text style={styles.varChipLabel}>{v.label}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.varChipSample} numberOfLines={1}>
-                    Contoh: {formatSample(v.sample_value, v.data_type)}
-                  </Text>
+                  style={styles.varChip}>
+                  <Text style={styles.varChipText}>{v.key}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -262,14 +222,14 @@ const MessageTemplateEdit = ({route}) => {
 
         {renderChipGroup('Status', STATUS_OPTIONS, 'status')}
 
-        <LoadingButton
+        <TouchableOpacity
           onPress={handleSave}
-          busy={saving}
-          label="Simpan"
-          busyLabel="Menyimpan..."
-          icon="check"
-          style={styles.saveButton}
-        />
+          disabled={saving}
+          style={styles.saveButton}>
+          <Text style={styles.saveButtonText}>
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -335,46 +295,26 @@ const styles = StyleSheet.create({
   },
   contentInput: {
     fontSize: 14,
-    // Harus sama dengan asumsi lineHeight di InputText (22px/baris) agar
-    // tinggi minimum field pas dengan jumlah baris yang ditampilkan.
-    lineHeight: 22,
+    lineHeight: 20,
   },
   varWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 14,
   },
   varChip: {
-    // Lebar penuh satu baris supaya contoh nilai tidak terpotong.
-    width: '100%',
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 5,
     borderRadius: 8,
     backgroundColor: '#EEF2FF',
     borderWidth: 1,
     borderColor: '#C7D2FE',
-    marginBottom: 6,
   },
-  varChipHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  varChipKey: {
+  varChipText: {
     fontSize: 12,
     color: '#4338CA',
-    fontWeight: '700',
-  },
-  varChipLabel: {
-    flex: 1,
-    fontSize: 11,
-    color: '#4B5563',
     fontWeight: '500',
-    textAlign: 'right',
-  },
-  varChipSample: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
   },
   saveButton: {
     marginTop: 14,

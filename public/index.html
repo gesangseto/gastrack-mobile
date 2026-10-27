@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+    <title>Jastip Center</title>
+
+    <!-- ===== PWA ===== -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1E3A8A" />
+    <meta name="description" content="Jastip Center - Your Warehouse Partner" />
+
+    <!-- iOS (Add to Home Screen) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Jastip" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+
+    <!-- ===== Font ikon =====
+         react-native-vector-icons tidak menyediakan @font-face di web
+         (dynamic font loading tidak didukung), sehingga font harus
+         dideklarasikan manual. Nama family HARUS sama dengan yang dipakai
+         createIconSet (fontBasename tanpa ekstensi):
+           Lucide                  -> Lucide.ttf
+           FontAwesome6_Regular    -> FontAwesome6_Regular.ttf
+           FontAwesome6_Solid      -> FontAwesome6_Solid.ttf
+           FontAwesome6_Brands     -> FontAwesome6_Brands.ttf
+    -->
+    <style>
+      @font-face {
+        font-family: 'Lucide';
+        src: url('/fonts/Lucide.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'FontAwesome6_Regular';
+        src: url('/fonts/FontAwesome6_Regular.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'FontAwesome6_Solid';
+        src: url('/fonts/FontAwesome6_Solid.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'FontAwesome6_Brands';
+        src: url('/fonts/FontAwesome6_Brands.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+    </style>
+
+    <!-- react-native-web: style reset (dari template Expo) -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Anda perlu mengaktifkan JavaScript untuk menjalankan aplikasi ini.</noscript>
+    <div id="root"></div>
+
+    <!-- Daftarkan service worker (PWA: offline app-shell + install prompt) -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function (err) {
+            console.warn('Service worker gagal didaftarkan:', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
