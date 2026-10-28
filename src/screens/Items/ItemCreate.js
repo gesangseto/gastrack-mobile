@@ -365,6 +365,15 @@ const ItemCreate = ({navigation, route}) => {
           {text: 'Simpan', onPress: doSubmit},
         ],
       );
+    } else if (Number(formData.quantity) > 1) {
+      Alert.alert(
+        'Konfirmasi Harga',
+        `${formData.quantity} pcs akan disimpan dalam satu baris.\n\nPastikan Cost Price dan Selling Price adalah harga per pcs, bukan harga total.`,
+        [
+          {text: 'Batal', style: 'cancel'},
+          {text: 'Simpan', onPress: doSubmit},
+        ],
+      );
     } else {
       doSubmit();
     }
@@ -431,12 +440,11 @@ const ItemCreate = ({navigation, route}) => {
                 <View style={styles.rowItem}>
                   <InputText
                     ref={quantityRef}
-                    label="Quantity"
+                    label="Quantity (pcs)"
                     required={true}
                     showError={true}
                     keyboardType="numeric"
                     value={formData.quantity}
-                    editable={!formData.id}
                     onChangeText={value =>
                       setFormData({...formData, quantity: value})
                     }
@@ -446,6 +454,10 @@ const ItemCreate = ({navigation, route}) => {
                   />
                 </View>
               </View>
+              <Text style={styles.helperText}>
+                Satu baris mewakili {formData.quantity || 0} pcs. Harga di bawah
+                adalah harga per pcs, bukan total.
+              </Text>
               <InputText
                 ref={phoneRef}
                 label="Phone No."
@@ -550,7 +562,7 @@ const ItemCreate = ({navigation, route}) => {
 
               <InputText
                 ref={costPriceRef}
-                label="Cost Price"
+                label="Cost Price (per pcs)"
                 required={true}
                 showError={true}
                 prefix={costSymbol}
@@ -575,7 +587,7 @@ const ItemCreate = ({navigation, route}) => {
               />
               <InputText
                 ref={sellingPriceRef}
-                label="Selling Price"
+                label="Selling Price (per pcs)"
                 required={true}
                 showError={true}
                 prefix={sellingSymbol}
@@ -790,6 +802,11 @@ const styles = StyleSheet.create({
   },
   rowItem: {
     flex: 1,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 10,
   },
   unitSuffix: {
     flexDirection: 'row',

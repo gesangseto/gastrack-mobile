@@ -33,6 +33,7 @@ const ItemCard = ({
   right,
   size = 40,
   priceCycle = false,
+  showLineTotal = false,
   session = null,
   config = null,
   configSymbol = '',
@@ -61,6 +62,13 @@ const ItemCard = ({
     if (isNaN(n)) return '-';
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
+
+  // Quantity baris adalah jumlah pcs dalam batch ini; harga tersimpan per pcs.
+  const qty = Number(item?.quantity || 0);
+  const unitPrice = Number(item?.local_price ?? item?.selling_price ?? 0);
+  const lineTotal = qty * unitPrice;
+  const fmtMoney = v =>
+    `${configSymbol ? configSymbol + ' ' : ''}${fmtAngka(v)}`;
 
   // ===== Mode siklus harga (List Item) =====
   // Klik area harga → tampilkan 3 titik data dari cyclePrice() bergantian:
@@ -154,6 +162,11 @@ const ItemCard = ({
             </TouchableOpacity>
           </View>
         </View>
+        {showLineTotal && qty > 1 ? (
+          <Text style={styles.lineTotal} numberOfLines={1}>
+            {qty} pcs × {fmtMoney(unitPrice)} = {fmtMoney(lineTotal)}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.boxImage}>
         <View style={styles.qtyBadge}>
@@ -234,6 +247,12 @@ const styles = StyleSheet.create({
   },
   priceTouch: {
     flexShrink: 1,
+  },
+  lineTotal: {
+    color: '#6A6A6A',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
   },
   qtyBadge: {
     backgroundColor: color.primaryLight,

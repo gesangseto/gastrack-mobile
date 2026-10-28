@@ -40,6 +40,7 @@ const Home = () => {
 
   const summary = sessionSummary || {
     items_without_batch: 0,
+    total_batches: 0,
     batches_not_shipping: 0,
   };
 
@@ -86,13 +87,15 @@ const Home = () => {
             </Text>
             <Text style={styles.sessionSub} numberOfLines={1}>
               {summary.items_without_batch > 0
-                ? `${summary.items_without_batch} item tanpa batch`
+                ? `${summary.items_without_batch} pcs tanpa batch`
                 : 'Semua item sudah batch'}
             </Text>
             <Text style={styles.sessionSub} numberOfLines={1}>
               {summary.batches_not_shipping > 0
                 ? `${summary.batches_not_shipping} batch belum kirim`
-                : 'Semua batch sudah kirim'}
+                : summary.total_batches > 0
+                ? 'Semua batch sudah kirim'
+                : 'Belum ada batch'}
             </Text>
           </View>
           <TouchableOpacity style={styles.stopBtn} onPress={handleStopSession}>

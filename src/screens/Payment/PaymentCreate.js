@@ -311,7 +311,8 @@ const PaymentCreate = ({route}) => {
                       </Text>
                     </View>
                     <Text style={styles.summaryItems}>
-                      {summary.total_items} item • {summary.total_quantity} pcs
+                      {summary.total_batches || 0} batch •{' '}
+                      {summary.total_quantity || 0} pcs
                     </Text>
                   </View>
                 </>

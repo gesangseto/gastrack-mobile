@@ -353,7 +353,7 @@ const SessionView = () => {
                     ]}>
                     {summary.items_without_batch}
                   </Text>
-                  <Text style={styles.summaryLabel}>Item Tanpa Batch</Text>
+                  <Text style={styles.summaryLabel}>Pcs Tanpa Batch</Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>

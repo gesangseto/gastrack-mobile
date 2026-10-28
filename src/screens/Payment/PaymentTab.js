@@ -293,6 +293,13 @@ const PaymentTab = () => {
             {item.customer_phone || '—'}
           </Text>
           <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>Item</Text>
+            <Text style={styles.amountItems}>
+              {Number(item.total_batches || 0)} batch •{' '}
+              {Number(item.total_quantity || 0)} pcs
+            </Text>
+          </View>
+          <View style={styles.amountRow}>
             <Text style={styles.amountLabel}>Tagihan</Text>
             <Text style={styles.amountValue}>
               {formatRupiah(item.grand_total)}
@@ -675,6 +682,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
+  },
+  amountItems: {
+    color: '#6A6A6A',
+    fontSize: 11,
+    fontWeight: '600',
   },
   amountPaid: {
     color: color.success,

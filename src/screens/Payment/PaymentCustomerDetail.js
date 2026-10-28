@@ -180,7 +180,7 @@ const PaymentCustomerDetail = ({route}) => {
               </View>
               <View style={styles.summaryDivider} />
               <Text style={styles.summaryItems}>
-                {summary?.total_items || 0} item •{' '}
+                {summary?.total_batches || 0} batch •{' '}
                 {summary?.total_quantity || 0} pcs
               </Text>
             </View>
@@ -189,7 +189,9 @@ const PaymentCustomerDetail = ({route}) => {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Item Dipesan</Text>
               <View style={styles.countBadge}>
-                <Text style={styles.countBadgeText}>{items.length} item</Text>
+                <Text style={styles.countBadgeText}>
+                  {items.length} batch
+                </Text>
               </View>
             </View>
             <ScrollView
@@ -222,10 +224,12 @@ const PaymentCustomerDetail = ({route}) => {
                           {item.barcode || '-'}
                         </Text>
                         <View style={styles.itemPriceRow}>
-                          <Text style={styles.itemForeign}>
-                            {Number(item.local_price || 0).toLocaleString(
-                              'id-ID',
-                            )}
+                          <Text style={styles.itemQtyText}>
+                            {Number(item.quantity || 0)} pcs ×{' '}
+                            {formatCurrency(item.local_price)}
+                          </Text>
+                          <Text style={styles.itemTotal}>
+                            {formatCurrency(total)}
                           </Text>
                         </View>
                       </View>
@@ -462,6 +466,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: color.primaryColor,
+  },
+  itemQtyText: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    flexShrink: 1,
+    marginRight: 8,
   },
   itemBadge: {
     borderRadius: 8,
