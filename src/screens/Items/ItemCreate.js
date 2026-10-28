@@ -436,6 +436,7 @@ const ItemCreate = ({navigation, route}) => {
                     showError={true}
                     keyboardType="numeric"
                     value={formData.quantity}
+                    editable={!formData.id}
                     onChangeText={value =>
                       setFormData({...formData, quantity: value})
                     }
