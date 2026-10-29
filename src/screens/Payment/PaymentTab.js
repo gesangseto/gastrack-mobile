@@ -74,7 +74,6 @@ const PaymentTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
-  const [historyQuery, setHistoryQuery] = useState('');
   // Blast tagihan (kirim invoice ke semua customer belum lunas pada session
   // terpilih) — state `blasting` menahan tombol saat request berjalan.
   const [blasting, setBlasting] = useState(false);
@@ -251,24 +250,16 @@ const PaymentTab = () => {
 
   // Filter customer by nama / no. HP (tab Pending & Paid)
   const kw = query.trim().toLowerCase();
-  const filteredBills = bills.filter(
-    b =>
-      !kw ||
-      (b.customer_name || '').toLowerCase().includes(kw) ||
-      (b.customer_phone || '').toLowerCase().includes(kw),
-  );
+  const matchesCustomer = row =>
+    !kw ||
+    (row.customer_name || '').toLowerCase().includes(kw) ||
+    (row.customer_phone || '').toLowerCase().includes(kw);
+  const filteredBills = bills.filter(matchesCustomer);
   const pending = filteredBills.filter(b => Number(b.remaining_amount) > 0);
   const paid = filteredBills.filter(b => Number(b.remaining_amount) <= 0);
 
-  // Filter riwayat by nama / no. HP / referensi
-  const hkw = historyQuery.trim().toLowerCase();
-  const filteredHistory = history.filter(
-    h =>
-      !hkw ||
-      (h.customer_name || '').toLowerCase().includes(hkw) ||
-      (h.customer_phone || '').toLowerCase().includes(hkw) ||
-      (h.reference_number || '').toLowerCase().includes(hkw),
-  );
+  // Tab Riwayat memakai pencarian customer yang sama (nama / no. HP).
+  const filteredHistory = history.filter(matchesCustomer);
 
   const renderBill = item => {
     const status = item.payment_status || 'UNPAID';
@@ -293,9 +284,9 @@ const PaymentTab = () => {
             {item.customer_phone || '—'}
           </Text>
           <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Item</Text>
+            <Text style={styles.amountLabel}>Qty</Text>
             <Text style={styles.amountItems}>
-              {Number(item.total_batches || 0)} batch •{' '}
+              {Number(item.total_records || 0)} record •{' '}
               {Number(item.total_quantity || 0)} pcs
             </Text>
           </View>
@@ -364,13 +355,22 @@ const PaymentTab = () => {
   };
 
   const list =
-    activeTab === 'Pending' ? pending : activeTab === 'Paid' ? paid : filteredHistory;
+    activeTab === 'Pending'
+      ? pending
+      : activeTab === 'Paid'
+      ? paid
+      : filteredHistory;
   const renderItem = activeTab === 'Riwayat' ? renderHistory : renderBill;
 
   const tabs = [
-    {key: 'Pending', label: 'Pending', qty: pending.length},
-    {key: 'Paid', label: 'Paid', qty: paid.length},
-    {key: 'Riwayat', label: 'Riwayat', qty: history.length},
+    {
+      key: 'Pending',
+      label: 'Pending',
+      qty: pending.length,
+      qtyLabel: 'customer',
+    },
+    {key: 'Paid', label: 'Paid', qty: paid.length, qtyLabel: 'customer'},
+    {key: 'Riwayat', label: 'Riwayat', qty: history.length, qtyLabel: 'trx'},
   ];
 
   const emptyText =
@@ -442,25 +442,13 @@ const PaymentTab = () => {
         />
       </View>
 
-      {/* Pencarian customer (tab Pending & Paid) */}
-      {activeTab !== 'Riwayat' && (
-        <InputText
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Cari customer..."
-          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
-        />
-      )}
-
-      {/* Pencarian riwayat */}
-      {activeTab === 'Riwayat' && (
-        <InputText
-          value={historyQuery}
-          onChangeText={setHistoryQuery}
-          placeholder="Cari nama / no HP / referensi..."
-          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
-        />
-      )}
+      {/* Pencarian customer — berlaku untuk semua tab (Pending, Paid, Riwayat) */}
+      <InputText
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Cari customer..."
+        rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
+      />
 
       <SegmentedTabs
         items={tabs}

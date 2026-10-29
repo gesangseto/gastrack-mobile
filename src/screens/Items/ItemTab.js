@@ -2,9 +2,10 @@ import {useFocusEffect} from '@react-navigation/native';
 import {useCallback, useEffect, useState} from 'react';
 import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 import Toast from 'react-native-toast-message';
+import Icon from '@react-native-vector-icons/lucide';
+import InputText from '../../components/InputText';
 import ListViewItem from '../../components/ListViewItem';
 import MenuTile from '../../components/MenuTile';
-import SearchBar from '../../components/SearchBar';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
@@ -26,35 +27,8 @@ const ITEM_TABS = [
   {key: 'OnShipping', label: 'On Shipping', status: 202},
 ];
 
-// Tipe pencarian → filter client-side pada data store:
-// - phone   : cocokkan nomor HP customer
-// - name    : cocokkan nama customer
-// - barcode : cocokkan barcode item
-const SEARCH_TYPES = [
-  {
-    key: 'phone',
-    label: 'No Hp',
-    placeholder: 'Cari nomor HP customer...',
-    keyboardType: 'phone-pad',
-    icon: 'phone',
-  },
-  {
-    key: 'name',
-    label: 'Nama Cust',
-    placeholder: 'Cari nama customer...',
-    icon: 'user',
-  },
-  {
-    key: 'barcode',
-    label: 'Barcode',
-    placeholder: 'Scan / ketik barcode...',
-    icon: 'scan-barcode',
-  },
-];
-
 const ItemTab = () => {
   const [activeTab, setActiveTab] = useState('Draft');
-  const [searchType, setSearchType] = useState('phone');
   const [query, setQuery] = useState('');
   const [keyword, setKeyword] = useState('');
 
@@ -70,7 +44,7 @@ const ItemTab = () => {
 
   // Debounce ketikan agar filter tidak dijalankan per karakter.
   useEffect(() => {
-    const timer = setTimeout(() => setKeyword(query.trim()), 400);
+    const timer = setTimeout(() => setKeyword(query.trim().toLowerCase()), 400);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -99,34 +73,34 @@ const ItemTab = () => {
     }
   };
 
-  // Filter client-side: tab status + kata kunci pencarian.
-  const matchesSearch = item => {
-    if (!keyword) {return true;}
-    const k = keyword.toLowerCase();
-    if (searchType === 'phone') {
-      return (item.customer_phone || '').toLowerCase().includes(k);
-    }
-    if (searchType === 'name') {
-      return (item.customer_name || '').toLowerCase().includes(k);
-    }
-    // barcode
-    return (item.barcode || '').toLowerCase().includes(k);
-  };
+  // Filter client-side: tab status + pencarian customer (nama / no. HP).
+  const matchesSearch = item =>
+    !keyword ||
+    (item.customer_name || '').toLowerCase().includes(keyword) ||
+    (item.customer_phone || '').toLowerCase().includes(keyword);
 
   const filteredList = list.filter(
     item => Number(item.status) === current.status && matchesSearch(item),
   );
 
-  // Jumlah item per status (badge tab) — dihitung dari data store.
-  // Ini quantity Item (jumlah item), bukan total quantity pcs.
-  const qtyOf = status =>
-    list.filter(item => Number(item.status) === status).length;
+  // Ringkasan tab per status: jumlah record (baris item) + total pcs.
+  // 1 baris item = 1 input admin berisi `quantity` pcs (bukan item_batch).
+  const summaryOf = status => {
+    const rows = list.filter(item => Number(item.status) === status);
+    return {
+      records: rows.length,
+      pcs: rows.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    };
+  };
 
-  const tabs = ITEM_TABS.map(t => ({
-    key: t.key,
-    label: t.label,
-    qty: qtyOf(t.status),
-  }));
+  const tabs = ITEM_TABS.map(t => {
+    const s = summaryOf(t.status);
+    return {
+      key: t.key,
+      label: t.label,
+      qtyText: `${s.records} record · ${s.pcs} pcs`,
+    };
+  });
 
   // Guard: "Tambah Item" hanya boleh jika ada session aktif.
   const handleAddItem = async () => {
@@ -159,14 +133,11 @@ const ItemTab = () => {
       <SegmentedTabs items={tabs} value={activeTab} onChange={setActiveTab} />
 
       <View style={styles.searchWrap}>
-        <SearchBar
+        <InputText
           value={query}
           onChangeText={setQuery}
-          onSubmit={() => setKeyword(query.trim())}
-          type={searchType}
-          types={SEARCH_TYPES}
-          onChangeType={setSearchType}
-          loading={loading}
+          placeholder="Cari customer..."
+          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
         />
       </View>
 
@@ -186,7 +157,7 @@ const ItemTab = () => {
               !activeSession
                 ? 'Tidak ada session aktif. Mulai session terlebih dahulu.'
                 : keyword
-                  ? `Tidak ada item untuk pencarian "${keyword}"`
+                  ? `Tidak ada item untuk pencarian "${query.trim()}"`
                   : 'Belum ada item'
             }
           />

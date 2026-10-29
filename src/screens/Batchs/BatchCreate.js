@@ -60,6 +60,8 @@ const BatchCreate = ({navigation, route}) => {
     return <ItemCard key={index} item={item} />;
   };
 
+  const totalPcs = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
       <StatusBar
@@ -69,7 +71,9 @@ const BatchCreate = ({navigation, route}) => {
       <Header title="Create Batch" />
       <View style={styles.container}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Item ({items.length})</Text>
+          <Text style={styles.listTitle}>
+            Item ({items.length} record · {totalPcs} pcs)
+          </Text>
         </View>
         <FlatList
           data={items}

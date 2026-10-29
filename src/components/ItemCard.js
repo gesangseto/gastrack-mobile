@@ -162,7 +162,9 @@ const ItemCard = ({
             </TouchableOpacity>
           </View>
         </View>
-        {showLineTotal && qty > 1 ? (
+        {/* Harga total baris = quantity pcs × harga satuan (selalu tampil
+            di list item agar total per baris langsung terbaca). */}
+        {showLineTotal && qty > 0 ? (
           <Text style={styles.lineTotal} numberOfLines={1}>
             {qty} pcs × {fmtMoney(unitPrice)} = {fmtMoney(lineTotal)}
           </Text>

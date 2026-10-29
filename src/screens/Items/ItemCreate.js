@@ -279,6 +279,15 @@ const ItemCreate = ({navigation, route}) => {
       });
       return;
     }
+    const qty = Number(formData.quantity);
+    if (!Number.isInteger(qty) || qty < 1) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Quantity harus bilangan bulat minimal 1',
+      });
+      return;
+    }
     // Guard create: wajib ada session aktif (edit item tidak butuh session baru)
     if (!formData.id) {
       const session = await useSessionStore.getState().ensureActiveSession();
@@ -365,7 +374,7 @@ const ItemCreate = ({navigation, route}) => {
           {text: 'Simpan', onPress: doSubmit},
         ],
       );
-    } else if (Number(formData.quantity) > 1) {
+    } else if (qty > 1) {
       Alert.alert(
         'Konfirmasi Harga',
         `${formData.quantity} pcs akan disimpan dalam satu baris.\n\nPastikan Cost Price dan Selling Price adalah harga per pcs, bukan harga total.`,

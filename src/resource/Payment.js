@@ -1,5 +1,7 @@
+import {Platform} from 'react-native';
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
+import {getEndpoint, getProfile} from '../storage';
 
 // Endpoint backend (module payment per-customer):
 // - GET  /api/v1/jastip/payment/summary      → ringkasan tagihan semua customer
@@ -81,7 +83,11 @@ export const getPaymentHistory = async (property = {}, useAlert = true) => {
 // Ringkasan tagihan satu customer (dipakai di PaymentCreate & detail tagihan).
 // sessionId opsional — filter item per session.
 // Resolve object summary atau null.
-export const getPaymentSummary = async (customerId, sessionId, useAlert = true) => {
+export const getPaymentSummary = async (
+  customerId,
+  sessionId,
+  useAlert = true,
+) => {
   const qs = new URLSearchParams();
   qs.append('customer_id', customerId);
   if (sessionId !== undefined && sessionId !== null && sessionId !== '') {
@@ -108,7 +114,11 @@ export const getPaymentSummary = async (customerId, sessionId, useAlert = true) 
 // Daftar item yang dipesan customer (detail tagihan).
 // Resolve array: [{id, product_id, barcode, product_name, quantity,
 //   selling_price, status, status_name, payment_status, session_id}]
-export const getPaymentItems = async (customerId, sessionId, useAlert = true) => {
+export const getPaymentItems = async (
+  customerId,
+  sessionId,
+  useAlert = true,
+) => {
   const qs = new URLSearchParams();
   qs.append('customer_id', customerId);
   if (sessionId !== undefined && sessionId !== null && sessionId !== '') {
@@ -157,6 +167,24 @@ export const createPayment = async (Params = {}, useAlert = true) => {
         return resolve(false);
       });
   });
+};
+
+// URL download invoice PDF (GET /api/v1/jastip/payment/invoice).
+// Dibuka langsung oleh browser/WebView, sehingga token & User-Type dikirim
+// lewat query (middleware backend menerima `?token=` dan `?User-Type=`).
+// Tanpa User-Type, browser tidak mengirim header tersebut → request dianggap
+// static-token user dan ditolak ("don't have any permission to access API").
+export const getInvoiceDownloadUrl = (customerId, sessionId) => {
+  const base = (getEndpoint() || '').replace(/\/+$/, '');
+  const token = getProfile()?.token || '';
+  const qs = new URLSearchParams();
+  qs.append('customer_id', customerId);
+  qs.append('session_id', sessionId);
+  qs.append('User-Type', Platform.OS === 'web' ? 'Website App' : 'Android App');
+  if (token) {
+    qs.append('token', token);
+  }
+  return `${base}${paymentUrl}/invoice?${qs.toString()}`;
 };
 
 // Kirim tagihan via WhatsApp (POST) — render template REQUEST_PAYMENT.

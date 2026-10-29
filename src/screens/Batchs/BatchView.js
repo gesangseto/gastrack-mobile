@@ -49,6 +49,17 @@ const BatchView = ({navigation, route}) => {
   const [warehouseId, setWarehouseId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Ringkasan isi batch = item yang masih dihitung (status 3 Destroyed &
+  // 206 Disposed tetap tampil di list sebagai jejak audit, tapi bukan isi
+  // batch) — sama dengan `item_batch.quantity` di backend.
+  const activeItems = list.filter(
+    it => ![3, 206].includes(Number(it.status)),
+  );
+  const totalPcs = activeItems.reduce(
+    (sum, it) => sum + (Number(it.quantity) || 0),
+    0,
+  );
+
   const loadWarehouse = async () => {
     let response = await getListMstWarehouse({status: 'Active'}, false);
     if (response) {
@@ -266,14 +277,17 @@ const BatchView = ({navigation, route}) => {
           </View>
         </View>
         <Text style={styles.headerMeta}>
-          {list.length} item • {moment(item?.created_date).format('DD MMM YYYY, HH:mm')}
+          {activeItems.length} record · {totalPcs} pcs •{' '}
+          {moment(item?.created_date).format('DD MMM YYYY, HH:mm')}
         </Text>
       </View>
 
       {/* List item batch */}
       <View style={styles.listContainer}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Item Batch ({list.length})</Text>
+          <Text style={styles.listTitle}>
+            Item Batch ({activeItems.length} record · {totalPcs} pcs)
+          </Text>
           {data?.status === 'Draft' && (
             <TouchableOpacity
               onPress={() =>

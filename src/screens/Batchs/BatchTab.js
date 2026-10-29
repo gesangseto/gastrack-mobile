@@ -57,16 +57,24 @@ const BatchTab = () => {
   // Filter client-side: tab Draft → status Draft, tab Shipping → status Shipping.
   const filteredList = list.filter(b => b.status === activeTab);
 
-  // Jumlah batch per status (badge tab) — dihitung dari data store.
-  // Ini quantity Batch (jumlah batch), bukan total quantity item di dalamnya.
-  const qtyOf = status =>
-    list.filter(b => b.status === status).length;
+  // Badge tab: jumlah record batch + total quantity (pcs) per status.
+  // Jumlah record = banyak baris item_batch; pcs = SUM(item_batch.quantity).
+  const summaryOf = status => {
+    const rows = list.filter(b => b.status === status);
+    return {
+      records: rows.length,
+      pcs: rows.reduce((sum, b) => sum + Number(b.quantity || 0), 0),
+    };
+  };
 
-  const tabs = BATCH_TABS.map(t => ({
-    key: t.key,
-    label: t.label,
-    qty: qtyOf(t.key),
-  }));
+  const tabs = BATCH_TABS.map(t => {
+    const s = summaryOf(t.key);
+    return {
+      key: t.key,
+      label: t.label,
+      qtyText: `${s.records} record · ${s.pcs} pcs`,
+    };
+  });
 
   // Guard: "Tambah Batch" hanya boleh jika ada session aktif.
   const handleAddBatch = async () => {

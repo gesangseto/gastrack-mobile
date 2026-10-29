@@ -19,7 +19,7 @@ import {fetchSessionStats} from '../../resource/Dashboard';
 
 // ===== Mapping status =====
 // Item stock: 200 Draft, 201 Manifesting, 202 In-Transit, 203 GRN,
-//             204 Dispatch, 205 Sold, 206 Disposed
+//             204 Dispatch, 205 Sold, 206 Disposed, 3 Destroyed
 const ITEM_STATUS = [
   {code: 200, label: 'Draft', color: '#9CA3AF'},
   {code: 201, label: 'Manifest', color: '#3B82F6'},
@@ -28,6 +28,7 @@ const ITEM_STATUS = [
   {code: 204, label: 'Dispatch', color: '#F97316'},
   {code: 205, label: 'Sold', color: '#10B981'},
   {code: 206, label: 'Disposed', color: '#EF4444'},
+  {code: 3, label: 'Destroyed', color: '#DC2626'},
 ];
 
 const fmt = v => {
@@ -143,11 +144,11 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   };
 
   // ===== Turunan data =====
-  // item_stock row = 1 batch input berisi `quantity` pcs. Jadi jumlah item
-  // yang ditampilkan = SUM(quantity) (pcs), sedangkan jumlah baris = batch.
+  // item_stock row = 1 input admin berisi `quantity` pcs. Jadi jumlah item
+  // yang ditampilkan = SUM(quantity) (pcs), sedangkan jumlah baris = record.
   const itemByStatus = data?.item_by_status || [];
   const totalPcs = sumBy(itemByStatus, 'total_quantity');
-  const totalBatches = sumBy(itemByStatus, 'total');
+  const totalRecords = sumBy(itemByStatus, 'total');
 
   const sold = data?.total_sales || {};
   const soldProfit = Number(sold.total_profit || 0);
@@ -442,7 +443,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Status Item</Text>
               <Text style={styles.cardTotal}>
-                {totalPcs} pcs · {totalBatches} batch
+                {totalPcs} pcs · {totalRecords} record
               </Text>
             </View>
             {totalPcs > 0 ? (

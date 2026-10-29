@@ -8,7 +8,7 @@
  *
  * Naikkan CACHE_VERSION setiap kali build agar cache lama dibuang.
  */
-const CACHE_VERSION = 'jastip-v2';
+const CACHE_VERSION = 'jastip-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', event => {
@@ -64,6 +64,10 @@ self.addEventListener('fetch', event => {
   }
 
   // Aset statis same-origin → cache-first.
+  // Pengecualian: bundle Metro (dev) memakai URL yang sama walau isinya berubah,
+  // jadi harus selalu diambil dari jaringan agar Hot Reload tidak basi.
+  if (url.pathname.includes('.bundle') || url.searchParams.has('hot')) return;
+
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;

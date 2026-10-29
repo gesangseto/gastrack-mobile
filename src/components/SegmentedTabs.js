@@ -2,11 +2,20 @@ import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import color from '../constant/color';
 
 // Tab segmen (pill) untuk filter status.
-// items: [{key, label, qty}] — qty (opsional) = total quantity group tsb.
+// items: [{key, label, qty, qtyLabel?, qtyText?}]
+// - qty      : angka ringkasan group tsb (suffix default "record")
+// - qtyLabel : suffix pengganti, mis. "pcs" / "batch"
+// - qtyText  : teks ringkasan bebas (mis. "3 batch · 25 pcs")
 const SegmentedTabs = ({items, value, onChange, style}) => (
   <View style={[styles.wrap, style]}>
     {items.map(item => {
       const active = item.key === value;
+      const qtyText =
+        item.qtyText != null
+          ? item.qtyText
+          : item.qty !== undefined && item.qty !== null
+            ? `${item.qty} ${item.qtyLabel || 'record'}`
+            : null;
       return (
         <TouchableOpacity
           key={item.key}
@@ -18,11 +27,11 @@ const SegmentedTabs = ({items, value, onChange, style}) => (
             numberOfLines={1}>
             {item.label}
           </Text>
-          {item.qty !== undefined && item.qty !== null && (
+          {qtyText !== null && (
             <Text
               style={[styles.tabQty, active && styles.tabQtyActive]}
               numberOfLines={1}>
-              {item.qty} record
+              {qtyText}
             </Text>
           )}
         </TouchableOpacity>

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
+import {PRICE_UNIT_LIST} from '../../constant/priceUnit';
 import {cancelItem, getListItem} from '../../resource/Item';
 import ImageThumbnail from '../../components/ImageThumbnail';
 import ImageViewer from '../../components/ImageViewer';
@@ -40,13 +41,24 @@ const calcProfit = item => {
   return sp - costIdr;
 };
 
+/**
+ * Suffix pengali kode harga, mis. selling_unit 'thousands' → " (000)".
+ */
+const codeUnitSuffix = unit =>
+  unit && unit !== 'none'
+    ? ` (${PRICE_UNIT_LIST.find(u => u.value === unit)?.multiplier || ''})`
+    : '';
+
 const ItemView = ({navigation, route}) => {
   let item = route.params?.item || {};
   const [visibleImageViewer, setVisibleImageViewer] = useState(false);
   const [profitMode, setProfitMode] = useState('local'); // 'local' | 'foreign'
 
   const handlePressDelete = () => {
-    Alert.alert('Hapus Item', 'Apakah anda yakin ingin menghapus item ini?', [
+    Alert.alert(
+      'Hapus Item',
+      'Item akan dihapus permanen dari database. Lanjutkan?',
+      [
       {text: 'Batal', style: 'cancel'},
       {
         text: 'Hapus',
@@ -80,7 +92,27 @@ const ItemView = ({navigation, route}) => {
     204: '#F97316',
     205: color.success,
     206: color.danger,
+    3: color.danger,
   };
+
+  // Edit/hapus hanya untuk draft yang belum diklaim batch/transaksi. Draft
+  // yang sudah masuk disposal (trx_model) tetap terkunci karena snapshot
+  // transaksinya sudah dibuat di backend.
+  const canEditDelete =
+    Number(item?.status) === 200 && !item?.batch_id && !item?.trx_model;
+
+  // Harga per pcs (mengikuti toggle mata uang) + total = qty × harga satuan
+  const qty = Number(item?.quantity || 0);
+  const unitCost = Number(item?.[`${profitMode}_cost`] || 0);
+  const unitSelling = Number(item?.[`${profitMode}_price`] || 0);
+  const unitShipping = Number(item?.[`${profitMode}_shipping`] || 0);
+  const unitProfit = Number(item?.[`${profitMode}_profit`] || 0);
+  const totalCost = unitCost * qty;
+  const totalSelling = unitSelling * qty;
+  const totalProfit = unitProfit * qty;
+  const priceCode = `${item?.cost_code || '-'}${codeUnitSuffix(
+    item?.cost_unit,
+  )} → ${item?.selling_code || '-'}${codeUnitSuffix(item?.selling_unit)}`;
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -104,7 +136,7 @@ const ItemView = ({navigation, route}) => {
             <Icon name="arrow-left" size={22} color={color.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Detail Item</Text>
-          {item?.status === 200 ? (
+          {canEditDelete ? (
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={handlePressEdit}
@@ -190,22 +222,18 @@ const ItemView = ({navigation, route}) => {
               </TouchableOpacity>
             </View>
           </View>
-          {/* Cost - Selling compact 2 kolom */}
+          {/* Cost - Selling compact 2 kolom (harga per pcs) */}
 
           <View style={styles.priceCard}>
             <View style={styles.priceGrid}>
               <View style={styles.priceCell}>
-                <Text style={styles.priceCellLabel}>Cost</Text>
-                <Text style={styles.priceCellValue}>
-                  {fmt(item[`${profitMode}_cost`])}
-                </Text>
+                <Text style={styles.priceCellLabel}>Cost /pcs</Text>
+                <Text style={styles.priceCellValue}>{fmt(unitCost)}</Text>
               </View>
               <View style={styles.priceCellDivider} />
               <View style={styles.priceCell}>
-                <Text style={styles.priceCellLabel}>Selling</Text>
-                <Text style={styles.priceCellValue}>
-                  {fmt(item[`${profitMode}_price`])}
-                </Text>
+                <Text style={styles.priceCellLabel}>Selling /pcs</Text>
+                <Text style={styles.priceCellValue}>{fmt(unitSelling)}</Text>
               </View>
             </View>
             {/* Shipment - Profit, compact 2 kolom */}
@@ -215,18 +243,36 @@ const ItemView = ({navigation, route}) => {
                 {borderTopWidth: 1, borderTopColor: '#F0F0F5'},
               ]}>
               <View style={styles.priceCell}>
-                <Text style={styles.priceCellLabel}>Shipment</Text>
-                <Text style={styles.priceCellValue}>
-                  {fmt(item[`${profitMode}_shipping`])}
-                </Text>
+                <Text style={styles.priceCellLabel}>Shipment /pcs</Text>
+                <Text style={styles.priceCellValue}>{fmt(unitShipping)}</Text>
               </View>
               <View style={styles.priceCellDivider} />
               <View style={styles.priceCell}>
-                <Text style={styles.priceCellLabel}>Profit</Text>
-                <Text style={styles.priceCellValue}>
-                  {fmt(item[`${profitMode}_profit`])}
-                </Text>
+                <Text style={styles.priceCellLabel}>Profit /pcs</Text>
+                <Text style={styles.priceCellValue}>{fmt(unitProfit)}</Text>
               </View>
+            </View>
+          </View>
+
+          {/* Ringkasan total = qty pcs × harga satuan */}
+          <View style={styles.totalCard}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Harga Total</Text>
+              <Text style={styles.totalGrand}>{fmt(totalSelling)}</Text>
+            </View>
+            <Text style={styles.totalFormula}>
+              {qty} pcs × {fmt(unitSelling)}/pcs
+            </Text>
+            <View style={styles.totalDivider} />
+            <View style={styles.totalRow}>
+              <Text style={styles.totalSubLabel}>Modal Total</Text>
+              <Text style={styles.totalSubValue}>{fmt(totalCost)}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalSubLabel}>Profit Total</Text>
+              <Text style={[styles.totalSubValue, styles.totalProfit]}>
+                {fmt(totalProfit)}
+              </Text>
             </View>
           </View>
         </View>
@@ -234,6 +280,11 @@ const ItemView = ({navigation, route}) => {
         {/* Detail compact */}
         <View style={styles.detailCard}>
           {[
+            {
+              label: 'Item',
+              value: item?.item_name || item?.product_name || '-',
+            },
+            {label: 'Kode Harga', value: priceCode},
             {label: 'Status', value: item?.status_name || '-'},
             {
               label: 'Qty',
@@ -361,6 +412,56 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#B0B0B0',
     marginTop: 2,
+  },
+  /* ---- Total Card ---- */
+  totalCard: {
+    backgroundColor: color.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E6E9F5',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  totalLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#555',
+  },
+  totalGrand: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: color.primaryColor,
+  },
+  totalFormula: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    marginTop: 1,
+    textAlign: 'right',
+  },
+  totalDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F5',
+    marginVertical: 8,
+  },
+  totalSubLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9A9A9A',
+  },
+  totalSubValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1F1F1F',
+  },
+  totalProfit: {
+    color: color.success,
   },
   /* ---- Profit Card ---- */
   profitCard: {
