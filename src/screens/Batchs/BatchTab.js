@@ -72,7 +72,7 @@ const BatchTab = () => {
     return {
       key: t.key,
       label: t.label,
-      qtyText: `${s.records} record · ${s.pcs} pcs`,
+      qtyText: `${s.records} rec · ${s.pcs} pcs`,
     };
   });
 

@@ -188,11 +188,6 @@ const PaymentCustomerDetail = ({route}) => {
                   {formatCurrency(summary?.remaining_amount)}
                 </Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <Text style={styles.summaryItems}>
-                {summary?.total_records || 0} record •{' '}
-                {summary?.total_quantity || 0} pcs
-              </Text>
             </View>
 
             {/* Daftar item yang dipesan — header fix, list scrollable */}
@@ -238,18 +233,20 @@ const PaymentCustomerDetail = ({route}) => {
                             {Number(item.quantity || 0)} pcs ×{' '}
                             {formatCurrency(item.local_price)}/pcs
                           </Text>
-                          <Text style={styles.itemTotal}>
-                            = {formatCurrency(total)}
-                          </Text>
                         </View>
                       </View>
-                      <View
-                        style={[
-                          styles.itemBadge,
-                          {backgroundColor: itemColor},
-                        ]}>
-                        <Text style={styles.itemBadgeText}>
-                          {item.status_name || item.status}
+                      <View style={styles.itemRight}>
+                        <View
+                          style={[
+                            styles.itemBadge,
+                            {backgroundColor: itemColor},
+                          ]}>
+                          <Text style={styles.itemBadgeText}>
+                            {item.status_name || item.status}
+                          </Text>
+                        </View>
+                        <Text style={styles.itemTotal} numberOfLines={1}>
+                          {formatCurrency(total)}
                         </Text>
                       </View>
                     </View>
@@ -411,15 +408,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: color.danger,
   },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: color.primaryLighter,
-    marginBottom: 5,
-  },
-  summaryItems: {
-    fontSize: 11,
-    color: '#9A9A9A',
-  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -496,6 +484,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#1F1F1F',
+    marginTop: 4,
   },
   itemForeign: {
     fontSize: 11,
@@ -508,11 +497,14 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     marginRight: 8,
   },
+  itemRight: {
+    alignItems: 'flex-end',
+    marginLeft: 8,
+  },
   itemBadge: {
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 6,
   },
   itemBadgeText: {
     fontSize: 9,

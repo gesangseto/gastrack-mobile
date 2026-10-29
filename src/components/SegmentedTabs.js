@@ -56,7 +56,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
     borderRadius: 9,
   },
   tabActive: {
@@ -77,10 +78,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tabQty: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     color: '#A9A9B2',
-    marginTop: 1,
+    marginTop: 0,
   },
   tabQtyActive: {
     color: color.primaryColor,

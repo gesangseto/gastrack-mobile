@@ -272,49 +272,52 @@ const PaymentTab = () => {
           })
         }
         key={item.customer_id}
-        style={styles.card}>
-        <View style={styles.iconBox}>
-          <Icon name="receipt-text" size={22} color={color.primaryColor} />
+        style={[styles.card, styles.billCard]}>
+        {/* Kiri: status + quantity */}
+        <View style={styles.billSide}>
+          <View
+            style={[
+              styles.badge,
+              styles.billBadge,
+              {backgroundColor: STATUS_COLOR[status] || '#C4C4C4'},
+            ]}>
+            <Text style={styles.badgeText}>{status}</Text>
+          </View>
+          <Text style={styles.billQty}>
+            {Number(item.total_records || 0)} record
+          </Text>
+          <Text style={styles.billQty}>
+            {Number(item.total_quantity || 0)} pcs
+          </Text>
         </View>
+        {/* Kiri 2: nama + label nominal; kanan: phone + nominal */}
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.customer_name || `Customer #${item.customer_id}`}
-          </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            {item.customer_phone || '—'}
-          </Text>
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Qty</Text>
-            <Text style={styles.amountItems}>
-              {Number(item.total_records || 0)} record •{' '}
-              {Number(item.total_quantity || 0)} pcs
+          <View style={styles.billRow}>
+            <Text style={[styles.name, styles.billName]} numberOfLines={1}>
+              {item.customer_name || `Customer #${item.customer_id}`}
+            </Text>
+            <Text style={styles.billPhone} numberOfLines={1}>
+              {item.customer_phone || '—'}
             </Text>
           </View>
-          <View style={styles.amountRow}>
+          <View style={[styles.billRow, styles.billAmountRow]}>
             <Text style={styles.amountLabel}>Tagihan</Text>
             <Text style={styles.amountValue}>
               {formatRupiah(item.grand_total)}
             </Text>
           </View>
-          <View style={styles.amountRow}>
+          <View style={[styles.billRow, styles.billAmountRow]}>
             <Text style={styles.amountLabel}>Dibayar</Text>
             <Text style={styles.amountPaid}>
               {formatRupiah(item.total_paid)}
             </Text>
           </View>
-          <View style={styles.amountRow}>
+          <View style={[styles.billRow, styles.billAmountRow]}>
             <Text style={styles.amountLabel}>Sisa</Text>
             <Text style={styles.amountRemaining}>
               {formatRupiah(item.remaining_amount)}
             </Text>
           </View>
-        </View>
-        <View
-          style={[
-            styles.badge,
-            {backgroundColor: STATUS_COLOR[status] || '#C4C4C4'},
-          ]}>
-          <Text style={styles.badgeText}>{status}</Text>
         </View>
       </Pressable>
     );
@@ -633,6 +636,22 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
   },
+  billCard: {
+    alignItems: 'flex-start',
+  },
+  billSide: {
+    width: 72,
+    alignItems: 'center',
+  },
+  billBadge: {
+    marginLeft: 0,
+  },
+  billQty: {
+    color: '#6A6A6A',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 3,
+  },
   iconBox: {
     width: 44,
     height: 44,
@@ -655,11 +674,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  amountRow: {
+  billRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
+  },
+  billName: {
+    flex: 1,
+  },
+  billPhone: {
+    color: '#9A9A9A',
+    fontSize: 11,
+    marginLeft: 8,
+  },
+  billAmountRow: {
+    marginTop: 3,
   },
   amountLabel: {
     color: '#9A9A9A',
@@ -670,11 +699,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
-  },
-  amountItems: {
-    color: '#6A6A6A',
-    fontSize: 11,
-    fontWeight: '600',
   },
   amountPaid: {
     color: color.success,
