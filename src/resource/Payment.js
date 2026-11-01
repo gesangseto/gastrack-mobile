@@ -220,14 +220,14 @@ export const sendInvoice = async (params = {}, useAlert = true) => {
 // Endpoint: POST /api/v1/jastip/payment/send-invoice-blast
 // Params: { session_id }
 // Resolve: { error: false, message, rows: [{ customer_id, customer_name,
-//   phone, status: 'sent'|'failed'|'skipped', message }] }
+//   phone, status: 'queued'|'skipped', message }] }
 //   atau { error: true, message } saat backend error / request gagal.
 // Catatan wire format: controller mengisi data.rows, tapi response helper
 // backend (app/configuration/response.js) memindahkan rows ke field `data`
 // — karenanya baca `data.rows || data.data` (sendInvoice existing juga
 // memakai data.data?.[0]).
 // Sukses TIDAK di-toast di sini (berbeda dengan sendInvoice) — caller
-// menampilkan ringkasan hasil blast (X terkirim / Y gagal / Z dilewati).
+// menampilkan ringkasan antrean (X masuk antrean / Y dilewati).
 export const sendInvoiceBlast = async (params = {}, useAlert = true) => {
   return new Promise(resolve => {
     $axios

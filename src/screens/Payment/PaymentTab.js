@@ -212,26 +212,26 @@ const PaymentTab = () => {
       );
       return;
     }
-    // Ringkasan hasil: hitung dari rows (sent/failed/skipped); fallback ke
-    // pesan dari backend bila rows tidak ada.
+    // Ringkasan hasil: backend mem-queue invoice (status 'queued') atau
+    // melewatinya ('skipped') — blast dikirim di background, jadi pesan sukses
+    // harus bicara soal antrean pengiriman, bukan "terkirim/gagal".
     const rows = Array.isArray(result.rows) ? result.rows : [];
-    const counts = rows.reduce(
-      (acc, row) => {
-        if (row.status === 'sent') {
-          acc.sent += 1;
-        } else if (row.status === 'failed') {
-          acc.failed += 1;
-        } else if (row.status === 'skipped') {
-          acc.skipped += 1;
-        }
-        return acc;
-      },
-      {sent: 0, failed: 0, skipped: 0},
-    );
+    let queued = 0;
+    let skipped = 0;
+    rows.forEach(row => {
+      if (!row) {
+        return;
+      }
+      if (row.status === 'queued') {
+        queued += 1;
+      } else if (row.status === 'skipped') {
+        skipped += 1;
+      }
+    });
     const summary = rows.length
-      ? `${counts.sent} terkirim, ${counts.failed} gagal, ${counts.skipped} dilewati`
-      : result.message || 'Tagihan terkirim';
-    Toast.show({type: 'success', text1: 'Berhasil', text2: summary});
+      ? `${queued} invoice masuk antrean, ${skipped} dilewati`
+      : result.message || 'Invoice dijadwalkan untuk dikirim';
+    Toast.show({type: 'success', text1: 'Blast Dijadwalkan', text2: summary});
   };
 
   // FAB Blast membuka modal checklist. Lista customer yang bisa dipilih =
