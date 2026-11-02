@@ -188,6 +188,36 @@ const PaymentCustomerDetail = ({route}) => {
                   {formatCurrency(summary?.remaining_amount)}
                 </Text>
               </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Invoice Terakhir</Text>
+                <Text
+                  style={[
+                    styles.summaryInvoice,
+                    summary?.invoice_status === 'sent'
+                      ? styles.summaryInvoiceSent
+                      : summary?.invoice_status === 'failed'
+                      ? styles.summaryInvoiceFailed
+                      : null,
+                  ]}>
+                  {summary?.invoice_status === 'sent'
+                    ? moment(summary.invoice_sent_at).format(
+                        'DD MMM YYYY, HH:mm',
+                      )
+                    : summary?.invoice_status === 'failed'
+                    ? `Gagal · ${moment(summary.invoice_attempt_at).format(
+                        'DD MMM YYYY, HH:mm',
+                      )}`
+                    : 'Belum terkirim'}
+                </Text>
+              </View>
+              {summary?.invoice_status === 'failed' && summary?.invoice_error ? (
+                <Text style={styles.invoiceErrorText} numberOfLines={4}>
+                  {summary.invoice_error_stage
+                    ? `[${summary.invoice_error_stage}] `
+                    : ''}
+                  {summary.invoice_error}
+                </Text>
+              ) : null}
             </View>
 
             {/* Daftar item yang dipesan — header fix, list scrollable */}
@@ -407,6 +437,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: color.danger,
+  },
+  summaryInvoice: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9A9A9A',
+  },
+  summaryInvoiceSent: {
+    color: color.success,
+  },
+  summaryInvoiceFailed: {
+    color: color.danger,
+  },
+  invoiceErrorText: {
+    fontSize: 11,
+    color: color.danger,
+    marginTop: 2,
   },
   sectionHeader: {
     flexDirection: 'row',

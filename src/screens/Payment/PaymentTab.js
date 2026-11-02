@@ -263,6 +263,22 @@ const PaymentTab = () => {
 
   const renderBill = item => {
     const status = item.payment_status || 'UNPAID';
+    const statusColor = STATUS_COLOR[status] || '#C4C4C4';
+    const remaining = Number(item.remaining_amount || 0);
+    const paidAmount = Number(item.total_paid || 0);
+    const invoiceStatus = item.invoice_status;
+    const invoiceColor =
+      invoiceStatus === 'sent'
+        ? color.success
+        : invoiceStatus === 'failed'
+        ? color.danger
+        : '#B9BDC6';
+    const invoiceText =
+      invoiceStatus === 'sent'
+        ? moment(item.invoice_sent_at).format('DD MMM HH:mm')
+        : invoiceStatus === 'failed'
+        ? moment(item.invoice_attempt_at).format('DD MMM HH:mm')
+        : 'Belum kirim';
     return (
       <Pressable
         onPress={() =>
@@ -272,51 +288,75 @@ const PaymentTab = () => {
           })
         }
         key={item.customer_id}
-        style={[styles.card, styles.billCard]}>
-        {/* Kiri: status + quantity */}
-        <View style={styles.billSide}>
-          <View
-            style={[
-              styles.badge,
-              styles.billBadge,
-              {backgroundColor: STATUS_COLOR[status] || '#C4C4C4'},
-            ]}>
-            <Text style={styles.badgeText}>{status}</Text>
-          </View>
-          <Text style={styles.billQty}>
-            {Number(item.total_records || 0)} record
-          </Text>
-          <Text style={styles.billQty}>
-            {Number(item.total_quantity || 0)} pcs
-          </Text>
-        </View>
-        {/* Kiri 2: nama + label nominal; kanan: phone + nominal */}
-        <View style={styles.info}>
-          <View style={styles.billRow}>
+        style={({pressed}) => [
+          styles.card,
+          styles.billCard,
+          pressed && styles.cardPressed,
+        ]}>
+        {/* Aksen kiri: warna status pembayaran, pengganti kolom badge lebar */}
+        <View style={[styles.billAccent, {backgroundColor: statusColor}]} />
+
+        <View style={styles.billBody}>
+          {/* Baris 1: nama + status */}
+          <View style={styles.billTopRow}>
             <Text style={[styles.name, styles.billName]} numberOfLines={1}>
               {item.customer_name || `Customer #${item.customer_id}`}
             </Text>
+            <View
+              style={[
+                styles.badge,
+                styles.billBadge,
+                {backgroundColor: statusColor},
+              ]}>
+              <Text style={styles.badgeText}>{status}</Text>
+            </View>
+          </View>
+
+          {/* Baris 2: telepon + sisa (info paling penting) */}
+          <View style={styles.billMidRow}>
             <Text style={styles.billPhone} numberOfLines={1}>
               {item.customer_phone || '—'}
             </Text>
-          </View>
-          <View style={[styles.billRow, styles.billAmountRow]}>
-            <Text style={styles.amountLabel}>Tagihan</Text>
-            <Text style={styles.amountValue}>
-              {formatRupiah(item.grand_total)}
+            <Text
+              style={[
+                styles.billRemaining,
+                remaining > 0 ? null : styles.billRemainingPaid,
+              ]}>
+              {remaining > 0 ? `- ${formatRupiah(remaining)}` : 'Lunas'}
             </Text>
           </View>
-          <View style={[styles.billRow, styles.billAmountRow]}>
-            <Text style={styles.amountLabel}>Dibayar</Text>
-            <Text style={styles.amountPaid}>
-              {formatRupiah(item.total_paid)}
+
+          {/* Baris 3: ringkasan + status invoice (ringkas, 1 baris) */}
+          <View style={styles.billBottomRow}>
+            <Text style={styles.billMeta} numberOfLines={1}>
+              dibayar {formatRupiah(paidAmount)} ·{' '}
+              {Number(item.total_quantity || 0)} pcs
             </Text>
-          </View>
-          <View style={[styles.billRow, styles.billAmountRow]}>
-            <Text style={styles.amountLabel}>Sisa</Text>
-            <Text style={styles.amountRemaining}>
-              {formatRupiah(item.remaining_amount)}
-            </Text>
+            <View style={styles.invoiceWrap}>
+              <Icon
+                name={
+                  invoiceStatus === 'sent'
+                    ? 'check'
+                    : invoiceStatus === 'failed'
+                    ? 'circle-x'
+                    : 'message-circle'
+                }
+                size={10}
+                color={invoiceColor}
+              />
+              <Text
+                style={[
+                  styles.invoiceLine,
+                  invoiceStatus === 'sent'
+                    ? styles.invoiceSent
+                    : invoiceStatus === 'failed'
+                    ? styles.invoiceFailed
+                    : null,
+                ]}
+                numberOfLines={1}>
+                {invoiceText}
+              </Text>
+            </View>
           </View>
         </View>
       </Pressable>
@@ -630,27 +670,72 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: color.white,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#F0F0F5',
-    padding: 12,
-    marginBottom: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  cardPressed: {
+    backgroundColor: '#FAFAFB',
   },
   billCard: {
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
+    padding: 0,
+    overflow: 'hidden',
   },
-  billSide: {
-    width: 72,
+  billAccent: {
+    width: 4,
+  },
+  billBody: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  billTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  billMidRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  billBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 3,
   },
   billBadge: {
-    marginLeft: 0,
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
-  billQty: {
-    color: '#6A6A6A',
+  billName: {
+    flex: 1,
+    marginRight: 8,
+  },
+  billMeta: {
+    flex: 1,
+    color: '#9A9A9A',
     fontSize: 10,
-    fontWeight: '600',
-    marginTop: 3,
+    marginRight: 8,
+  },
+  billRemaining: {
+    color: color.danger,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  billRemainingPaid: {
+    color: color.success,
+  },
+  invoiceWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconBox: {
     width: 44,
@@ -674,41 +759,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  billRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  billName: {
-    flex: 1,
-  },
   billPhone: {
+    flex: 1,
     color: '#9A9A9A',
     fontSize: 11,
-    marginLeft: 8,
+    marginRight: 8,
   },
-  billAmountRow: {
-    marginTop: 3,
-  },
-  amountLabel: {
+  invoiceLine: {
     color: '#9A9A9A',
-    fontSize: 11,
+    fontSize: 10,
+    marginLeft: 3,
+  },
+  invoiceSent: {
+    color: color.success,
+  },
+  invoiceFailed: {
+    color: color.danger,
   },
   amountValue: {
     color: '#1F1F1F',
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
-  },
-  amountPaid: {
-    color: color.success,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  amountRemaining: {
-    color: color.danger,
-    fontSize: 13,
-    fontWeight: '700',
   },
   date: {
     color: '#C4C4C4',
