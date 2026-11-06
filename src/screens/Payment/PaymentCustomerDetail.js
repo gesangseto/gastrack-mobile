@@ -20,6 +20,7 @@ import {
   getPaymentSummary,
   sendInvoice,
 } from '../../resource/Payment';
+import {downloadInvoicePdf} from '../../helper/downloadInvoice';
 import ImageThumbnail from '../../components/ImageThumbnail';
 
 // Detail tagihan customer — dibuka dari tab Pending/Paid di menu Payment.
@@ -55,6 +56,7 @@ const PaymentCustomerDetail = ({route}) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const mountedRef = useRef(true);
   useFocusEffect(
@@ -120,6 +122,14 @@ const PaymentCustomerDetail = ({route}) => {
     }
   };
 
+  // Download invoice PDF (endpoint backend /payment/invoice).
+  const handleDownloadInvoice = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    await downloadInvoicePdf(customer_id, session_id);
+    setDownloading(false);
+  };
+
   return (
     <View style={styles.screen}>
       <StatusBar
@@ -178,18 +188,45 @@ const PaymentCustomerDetail = ({route}) => {
                   {formatCurrency(summary?.remaining_amount)}
                 </Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <Text style={styles.summaryItems}>
-                {summary?.total_items || 0} item •{' '}
-                {summary?.total_quantity || 0} pcs
-              </Text>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Invoice Terakhir</Text>
+                <Text
+                  style={[
+                    styles.summaryInvoice,
+                    summary?.invoice_status === 'sent'
+                      ? styles.summaryInvoiceSent
+                      : summary?.invoice_status === 'failed'
+                      ? styles.summaryInvoiceFailed
+                      : null,
+                  ]}>
+                  {summary?.invoice_status === 'sent'
+                    ? moment(summary.invoice_sent_at).format(
+                        'DD MMM YYYY, HH:mm',
+                      )
+                    : summary?.invoice_status === 'failed'
+                    ? `Gagal · ${moment(summary.invoice_attempt_at).format(
+                        'DD MMM YYYY, HH:mm',
+                      )}`
+                    : 'Belum terkirim'}
+                </Text>
+              </View>
+              {summary?.invoice_status === 'failed' && summary?.invoice_error ? (
+                <Text style={styles.invoiceErrorText} numberOfLines={4}>
+                  {summary.invoice_error_stage
+                    ? `[${summary.invoice_error_stage}] `
+                    : ''}
+                  {summary.invoice_error}
+                </Text>
+              ) : null}
             </View>
 
             {/* Daftar item yang dipesan — header fix, list scrollable */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Item Dipesan</Text>
               <View style={styles.countBadge}>
-                <Text style={styles.countBadgeText}>{items.length} item</Text>
+                <Text style={styles.countBadgeText}>
+                  {items.length} record • {summary?.total_quantity || 0} pcs
+                </Text>
               </View>
             </View>
             <ScrollView
@@ -222,20 +259,24 @@ const PaymentCustomerDetail = ({route}) => {
                           {item.barcode || '-'}
                         </Text>
                         <View style={styles.itemPriceRow}>
-                          <Text style={styles.itemForeign}>
-                            {Number(item.local_price || 0).toLocaleString(
-                              'id-ID',
-                            )}
+                          <Text style={styles.itemQtyText}>
+                            {Number(item.quantity || 0)} pcs ×{' '}
+                            {formatCurrency(item.local_price)}/pcs
                           </Text>
                         </View>
                       </View>
-                      <View
-                        style={[
-                          styles.itemBadge,
-                          {backgroundColor: itemColor},
-                        ]}>
-                        <Text style={styles.itemBadgeText}>
-                          {item.status_name || item.status}
+                      <View style={styles.itemRight}>
+                        <View
+                          style={[
+                            styles.itemBadge,
+                            {backgroundColor: itemColor},
+                          ]}>
+                          <Text style={styles.itemBadgeText}>
+                            {item.status_name || item.status}
+                          </Text>
+                        </View>
+                        <Text style={styles.itemTotal} numberOfLines={1}>
+                          {formatCurrency(total)}
                         </Text>
                       </View>
                     </View>
@@ -243,11 +284,23 @@ const PaymentCustomerDetail = ({route}) => {
                 })
               )}
             </ScrollView>
+
+            {/* Total harga seluruh item tagihan + quantity (pcs) */}
+            {items.length > 0 && (
+              <View style={styles.totalBar}>
+                <Text style={styles.totalBarLabel}>
+                  Total Harga Item · {summary?.total_quantity || 0} pcs
+                </Text>
+                <Text style={styles.totalBarValue}>
+                  {formatCurrency(summary?.grand_total)}
+                </Text>
+              </View>
+            )}
           </>
         )}
       </View>
 
-      {/* Footer: Bayar Tagihan (75%) + Kirim Tagihan icon (25%) */}
+      {/* Footer: Bayar Tagihan + Download Invoice + Kirim Tagihan */}
       <View style={styles.footer}>
         <View style={styles.footerRow}>
           <TouchableOpacity
@@ -260,6 +313,19 @@ const PaymentCustomerDetail = ({route}) => {
             style={styles.payButtonInline}>
             <Icon name="wallet" size={18} color={color.white} />
             <Text style={styles.payButtonText}>Bayar Tagihan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleDownloadInvoice}
+            disabled={downloading || loading}
+            style={[
+              styles.downloadButtonInline,
+              (downloading || loading) && styles.saveButtonDisabled,
+            ]}>
+            {downloading ? (
+              <ActivityIndicator size="small" color={color.white} />
+            ) : (
+              <Icon name="download" size={18} color={color.white} />
+            )}
           </TouchableOpacity>
           {status !== 'PAID' && (
             <TouchableOpacity
@@ -372,14 +438,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: color.danger,
   },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: color.primaryLighter,
-    marginBottom: 5,
-  },
-  summaryItems: {
-    fontSize: 11,
+  summaryInvoice: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#9A9A9A',
+  },
+  summaryInvoiceSent: {
+    color: color.success,
+  },
+  summaryInvoiceFailed: {
+    color: color.danger,
+  },
+  invoiceErrorText: {
+    fontSize: 11,
+    color: color.danger,
+    marginTop: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -457,17 +530,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#1F1F1F',
+    marginTop: 4,
   },
   itemForeign: {
     fontSize: 11,
     fontWeight: '600',
     color: color.primaryColor,
   },
+  itemQtyText: {
+    fontSize: 11,
+    color: '#9A9A9A',
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  itemRight: {
+    alignItems: 'flex-end',
+    marginLeft: 8,
+  },
   itemBadge: {
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 6,
   },
   itemBadgeText: {
     fontSize: 9,
@@ -516,6 +599,36 @@ const styles = StyleSheet.create({
     height: 46,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  downloadButtonInline: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: color.success,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  totalBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F5',
+    paddingTop: 10,
+    marginTop: 4,
+  },
+  totalBarLabel: {
+    fontSize: 12,
+    color: '#6A6A6A',
+    fontWeight: '600',
+  },
+  totalBarValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: color.primaryColor,
   },
   hiddenIcon: {
     opacity: 0,

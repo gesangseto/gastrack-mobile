@@ -1,6 +1,11 @@
 import {MMKV} from 'react-native-mmkv';
 export const storage = new MMKV(); // Returns an MMKV Instance
 
+// Endpoint default diambil dari .env (EXPO_PUBLIC_API_URL).
+// Expo meng-inline variabel ini saat build; fallback dipakai bila .env kosong.
+const DEFAULT_ENDPOINT =
+  process.env.EXPO_PUBLIC_API_URL || 'https://api.jastipcenter.com';
+
 export const setProfile = data => {
   try {
     storage.set('profile', JSON.stringify(data));
@@ -18,7 +23,7 @@ export const getProfile = () => {
 export const getEndpoint = () => {
   try {
     let endpoint = storage.getString('endpoint');
-    if (!endpoint) endpoint = 'https://api.jastipcenter.com';
+    if (!endpoint) endpoint = DEFAULT_ENDPOINT;
     return endpoint;
   } catch (error) {
     return null;
@@ -26,7 +31,7 @@ export const getEndpoint = () => {
 };
 export const setEndpoint = string => {
   try {
-    if (!string) string = 'https://api.jastipcenter.com';
+    if (!string) string = DEFAULT_ENDPOINT;
     storage.set('endpoint', string);
     return string;
   } catch (error) {

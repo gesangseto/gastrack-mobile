@@ -1,5 +1,7 @@
+import {Platform} from 'react-native';
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
+import {getEndpoint, getProfile} from '../storage';
 
 // Endpoint backend (module payment per-customer):
 // - GET  /api/v1/jastip/payment/summary      → ringkasan tagihan semua customer
@@ -81,7 +83,11 @@ export const getPaymentHistory = async (property = {}, useAlert = true) => {
 // Ringkasan tagihan satu customer (dipakai di PaymentCreate & detail tagihan).
 // sessionId opsional — filter item per session.
 // Resolve object summary atau null.
-export const getPaymentSummary = async (customerId, sessionId, useAlert = true) => {
+export const getPaymentSummary = async (
+  customerId,
+  sessionId,
+  useAlert = true,
+) => {
   const qs = new URLSearchParams();
   qs.append('customer_id', customerId);
   if (sessionId !== undefined && sessionId !== null && sessionId !== '') {
@@ -108,7 +114,11 @@ export const getPaymentSummary = async (customerId, sessionId, useAlert = true) 
 // Daftar item yang dipesan customer (detail tagihan).
 // Resolve array: [{id, product_id, barcode, product_name, quantity,
 //   selling_price, status, status_name, payment_status, session_id}]
-export const getPaymentItems = async (customerId, sessionId, useAlert = true) => {
+export const getPaymentItems = async (
+  customerId,
+  sessionId,
+  useAlert = true,
+) => {
   const qs = new URLSearchParams();
   qs.append('customer_id', customerId);
   if (sessionId !== undefined && sessionId !== null && sessionId !== '') {
@@ -159,6 +169,24 @@ export const createPayment = async (Params = {}, useAlert = true) => {
   });
 };
 
+// URL download invoice PDF (GET /api/v1/jastip/payment/invoice).
+// Dibuka langsung oleh browser/WebView, sehingga token & User-Type dikirim
+// lewat query (middleware backend menerima `?token=` dan `?User-Type=`).
+// Tanpa User-Type, browser tidak mengirim header tersebut → request dianggap
+// static-token user dan ditolak ("don't have any permission to access API").
+export const getInvoiceDownloadUrl = (customerId, sessionId) => {
+  const base = (getEndpoint() || '').replace(/\/+$/, '');
+  const token = getProfile()?.token || '';
+  const qs = new URLSearchParams();
+  qs.append('customer_id', customerId);
+  qs.append('session_id', sessionId);
+  qs.append('User-Type', Platform.OS === 'web' ? 'Website App' : 'Android App');
+  if (token) {
+    qs.append('token', token);
+  }
+  return `${base}${paymentUrl}/invoice?${qs.toString()}`;
+};
+
 // Kirim tagihan via WhatsApp (POST) — render template REQUEST_PAYMENT.
 // Params: { customer_id, session_id }
 // Resolve: { message, rows: [{ customer_id, phone, message }] }
@@ -192,14 +220,14 @@ export const sendInvoice = async (params = {}, useAlert = true) => {
 // Endpoint: POST /api/v1/jastip/payment/send-invoice-blast
 // Params: { session_id }
 // Resolve: { error: false, message, rows: [{ customer_id, customer_name,
-//   phone, status: 'sent'|'failed'|'skipped', message }] }
+//   phone, status: 'queued'|'skipped', message }] }
 //   atau { error: true, message } saat backend error / request gagal.
 // Catatan wire format: controller mengisi data.rows, tapi response helper
 // backend (app/configuration/response.js) memindahkan rows ke field `data`
 // — karenanya baca `data.rows || data.data` (sendInvoice existing juga
 // memakai data.data?.[0]).
 // Sukses TIDAK di-toast di sini (berbeda dengan sendInvoice) — caller
-// menampilkan ringkasan hasil blast (X terkirim / Y gagal / Z dilewati).
+// menampilkan ringkasan antrean (X masuk antrean / Y dilewati).
 export const sendInvoiceBlast = async (params = {}, useAlert = true) => {
   return new Promise(resolve => {
     $axios

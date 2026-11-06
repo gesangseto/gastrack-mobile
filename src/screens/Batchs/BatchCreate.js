@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import ItemCard from '../../components/ItemCard';
+import LoadingButton from '../../components/LoadingButton';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -18,7 +20,9 @@ import {useSessionStore} from '../../store/sessionStore';
 
 const BatchCreate = ({navigation, route}) => {
   const [items, setItems] = useState([]);
-  const [saving, setSaving] = useState(false);
+  // Guard anti-duplikat: `busy` untuk tampilan, `submit` menolak request
+  // kedua secara sinkron walau double-tap.
+  const {busy: saving, submit} = useSubmitGuard();
 
   useEffect(() => {
     loadItems();
@@ -45,16 +49,18 @@ const BatchCreate = ({navigation, route}) => {
       });
       return;
     }
-    setSaving(true);
     // Weight & Tujuan diisi saat kirim (Detail Batch)
-    let submit = await createBatch({items: items.map(i => ({id: i.id}))});
-    setSaving(false);
-    if (submit) RootNavigation.goBack();
+    await submit(async () => {
+      const created = await createBatch({items: items.map(i => ({id: i.id}))});
+      if (created) RootNavigation.goBack();
+    });
   };
 
   const renderItem = (item, index) => {
     return <ItemCard key={index} item={item} />;
   };
+
+  const totalPcs = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
 
   return (
     <View style={{flex: 1, backgroundColor: color.white}}>
@@ -65,7 +71,9 @@ const BatchCreate = ({navigation, route}) => {
       <Header title="Create Batch" />
       <View style={styles.container}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Item ({items.length})</Text>
+          <Text style={styles.listTitle}>
+            Item ({items.length} record · {totalPcs} pcs)
+          </Text>
         </View>
         <FlatList
           data={items}
@@ -78,17 +86,15 @@ const BatchCreate = ({navigation, route}) => {
           }
         />
 
-        <TouchableOpacity
-          onPress={() => save()}
-          disabled={saving || items.length === 0}
-          style={[
-            styles.saveButton,
-            (saving || items.length === 0) && styles.btnDisabled,
-          ]}>
-          <Text style={styles.saveButtonText}>
-            {saving ? 'Membuat...' : 'Create Batch'}
-          </Text>
-        </TouchableOpacity>
+        <LoadingButton
+          onPress={save}
+          busy={saving}
+          disabled={items.length === 0}
+          label="Create Batch"
+          busyLabel="Membuat..."
+          icon="package"
+          style={{marginTop: 10, marginBottom: 30, height: 50, borderRadius: 20}}
+        />
       </View>
     </View>
   );

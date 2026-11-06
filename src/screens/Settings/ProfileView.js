@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import InputText from '../../components/InputText';
+import LoadingButton from '../../components/LoadingButton';
+import useSubmitGuard from '../../hooks/useSubmitGuard';
 import * as RootNavigation from '../../config/RootNavigation';
 import color from '../../constant/color';
 import Header from '../../layouts/Header';
@@ -22,7 +24,8 @@ const ProfileView = ({navigation, route}) => {
     email: profile.email || '',
     phone: profile.phone || '',
   });
-  const [saving, setSaving] = useState(false);
+  // Guard anti-duplikat submit (ref lock sinkron + status untuk tombol)
+  const {busy: saving, submit} = useSubmitGuard();
 
   const save = async () => {
     if (!form.full_name || !form.email) {
@@ -33,41 +36,41 @@ const ProfileView = ({navigation, route}) => {
       });
       return;
     }
-    setSaving(true);
-    try {
-      const res = await $axios.post('/api/v1/master/user', {
-        id: profile.id,
-        full_name: form.full_name,
-        email: form.email,
-        phone: form.phone,
-      });
-      const data = res.data;
-      if (data.error) {
+    // `submit` menolak request kedua secara sinkron (ref lock) — double-tap
+    // pada tombol Simpan tidak pernah mengirim dua update profile.
+    await submit(async () => {
+      try {
+        const res = await $axios.post('/api/v1/master/user', {
+          id: profile.id,
+          full_name: form.full_name,
+          email: form.email,
+          phone: form.phone,
+        });
+        const data = res.data;
+        if (data.error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message,
+          });
+          return;
+        }
+        // Perbarui profile di MMKV agar tampilan tetap sinkron
+        setProfile({...profile, ...form});
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Profil tersimpan',
+        });
+        RootNavigation.goBack();
+      } catch (e) {
         Toast.show({
           type: 'error',
-          text1: 'Error',
-          text2: data.message,
+          text1: 'Server Error',
+          text2: e?.message || e,
         });
-        setSaving(false);
-        return;
       }
-      // Perbarui profile di MMKV agar tampilan tetap sinkron
-      setProfile({...profile, ...form});
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'Profil tersimpan',
-      });
-      setSaving(false);
-      RootNavigation.goBack();
-    } catch (e) {
-      Toast.show({
-        type: 'error',
-        text1: 'Server Error',
-        text2: e?.message || e,
-      });
-      setSaving(false);
-    }
+    });
   };
 
   return (
@@ -80,9 +83,6 @@ const ProfileView = ({navigation, route}) => {
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Informasi Login User</Text>
-          <Text style={styles.sectionDesc}>
-            Data ini tersimpan di mst_user dan dipakai untuk login aplikasi.
-          </Text>
 
           <InputText
             label="Username"
@@ -116,14 +116,14 @@ const ProfileView = ({navigation, route}) => {
             keyboardType="phone-pad"
           />
 
-          <TouchableOpacity
+          <LoadingButton
             onPress={save}
-            disabled={saving}
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}>
-            <Text style={styles.saveButtonText}>
-              {saving ? 'Menyimpan...' : 'Simpan Profil'}
-            </Text>
-          </TouchableOpacity>
+            busy={saving}
+            label="Simpan Profil"
+            busyLabel="Menyimpan..."
+            icon="check"
+            style={styles.saveButton}
+          />
         </ScrollView>
       </View>
     </View>
@@ -145,11 +145,6 @@ const styles = StyleSheet.create({
     color: color.primaryColor,
     fontSize: 18,
     fontWeight: '700',
-  },
-  sectionDesc: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
     marginBottom: 18,
   },
   saveButton: {

@@ -25,7 +25,7 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {getListMstWarehouse} from '../../resource/MstWarehouse';
-import {fetchDashboard} from '../../resource/Dashboard';
+import {getSysConfig} from '../../storage';
 
 const BatchView = ({navigation, route}) => {
   let item = route.params?.item || {};
@@ -34,7 +34,12 @@ const BatchView = ({navigation, route}) => {
   const [weight, setWeight] = useState('');
   const [shipmentNumber, setShipmentNumber] = useState('');
   const [shipmentPrice, setShipmentPrice] = useState('');
-  const [shipmentCurrency, setShipmentCurrency] = useState('IDR');
+  // Default currency mengikuti `sys_configuration_mst.currency` (setting
+  // aplikasi), bukan hardcode. Nilai ini dibaca sinkron dari MMKV sehingga
+  // field terisi tepat sejak form dibuka — tanpa menunggu request dashboard.
+  const [shipmentCurrency, setShipmentCurrency] = useState(
+    () => getSysConfig()?.currency || 'IDR',
+  );
   const [showShipForm, setShowShipForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shipping, setShipping] = useState(false);
@@ -43,6 +48,17 @@ const BatchView = ({navigation, route}) => {
   const [warehouseList, setWarehouseList] = useState([]);
   const [warehouseId, setWarehouseId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Ringkasan isi batch = item yang masih dihitung (status 3 Destroyed &
+  // 206 Disposed tetap tampil di list sebagai jejak audit, tapi bukan isi
+  // batch) — sama dengan `item_batch.quantity` di backend.
+  const activeItems = list.filter(
+    it => ![3, 206].includes(Number(it.status)),
+  );
+  const totalPcs = activeItems.reduce(
+    (sum, it) => sum + (Number(it.quantity) || 0),
+    0,
+  );
 
   const loadWarehouse = async () => {
     let response = await getListMstWarehouse({status: 'Active'}, false);
@@ -55,13 +71,14 @@ const BatchView = ({navigation, route}) => {
     }
   };
 
-  // Default shipment currency dari session jastip aktif
+  // Currency default untuk form shipping.
+  //
+  // Sumber TUNGGAL: `sys_configuration_mst.currency`. Currency session jastip
+  // aktif TIDAK dipakai lagi — session memakai mata uang negara tujuan
+  // (mis. THB untuk Thailand), sedangkan ongkos kirim selalu dalam mata uang
+  // default aplikasi. Field yang sudah diisi user tidak ditimpa.
   const loadSessionCurrency = async () => {
-    const d = await fetchDashboard(false);
-    const cur = d?.active_session?.currency_code;
-    if (cur) {
-      setShipmentCurrency(cur);
-    }
+    setShipmentCurrency(prev => prev || getSysConfig()?.currency || 'IDR');
   };
 
   const loadData = async () => {
@@ -260,14 +277,17 @@ const BatchView = ({navigation, route}) => {
           </View>
         </View>
         <Text style={styles.headerMeta}>
-          {list.length} item • {moment(item?.created_date).format('DD MMM YYYY, HH:mm')}
+          {activeItems.length} record · {totalPcs} pcs •{' '}
+          {moment(item?.created_date).format('DD MMM YYYY, HH:mm')}
         </Text>
       </View>
 
       {/* List item batch */}
       <View style={styles.listContainer}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Item Batch ({list.length})</Text>
+          <Text style={styles.listTitle}>
+            Item Batch ({activeItems.length} record · {totalPcs} pcs)
+          </Text>
           {data?.status === 'Draft' && (
             <TouchableOpacity
               onPress={() =>
@@ -368,7 +388,7 @@ const BatchView = ({navigation, route}) => {
                 autoCapitalize="characters"
               />
               <Text style={styles.currencyHint}>
-                Default dari session jastip aktif ({shipmentCurrency}).
+                Default dari pengaturan aplikasi ({shipmentCurrency}).
               </Text>
               <View style={styles.formActions}>
                 <TouchableOpacity

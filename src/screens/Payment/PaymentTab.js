@@ -15,6 +15,7 @@ import {
 import DropDownPicker from 'react-native-dropdown-picker';
 import moment from 'moment';
 import Toast from 'react-native-toast-message';
+import BlastCustomerPicker from '../../components/BlastCustomerPicker';
 import InputText from '../../components/InputText';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import * as RootNavigation from '../../config/RootNavigation';
@@ -73,10 +74,11 @@ const PaymentTab = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
-  const [historyQuery, setHistoryQuery] = useState('');
   // Blast tagihan (kirim invoice ke semua customer belum lunas pada session
   // terpilih) — state `blasting` menahan tombol saat request berjalan.
   const [blasting, setBlasting] = useState(false);
+  // Modal checklist customer — fab Blast membukanya, bukan langsung mengirim.
+  const [blastPickerOpen, setBlastPickerOpen] = useState(false);
 
   // Session dropdown — daftar session dari store (cache MMKV). Tidak
   // di-fetch ulang saat kembali ke layar; refresh hanya via pull-to-refresh.
@@ -179,12 +181,26 @@ const PaymentTab = () => {
   // ===== Blast tagihan (FAB) — kirim invoice ke semua customer belum lunas =====
   // Jalankan request blast. Session id diambil dari session terpilih di store
   // (sumber yang sama dengan filter list & navigasi detail), bukan hardcode.
-  const handleBlast = async () => {
+  const handleBlast = async customerIds => {
     if (blasting) {
       return;
     }
+    if (!customerIds || customerIds.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Blast Tagihan',
+        text2: 'Pilih minimal satu customer terlebih dahulu',
+      });
+      return;
+    }
     setBlasting(true);
-    const result = await sendInvoiceBlast({session_id: sessionValue}, false);
+    setBlastPickerOpen(false);
+    // Kirim HANYA customer yang dicentang — backend menerima `customer_ids`
+    // sebagai subset filter (lihat payment.js::sendInvoiceBlast).
+    const result = await sendInvoiceBlast(
+      {session_id: sessionValue, customer_ids: customerIds},
+      false,
+    );
     setBlasting(false);
     if (!mountedRef.current) {
       return;
@@ -196,30 +212,32 @@ const PaymentTab = () => {
       );
       return;
     }
-    // Ringkasan hasil: hitung dari rows (sent/failed/skipped); fallback ke
-    // pesan dari backend bila rows tidak ada.
+    // Ringkasan hasil: backend mem-queue invoice (status 'queued') atau
+    // melewatinya ('skipped') — blast dikirim di background, jadi pesan sukses
+    // harus bicara soal antrean pengiriman, bukan "terkirim/gagal".
     const rows = Array.isArray(result.rows) ? result.rows : [];
-    const counts = rows.reduce(
-      (acc, row) => {
-        if (row.status === 'sent') {
-          acc.sent += 1;
-        } else if (row.status === 'failed') {
-          acc.failed += 1;
-        } else if (row.status === 'skipped') {
-          acc.skipped += 1;
-        }
-        return acc;
-      },
-      {sent: 0, failed: 0, skipped: 0},
-    );
+    let queued = 0;
+    let skipped = 0;
+    rows.forEach(row => {
+      if (!row) {
+        return;
+      }
+      if (row.status === 'queued') {
+        queued += 1;
+      } else if (row.status === 'skipped') {
+        skipped += 1;
+      }
+    });
     const summary = rows.length
-      ? `${counts.sent} terkirim, ${counts.failed} gagal, ${counts.skipped} dilewati`
-      : result.message || 'Tagihan terkirim';
-    Toast.show({type: 'success', text1: 'Berhasil', text2: summary});
+      ? `${queued} invoice masuk antrean, ${skipped} dilewati`
+      : result.message || 'Invoice dijadwalkan untuk dikirim';
+    Toast.show({type: 'success', text1: 'Blast Dijadwalkan', text2: summary});
   };
 
-  // Konfirmasi sebelum blast (tombol Batal / Kirim).
-  const handleConfirmBlast = () => {
+  // FAB Blast membuka modal checklist. Lista customer yang bisa dipilih =
+  // customer dengan sisa tagihan > 0 pada tab Pending (data yang sudah
+  // difilter di `pending`). Tanpa session terpilih tidak ada yang bisa dikirim.
+  const handleOpenBlastPicker = () => {
     if (blasting) {
       return;
     }
@@ -227,39 +245,40 @@ const PaymentTab = () => {
       Alert.alert('Blast Tagihan', 'Pilih session terlebih dahulu.');
       return;
     }
-    Alert.alert(
-      'Blast Tagihan',
-      'Kirim tagihan ke semua customer yang belum lunas di session ini?',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {text: 'Kirim', onPress: handleBlast},
-      ],
-    );
+    setBlastPickerOpen(true);
   };
 
   // Filter customer by nama / no. HP (tab Pending & Paid)
   const kw = query.trim().toLowerCase();
-  const filteredBills = bills.filter(
-    b =>
-      !kw ||
-      (b.customer_name || '').toLowerCase().includes(kw) ||
-      (b.customer_phone || '').toLowerCase().includes(kw),
-  );
+  const matchesCustomer = row =>
+    !kw ||
+    (row.customer_name || '').toLowerCase().includes(kw) ||
+    (row.customer_phone || '').toLowerCase().includes(kw);
+  const filteredBills = bills.filter(matchesCustomer);
   const pending = filteredBills.filter(b => Number(b.remaining_amount) > 0);
   const paid = filteredBills.filter(b => Number(b.remaining_amount) <= 0);
 
-  // Filter riwayat by nama / no. HP / referensi
-  const hkw = historyQuery.trim().toLowerCase();
-  const filteredHistory = history.filter(
-    h =>
-      !hkw ||
-      (h.customer_name || '').toLowerCase().includes(hkw) ||
-      (h.customer_phone || '').toLowerCase().includes(hkw) ||
-      (h.reference_number || '').toLowerCase().includes(hkw),
-  );
+  // Tab Riwayat memakai pencarian customer yang sama (nama / no. HP).
+  const filteredHistory = history.filter(matchesCustomer);
 
   const renderBill = item => {
     const status = item.payment_status || 'UNPAID';
+    const statusColor = STATUS_COLOR[status] || '#C4C4C4';
+    const remaining = Number(item.remaining_amount || 0);
+    const paidAmount = Number(item.total_paid || 0);
+    const invoiceStatus = item.invoice_status;
+    const invoiceColor =
+      invoiceStatus === 'sent'
+        ? color.success
+        : invoiceStatus === 'failed'
+        ? color.danger
+        : '#B9BDC6';
+    const invoiceText =
+      invoiceStatus === 'sent'
+        ? moment(item.invoice_sent_at).format('DD MMM HH:mm')
+        : invoiceStatus === 'failed'
+        ? moment(item.invoice_attempt_at).format('DD MMM HH:mm')
+        : 'Belum kirim';
     return (
       <Pressable
         onPress={() =>
@@ -269,42 +288,76 @@ const PaymentTab = () => {
           })
         }
         key={item.customer_id}
-        style={styles.card}>
-        <View style={styles.iconBox}>
-          <Icon name="receipt-text" size={22} color={color.primaryColor} />
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.customer_name || `Customer #${item.customer_id}`}
-          </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            {item.customer_phone || '—'}
-          </Text>
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Tagihan</Text>
-            <Text style={styles.amountValue}>
-              {formatRupiah(item.grand_total)}
+        style={({pressed}) => [
+          styles.card,
+          styles.billCard,
+          pressed && styles.cardPressed,
+        ]}>
+        {/* Aksen kiri: warna status pembayaran, pengganti kolom badge lebar */}
+        <View style={[styles.billAccent, {backgroundColor: statusColor}]} />
+
+        <View style={styles.billBody}>
+          {/* Baris 1: nama + status */}
+          <View style={styles.billTopRow}>
+            <Text style={[styles.name, styles.billName]} numberOfLines={1}>
+              {item.customer_name || `Customer #${item.customer_id}`}
+            </Text>
+            <View
+              style={[
+                styles.badge,
+                styles.billBadge,
+                {backgroundColor: statusColor},
+              ]}>
+              <Text style={styles.badgeText}>{status}</Text>
+            </View>
+          </View>
+
+          {/* Baris 2: telepon + sisa (info paling penting) */}
+          <View style={styles.billMidRow}>
+            <Text style={styles.billPhone} numberOfLines={1}>
+              {item.customer_phone || '—'}
+            </Text>
+            <Text
+              style={[
+                styles.billRemaining,
+                remaining > 0 ? null : styles.billRemainingPaid,
+              ]}>
+              {remaining > 0 ? `- ${formatRupiah(remaining)}` : 'Lunas'}
             </Text>
           </View>
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Dibayar</Text>
-            <Text style={styles.amountPaid}>
-              {formatRupiah(item.total_paid)}
+
+          {/* Baris 3: ringkasan + status invoice (ringkas, 1 baris) */}
+          <View style={styles.billBottomRow}>
+            <Text style={styles.billMeta} numberOfLines={1}>
+              dibayar {formatRupiah(paidAmount)} ·{' '}
+              {Number(item.total_quantity || 0)} pcs
             </Text>
+            <View style={styles.invoiceWrap}>
+              <Icon
+                name={
+                  invoiceStatus === 'sent'
+                    ? 'check'
+                    : invoiceStatus === 'failed'
+                    ? 'circle-x'
+                    : 'message-circle'
+                }
+                size={10}
+                color={invoiceColor}
+              />
+              <Text
+                style={[
+                  styles.invoiceLine,
+                  invoiceStatus === 'sent'
+                    ? styles.invoiceSent
+                    : invoiceStatus === 'failed'
+                    ? styles.invoiceFailed
+                    : null,
+                ]}
+                numberOfLines={1}>
+                {invoiceText}
+              </Text>
+            </View>
           </View>
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Sisa</Text>
-            <Text style={styles.amountRemaining}>
-              {formatRupiah(item.remaining_amount)}
-            </Text>
-          </View>
-        </View>
-        <View
-          style={[
-            styles.badge,
-            {backgroundColor: STATUS_COLOR[status] || '#C4C4C4'},
-          ]}>
-          <Text style={styles.badgeText}>{status}</Text>
         </View>
       </Pressable>
     );
@@ -345,13 +398,22 @@ const PaymentTab = () => {
   };
 
   const list =
-    activeTab === 'Pending' ? pending : activeTab === 'Paid' ? paid : filteredHistory;
+    activeTab === 'Pending'
+      ? pending
+      : activeTab === 'Paid'
+      ? paid
+      : filteredHistory;
   const renderItem = activeTab === 'Riwayat' ? renderHistory : renderBill;
 
   const tabs = [
-    {key: 'Pending', label: 'Pending', qty: pending.length},
-    {key: 'Paid', label: 'Paid', qty: paid.length},
-    {key: 'Riwayat', label: 'Riwayat', qty: history.length},
+    {
+      key: 'Pending',
+      label: 'Pending',
+      qty: pending.length,
+      qtyLabel: 'customer',
+    },
+    {key: 'Paid', label: 'Paid', qty: paid.length, qtyLabel: 'customer'},
+    {key: 'Riwayat', label: 'Riwayat', qty: history.length, qtyLabel: 'trx'},
   ];
 
   const emptyText =
@@ -423,25 +485,13 @@ const PaymentTab = () => {
         />
       </View>
 
-      {/* Pencarian customer (tab Pending & Paid) */}
-      {activeTab !== 'Riwayat' && (
-        <InputText
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Cari customer..."
-          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
-        />
-      )}
-
-      {/* Pencarian riwayat */}
-      {activeTab === 'Riwayat' && (
-        <InputText
-          value={historyQuery}
-          onChangeText={setHistoryQuery}
-          placeholder="Cari nama / no HP / referensi..."
-          rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
-        />
-      )}
+      {/* Pencarian customer — berlaku untuk semua tab (Pending, Paid, Riwayat) */}
+      <InputText
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Cari customer..."
+        rightIcon={<Icon name="search" size={18} color="#9CA3AF" />}
+      />
 
       <SegmentedTabs
         items={tabs}
@@ -476,12 +526,12 @@ const PaymentTab = () => {
           />
         )}
 
-        {/* FAB Blast — kirim tagihan ke semua customer belum lunas pada
-            session terpilih (tab Pending). Di-disable selama request jalan. */}
+        {/* FAB Blast — membuka modal checklist customer. Di-disable selama
+            request blast berjalan. */}
         {activeTab === 'Pending' && (
           <TouchableOpacity
             style={[styles.fab, blasting && styles.fabDisabled]}
-            onPress={handleConfirmBlast}
+            onPress={handleOpenBlastPicker}
             disabled={blasting}
             activeOpacity={0.8}>
             {blasting ? (
@@ -494,6 +544,15 @@ const PaymentTab = () => {
             )}
           </TouchableOpacity>
         )}
+
+        {/* Modal checklist customer untuk blast tagihan. */}
+        <BlastCustomerPicker
+          visible={blastPickerOpen}
+          customers={pending}
+          busy={blasting}
+          onClose={() => setBlastPickerOpen(false)}
+          onConfirm={handleBlast}
+        />
       </View>
     </View>
   );
@@ -611,11 +670,72 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: color.white,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#F0F0F5',
-    padding: 12,
-    marginBottom: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  cardPressed: {
+    backgroundColor: '#FAFAFB',
+  },
+  billCard: {
+    alignItems: 'stretch',
+    padding: 0,
+    overflow: 'hidden',
+  },
+  billAccent: {
+    width: 4,
+  },
+  billBody: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  billTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  billMidRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  billBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 3,
+  },
+  billBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  billName: {
+    flex: 1,
+    marginRight: 8,
+  },
+  billMeta: {
+    flex: 1,
+    color: '#9A9A9A',
+    fontSize: 10,
+    marginRight: 8,
+  },
+  billRemaining: {
+    color: color.danger,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  billRemainingPaid: {
+    color: color.success,
+  },
+  invoiceWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconBox: {
     width: 44,
@@ -639,31 +759,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  amountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  amountLabel: {
+  billPhone: {
+    flex: 1,
     color: '#9A9A9A',
     fontSize: 11,
+    marginRight: 8,
+  },
+  invoiceLine: {
+    color: '#9A9A9A',
+    fontSize: 10,
+    marginLeft: 3,
+  },
+  invoiceSent: {
+    color: color.success,
+  },
+  invoiceFailed: {
+    color: color.danger,
   },
   amountValue: {
     color: '#1F1F1F',
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
-  },
-  amountPaid: {
-    color: color.success,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  amountRemaining: {
-    color: color.danger,
-    fontSize: 13,
-    fontWeight: '700',
   },
   date: {
     color: '#C4C4C4',

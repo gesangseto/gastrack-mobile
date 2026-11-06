@@ -72,6 +72,7 @@ const ListViewItem = props => {
         size={44}
         onPress={() => RootNavigation.navigate('ItemView', {item: item})}
         priceCycle
+        showLineTotal
         session={session}
         config={config}
         configSymbol={configSymbol}

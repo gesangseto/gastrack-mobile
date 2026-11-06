@@ -23,8 +23,7 @@ import {getListMessageTemplate} from '../../resource/MessageTemplate';
 const getController = metadata => {
   if (!metadata) return '';
   try {
-    const meta =
-      typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+    const meta = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
     return meta?.controller || '';
   } catch (e) {
     return '';
@@ -113,14 +112,8 @@ const MessageTemplateList = () => {
             <Text style={styles.detailValueMono}>{item?.code}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>• Trigger Event:</Text>
-            <Text style={styles.detailValueMono}>{item?.trigger_event}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>• Kapan Dikirim:</Text>
-            <Text style={styles.detailValue}>
-              {item?.description || '-'}
-            </Text>
+            <Text style={styles.detailLabel}>• Description:</Text>
+            <Text style={styles.detailValue}>{item?.description || '-'}</Text>
           </View>
           {!!controller && (
             <View style={styles.detailRow}>

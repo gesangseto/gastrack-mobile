@@ -19,7 +19,7 @@ import {fetchSessionStats} from '../../resource/Dashboard';
 
 // ===== Mapping status =====
 // Item stock: 200 Draft, 201 Manifesting, 202 In-Transit, 203 GRN,
-//             204 Dispatch, 205 Sold, 206 Disposed
+//             204 Dispatch, 205 Sold, 206 Disposed, 3 Destroyed
 const ITEM_STATUS = [
   {code: 200, label: 'Draft', color: '#9CA3AF'},
   {code: 201, label: 'Manifest', color: '#3B82F6'},
@@ -28,6 +28,7 @@ const ITEM_STATUS = [
   {code: 204, label: 'Dispatch', color: '#F97316'},
   {code: 205, label: 'Sold', color: '#10B981'},
   {code: 206, label: 'Disposed', color: '#EF4444'},
+  {code: 3, label: 'Destroyed', color: '#DC2626'},
 ];
 
 const fmt = v => {
@@ -143,8 +144,11 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
   };
 
   // ===== Turunan data =====
+  // item_stock row = 1 input admin berisi `quantity` pcs. Jadi jumlah item
+  // yang ditampilkan = SUM(quantity) (pcs), sedangkan jumlah baris = record.
   const itemByStatus = data?.item_by_status || [];
-  const totalItems = sumBy(itemByStatus, 'total');
+  const totalPcs = sumBy(itemByStatus, 'total_quantity');
+  const totalRecords = sumBy(itemByStatus, 'total');
 
   const sold = data?.total_sales || {};
   const soldProfit = Number(sold.total_profit || 0);
@@ -160,7 +164,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
 
   const itemCount = code => {
     const row = itemByStatus.find(it => Number(it.status) === code);
-    return row ? Number(row.total || 0) : 0;
+    return row ? Number(row.total_quantity || 0) : 0;
   };
 
   // Session terpilih → info header (session_no, country, status).
@@ -336,7 +340,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             <View style={[styles.miniCard, {backgroundColor: '#F6F4FB'}]}>
               <Icon name="package" size={18} color={color.primaryColor} />
               <Text style={styles.miniValue}>{heroVal('total_items')}</Text>
-              <Text style={styles.miniLabel}>Item</Text>
+              <Text style={styles.miniLabel}>Item (pcs)</Text>
             </View>
             <View style={[styles.miniCard, {backgroundColor: '#E0F2FE'}]}>
               <Icon name="users" size={18} color="#0EA5E9" />
@@ -346,7 +350,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
             <View style={[styles.miniCard, {backgroundColor: '#D1FAE5'}]}>
               <Icon name="layers" size={18} color="#10B981" />
               <Text style={styles.miniValue}>{heroVal('total_batch')}</Text>
-              <Text style={styles.miniLabel}>Batch</Text>
+              <Text style={styles.miniLabel}>Batch Kirim</Text>
             </View>
           </View>
         </View>
@@ -438,9 +442,11 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Status Item</Text>
-              <Text style={styles.cardTotal}>{totalItems} item</Text>
+              <Text style={styles.cardTotal}>
+                {totalPcs} pcs · {totalRecords} record
+              </Text>
             </View>
-            {totalItems > 0 ? (
+            {totalPcs > 0 ? (
               <View style={styles.progressTrack}>
                 {ITEM_STATUS.map(s => {
                   const count = itemCount(s.code);
@@ -474,7 +480,7 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
                       style={[styles.legendDot, {backgroundColor: s.color}]}
                     />
                     <Text style={styles.legendText}>
-                      {s.label} · {count}
+                      {s.label} · {count} pcs
                     </Text>
                   </View>
                 );
@@ -486,7 +492,9 @@ const Statistik = ({navigation, route, inline = false, header = null}) => {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Item Terjual</Text>
-              <Text style={styles.cardTotal}>{itemCount(205)} item sold</Text>
+              <Text style={styles.cardTotal}>
+                {itemCount(205)} pcs sold
+              </Text>
             </View>
             <View style={styles.soldRow}>
               <View style={styles.soldBox}>

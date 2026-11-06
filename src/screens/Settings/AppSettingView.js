@@ -35,6 +35,9 @@ const AppSettingView = ({navigation, route}) => {
     identity_number: config.identity_number || '',
     identity_phone: config.identity_phone || '',
     identity_address: config.identity_address || '',
+    link_tiktok: config.link_tiktok || '',
+    link_instagram: config.link_instagram || '',
+    link_other: config.link_other || '',
     country: config.country || 'Indonesia',
     country_code: config.country_code || '+62',
     currency: config.currency || 'IDR',
@@ -53,6 +56,7 @@ const AppSettingView = ({navigation, route}) => {
   const [waLoading, setWaLoading] = useState(false);
   const [waDestroying, setWaDestroying] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [waQrExpired, setWaQrExpired] = useState(false);
 
   useEffect(() => {
     fetchCountries().then(list => {
@@ -91,6 +95,9 @@ const AppSettingView = ({navigation, route}) => {
       identity_number: form.identity_number,
       identity_phone: form.identity_phone,
       identity_address: form.identity_address,
+      link_tiktok: form.link_tiktok,
+      link_instagram: form.link_instagram,
+      link_other: form.link_other,
       country: form.country,
       country_code: form.country_code,
       currency: form.currency,
@@ -109,6 +116,45 @@ const AppSettingView = ({navigation, route}) => {
       });
       RootNavigation.goBack();
     }
+  };
+
+  const handleDestroyWhatsAppSession = () => {
+    Alert.alert(
+      'Hapus session WhatsApp?',
+      'Akun WhatsApp akan terputus dari aplikasi. Anda perlu scan QR lagi untuk menghubungkannya.',
+      [
+        {text: 'Batal', style: 'cancel'},
+        {
+          text: 'Hapus Session',
+          style: 'destructive',
+          onPress: async () => {
+            setWaDestroying(true);
+            try {
+              const destroyed = await deleteWhatsAppSession({id: 'main'});
+              if (!destroyed) {
+                return;
+              }
+              setWaStatus({
+                connected: false,
+                session_exists: false,
+                phone_number: null,
+              });
+              setWaQR(null);
+              setWaQrExpired(false);
+              setQrModalVisible(false);
+              Toast.show({
+                type: 'success',
+                text1: 'Session dihapus',
+                text2: 'Hubungkan kembali WhatsApp dengan memindai QR.',
+              });
+            } finally {
+              setWaDestroying(false);
+            }
+          },
+        },
+      ],
+      {cancelable: true},
+    );
   };
 
   // ON → langsung request QR (initWhatsApp dijalankan karena notification_whatsapp dikirim true ke backend).
@@ -136,6 +182,8 @@ const AppSettingView = ({navigation, route}) => {
         const qr = await fetchWhatsAppQR();
         if (qr && qr.qr_base64) {
           setWaQR(qr.qr_base64);
+          setWaQrExpired(false);
+          qrIssuedAtRef.current = Date.now();
           setQrModalVisible(true);
           startQrPolling();
         } else {
@@ -151,10 +199,16 @@ const AppSettingView = ({navigation, route}) => {
         const qr = await fetchWhatsAppQR();
         if (qr && qr.qr_base64) {
           setWaQR(qr.qr_base64);
+          setWaQrExpired(false);
+          qrIssuedAtRef.current = Date.now();
           setQrModalVisible(true);
           startQrPolling();
         } else if (qr && qr.message) {
-          // Backend kirim pesan status (bukan QR)
+          // Backend kirim pesan status (bukan QR) — mis. QR kedaluwarsa
+          if (qr.qr_expired) {
+            setWaQrExpired(true);
+            setQrModalVisible(true);
+          }
           Toast.show({
             type: 'info',
             text1: 'Status WhatsApp',
@@ -178,6 +232,7 @@ const AppSettingView = ({navigation, route}) => {
         phone_number: null,
       }));
       setWaQR(null);
+      setWaQrExpired(false);
       setQrModalVisible(false);
       // Matikan toggle di backend juga
       await updateSysConfig({
@@ -187,43 +242,12 @@ const AppSettingView = ({navigation, route}) => {
     }
   };
 
-  const handleDestroyWhatsAppSession = () => {
-    Alert.alert(
-      'Hapus session WhatsApp?',
-      'Akun WhatsApp akan terputus dari aplikasi. Anda perlu scan QR lagi untuk menghubungkannya.',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {
-          text: 'Hapus Session',
-          style: 'destructive',
-          onPress: async () => {
-            setWaDestroying(true);
-            const destroyed = await deleteWhatsAppSession({id: 'main'});
-            setWaDestroying(false);
-            if (!destroyed) {
-              return;
-            }
-            setWaStatus({
-              connected: false,
-              session_exists: false,
-              phone_number: null,
-            });
-            setWaQR(null);
-            setQrModalVisible(false);
-            Toast.show({
-              type: 'success',
-              text1: 'Session dihapus',
-              text2: 'Hubungkan kembali WhatsApp dengan memindai QR.',
-            });
-          },
-        },
-      ],
-      {cancelable: true},
-    );
-  };
-
   // Polling QR: cek status setiap 3 detik sampai connected atau user cancel
   const qrPollingRef = useRef(null);
+  const qrIssuedAtRef = useRef(null);
+  // QR Baileys berlaku 60 detik (qrTimeout backend). Beri margin 5 detik agar
+  // user tidak men-scan QR yang sudah dirotasi server.
+  const QR_TTL_MS = 55000;
   useEffect(() => {
     return () => {
       if (qrPollingRef.current) {
@@ -236,23 +260,52 @@ const AppSettingView = ({navigation, route}) => {
     if (qrPollingRef.current) {clearInterval(qrPollingRef.current);}
     qrPollingRef.current = setInterval(async () => {
       try {
+        // QR yang tampil sudah lewat masa berlaku → minta user muat ulang.
+        if (
+          qrIssuedAtRef.current &&
+          Date.now() - qrIssuedAtRef.current > QR_TTL_MS
+        ) {
+          setWaQrExpired(true);
+        }
         const status = await fetchWhatsAppStatus();
         if (status && status.connected) {
           clearInterval(qrPollingRef.current);
           qrPollingRef.current = null;
           setWaStatus(status);
           setWaQR(null);
+          setWaQrExpired(false);
           setQrModalVisible(false);
           Toast.show({
             type: 'success',
             text1: 'Berhasil!',
             text2: 'WhatsApp terhubung. Notifikasi aktif.',
           });
+        } else if (status && status.qr_expired) {
+          // Socket pairing sudah ditutup server (QR ref habis / koneksi tutup)
+          setWaQrExpired(true);
         }
       } catch (e) {
         // ignore, terus polling
       }
     }, 3000);
+  };
+
+  // Muat ulang QR secara manual (QR lama sudah kedaluwarsa).
+  const handleReloadQr = async () => {
+    setWaQrExpired(false);
+    setWaQR(null);
+    const qr = await fetchWhatsAppQR();
+    if (qr && qr.qr_base64) {
+      setWaQR(qr.qr_base64);
+      qrIssuedAtRef.current = Date.now();
+      setQrModalVisible(true);
+      startQrPolling();
+    } else {
+      setWaQrExpired(true);
+      if (qr && qr.message) {
+        Toast.show({type: 'info', text1: 'Status WhatsApp', text2: qr.message});
+      }
+    }
   };
 
   const currencyLabel = code => {
@@ -292,10 +345,6 @@ const AppSettingView = ({navigation, route}) => {
       <View style={styles.body}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>Pengaturan Aplikasi</Text>
-          <Text style={styles.sectionDesc}>
-            Konfigurasi ini dikirim ke Backend (sys_configuration_mst) dan
-            dipakai aplikasi (mis. kode negara untuk nomor HP).
-          </Text>
 
           <InputText
             label="Nama Perusahaan"
@@ -328,30 +377,26 @@ const AppSettingView = ({navigation, route}) => {
             }
             placeholder="Alamat perusahaan"
           />
-          
           <InputText
-            label="Link Tiktok"
+            label="Link TikTok"
             value={form.link_tiktok}
-            onChangeText={value =>
-              setForm({...form, link_tiktok: value})
-            }
-            placeholder="Link Tiktok"
+            onChangeText={value => setForm({...form, link_tiktok: value})}
+            placeholder="Link TikTok"
+            autoCapitalize="none"
           />
           <InputText
             label="Link Instagram"
             value={form.link_instagram}
-            onChangeText={value =>
-              setForm({...form, link_instagram: value})
-            }
+            onChangeText={value => setForm({...form, link_instagram: value})}
             placeholder="Link Instagram"
+            autoCapitalize="none"
           />
           <InputText
             label="Link Lainnya"
             value={form.link_other}
-            onChangeText={value =>
-              setForm({...form, link_other: value})
-            }
-            placeholder="Link Lainnya"
+            onChangeText={value => setForm({...form, link_other: value})}
+            placeholder="Link lainnya"
+            autoCapitalize="none"
           />
           {/* Negara */}
           <Text style={styles.fieldLabel}>Negara</Text>
@@ -449,7 +494,7 @@ const AppSettingView = ({navigation, route}) => {
                 }
               />
             </View>
-            {(waStatus?.session_exists || waStatus?.connected) && (
+            {waStatus?.connected && (
               <TouchableOpacity
                 style={styles.waDeleteButton}
                 onPress={handleDestroyWhatsAppSession}
@@ -552,7 +597,19 @@ const AppSettingView = ({navigation, route}) => {
                 <Icon name="x" size={22} color="#666" />
               </TouchableOpacity>
             </View>
-            {waQR ? (
+            {waQrExpired ? (
+              <View style={styles.qrExpiredBox}>
+                <Text style={styles.qrExpiredText}>
+                  QR sudah kedaluwarsa. Silakan muat ulang QR untuk menampilkan
+                  kode baru.
+                </Text>
+                <TouchableOpacity
+                  style={styles.qrReloadButton}
+                  onPress={handleReloadQr}>
+                  <Text style={styles.qrReloadButtonText}>Muat Ulang QR</Text>
+                </TouchableOpacity>
+              </View>
+            ) : waQR ? (
               <Image
                 source={{uri: waQR}}
                 style={styles.qrImage}
@@ -586,11 +643,6 @@ const styles = StyleSheet.create({
     color: color.primaryColor,
     fontSize: 18,
     fontWeight: '700',
-  },
-  sectionDesc: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
     marginBottom: 18,
   },
   fieldLabel: {
@@ -757,6 +809,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 4,
   },
+  waDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+  },
+  waDeleteText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   waRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -775,23 +844,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#8A8A8A',
     marginTop: 3,
-  },
-  waDeleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
-  },
-  waDeleteText: {
-    color: '#EF4444',
-    fontSize: 13,
-    fontWeight: '600',
   },
   qrOverlay: {
     flex: 1,
@@ -824,5 +876,27 @@ const styles = StyleSheet.create({
     color: '#8A8A8A',
     textAlign: 'center',
     marginTop: 12,
+  },
+  qrExpiredBox: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  qrExpiredText: {
+    textAlign: 'center',
+    color: '#B45309',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  qrReloadButton: {
+    backgroundColor: color.primaryColor,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  qrReloadButtonText: {
+    color: color.white,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

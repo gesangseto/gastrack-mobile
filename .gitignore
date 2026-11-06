@@ -77,3 +77,14 @@ yarn-error.log
 
 # temp folder for test files
 temp/
+
+# Expo web build output
+/dist
+/web-build
+.expo
+
+# Environment (jangan commit nilai lokal; .env.example tetap di-commit)
+.env
+.env.local
+.env.*.local
+!.env.example
