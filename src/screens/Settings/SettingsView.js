@@ -35,6 +35,15 @@ const MENU = [
     screen: 'LocalSettingView',
   },
   {
+    key: 'notification',
+    title: 'Notification',
+    desc: 'Channel WhatsApp & laporan penerima',
+    icon: 'bell',
+    tint: '#EF4444',
+    bg: '#FEE2E2',
+    screen: 'NotificationView',
+  },
+  {
     key: 'setting',
     title: 'Setting',
     desc: 'Pengaturan aplikasi',

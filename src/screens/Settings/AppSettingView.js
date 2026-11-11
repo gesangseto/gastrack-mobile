@@ -1,6 +1,5 @@
-import {useEffect, useState, useRef} from 'react';
+import {useEffect, useState} from 'react';
 import {
-  Alert,
   Modal,
   ScrollView,
   StatusBar,
@@ -9,8 +8,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Switch,
-  Image,
 } from 'react-native';
 import InputText from '../../components/InputText';
 import * as RootNavigation from '../../config/RootNavigation';
@@ -22,11 +19,6 @@ import {updateSysConfig} from '../../resource/Configuration';
 import {getSysConfig, setSysConfig} from '../../storage';
 import Icon from '@react-native-vector-icons/lucide';
 import Toast from 'react-native-toast-message';
-import {
-  fetchWhatsAppStatus,
-  fetchWhatsAppQR,
-  deleteWhatsAppSession,
-} from '../../resource/Whatsapp';
 
 const AppSettingView = ({navigation, route}) => {
   const config = getSysConfig() || {};
@@ -42,21 +34,12 @@ const AppSettingView = ({navigation, route}) => {
     country_code: config.country_code || '+62',
     currency: config.currency || 'IDR',
     price_unit_code: config.price_unit_code || 'none',
-    notification_whatsapp: config.notification_whatsapp === true,
   });
   const [countries, setCountries] = useState([]);
   const [currencies, setCurrencies] = useState([]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // WhatsApp — single session 'main'
-  const [waStatus, setWaStatus] = useState(null);
-  const [waQR, setWaQR] = useState(null);
-  const [waLoading, setWaLoading] = useState(false);
-  const [waDestroying, setWaDestroying] = useState(false);
-  const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [waQrExpired, setWaQrExpired] = useState(false);
 
   useEffect(() => {
     fetchCountries().then(list => {
@@ -72,10 +55,6 @@ const AppSettingView = ({navigation, route}) => {
         return true;
       });
       setCurrencies(cur);
-    });
-    // Load WA status saat buka setting
-    fetchWhatsAppStatus().then(st => {
-      if (st) setWaStatus(st);
     });
   }, []);
 
@@ -102,7 +81,6 @@ const AppSettingView = ({navigation, route}) => {
       country_code: form.country_code,
       currency: form.currency,
       price_unit_code: form.price_unit_code,
-      notification_whatsapp: form.notification_whatsapp,
     };
     const updated = await updateSysConfig(payload);
     setSaving(false);
@@ -115,196 +93,6 @@ const AppSettingView = ({navigation, route}) => {
         text2: 'Konfigurasi tersimpan',
       });
       RootNavigation.goBack();
-    }
-  };
-
-  const handleDestroyWhatsAppSession = () => {
-    Alert.alert(
-      'Hapus session WhatsApp?',
-      'Akun WhatsApp akan terputus dari aplikasi. Anda perlu scan QR lagi untuk menghubungkannya.',
-      [
-        {text: 'Batal', style: 'cancel'},
-        {
-          text: 'Hapus Session',
-          style: 'destructive',
-          onPress: async () => {
-            setWaDestroying(true);
-            try {
-              const destroyed = await deleteWhatsAppSession({id: 'main'});
-              if (!destroyed) {
-                return;
-              }
-              setWaStatus({
-                connected: false,
-                session_exists: false,
-                phone_number: null,
-              });
-              setWaQR(null);
-              setWaQrExpired(false);
-              setQrModalVisible(false);
-              Toast.show({
-                type: 'success',
-                text1: 'Session dihapus',
-                text2: 'Hubungkan kembali WhatsApp dengan memindai QR.',
-              });
-            } finally {
-              setWaDestroying(false);
-            }
-          },
-        },
-      ],
-      {cancelable: true},
-    );
-  };
-
-  // ON → langsung request QR (initWhatsApp dijalankan karena notification_whatsapp dikirim true ke backend).
-  //     Kalau sudah ada session → tampilkan status. Kalau belum → tampilkan QR barcode + polling.
-  // OFF → disconnect & hapus session.
-  const handleToggleWhatsApp = async value => {
-    const willBeOn = value;
-    setForm(prev => ({...prev, notification_whatsapp: value}));
-    if (willBeOn) {
-      setWaLoading(true);
-      // 1. Simpan toggle ke backend dulu (biar initWhatsApp jalan)
-      await updateSysConfig({
-        users_name: config.users_name,
-        notification_whatsapp: true,
-      });
-      // 2. Cek status setelah backend inisialisasi WA
-      const status = await fetchWhatsAppStatus();
-      if (status) {setWaStatus(status);}
-      if (status && status.connected) {
-        // Sudah terhubung → tampilkan status, tanpa QR
-        setWaQR(null);
-        setQrModalVisible(false);
-      } else if (status && status.session_exists) {
-        // Session tersimpan tapi belum connect → request QR untuk reconnect
-        const qr = await fetchWhatsAppQR();
-        if (qr && qr.qr_base64) {
-          setWaQR(qr.qr_base64);
-          setWaQrExpired(false);
-          qrIssuedAtRef.current = Date.now();
-          setQrModalVisible(true);
-          startQrPolling();
-        } else {
-          // QR null/empty tapi session ada → tampilkan pesan
-          Toast.show({
-            type: 'info',
-            text1: 'Session Ada',
-            text2: 'Menunggu koneksi... Jika tidak, silakan scan QR yang tampil.',
-          });
-        }
-      } else {
-        // Belum ada session sama sekali → minta QR baru
-        const qr = await fetchWhatsAppQR();
-        if (qr && qr.qr_base64) {
-          setWaQR(qr.qr_base64);
-          setWaQrExpired(false);
-          qrIssuedAtRef.current = Date.now();
-          setQrModalVisible(true);
-          startQrPolling();
-        } else if (qr && qr.message) {
-          // Backend kirim pesan status (bukan QR) — mis. QR kedaluwarsa
-          if (qr.qr_expired) {
-            setWaQrExpired(true);
-            setQrModalVisible(true);
-          }
-          Toast.show({
-            type: 'info',
-            text1: 'Status WhatsApp',
-            text2: qr.message,
-          });
-        } else {
-          Toast.show({
-            type: 'error',
-            text1: 'QR Error',
-            text2: 'Tidak bisa generate QR. Coba lagi.',
-          });
-        }
-      }
-      setWaLoading(false);
-    } else {
-      await deleteWhatsAppSession({id: 'main'});
-      setWaStatus(prev => ({
-        ...(prev || {}),
-        connected: false,
-        session_exists: false,
-        phone_number: null,
-      }));
-      setWaQR(null);
-      setWaQrExpired(false);
-      setQrModalVisible(false);
-      // Matikan toggle di backend juga
-      await updateSysConfig({
-        users_name: config.users_name,
-        notification_whatsapp: false,
-      });
-    }
-  };
-
-  // Polling QR: cek status setiap 3 detik sampai connected atau user cancel
-  const qrPollingRef = useRef(null);
-  const qrIssuedAtRef = useRef(null);
-  // QR Baileys berlaku 60 detik (qrTimeout backend). Beri margin 5 detik agar
-  // user tidak men-scan QR yang sudah dirotasi server.
-  const QR_TTL_MS = 55000;
-  useEffect(() => {
-    return () => {
-      if (qrPollingRef.current) {
-        clearInterval(qrPollingRef.current);
-        qrPollingRef.current = null;
-      }
-    };
-  }, []);
-  const startQrPolling = () => {
-    if (qrPollingRef.current) {clearInterval(qrPollingRef.current);}
-    qrPollingRef.current = setInterval(async () => {
-      try {
-        // QR yang tampil sudah lewat masa berlaku → minta user muat ulang.
-        if (
-          qrIssuedAtRef.current &&
-          Date.now() - qrIssuedAtRef.current > QR_TTL_MS
-        ) {
-          setWaQrExpired(true);
-        }
-        const status = await fetchWhatsAppStatus();
-        if (status && status.connected) {
-          clearInterval(qrPollingRef.current);
-          qrPollingRef.current = null;
-          setWaStatus(status);
-          setWaQR(null);
-          setWaQrExpired(false);
-          setQrModalVisible(false);
-          Toast.show({
-            type: 'success',
-            text1: 'Berhasil!',
-            text2: 'WhatsApp terhubung. Notifikasi aktif.',
-          });
-        } else if (status && status.qr_expired) {
-          // Socket pairing sudah ditutup server (QR ref habis / koneksi tutup)
-          setWaQrExpired(true);
-        }
-      } catch (e) {
-        // ignore, terus polling
-      }
-    }, 3000);
-  };
-
-  // Muat ulang QR secara manual (QR lama sudah kedaluwarsa).
-  const handleReloadQr = async () => {
-    setWaQrExpired(false);
-    setWaQR(null);
-    const qr = await fetchWhatsAppQR();
-    if (qr && qr.qr_base64) {
-      setWaQR(qr.qr_base64);
-      qrIssuedAtRef.current = Date.now();
-      setQrModalVisible(true);
-      startQrPolling();
-    } else {
-      setWaQrExpired(true);
-      if (qr && qr.message) {
-        Toast.show({type: 'info', text1: 'Status WhatsApp', text2: qr.message});
-      }
     }
   };
 
@@ -466,52 +254,10 @@ const AppSettingView = ({navigation, route}) => {
             unit dari session.
           </Text>
 
-          {/* Koneksi WhatsApp */}
-          <Text style={styles.fieldLabel}>Koneksi WhatsApp</Text>
-          <View style={styles.waBox}>
-            <View style={styles.waRow}>
-              <View style={styles.waInfo}>
-                <Text style={styles.waTitle}>Hubungkan WhatsApp</Text>
-                <Text style={styles.waDesc}>
-                  {waStatus?.connected
-                    ? `Terhubung${
-                        waStatus.phone_number
-                          ? ' · ' + waStatus.phone_number.split('@')[0]
-                          : ''
-                      }`
-                    : waStatus?.session_exists
-                    ? 'Session tersimpan'
-                    : 'Belum ada session'}
-                </Text>
-              </View>
-              <Switch
-                value={form.notification_whatsapp}
-                onValueChange={handleToggleWhatsApp}
-                disabled={waLoading || waDestroying}
-                trackColor={{false: '#E5E5E5', true: '#D8CCF3'}}
-                thumbColor={
-                  form.notification_whatsapp ? color.primaryColor : '#f4f4f4'
-                }
-              />
-            </View>
-            {waStatus?.connected && (
-              <TouchableOpacity
-                style={styles.waDeleteButton}
-                onPress={handleDestroyWhatsAppSession}
-                disabled={waLoading || waDestroying}>
-                <Icon name="trash-2" size={16} color="#EF4444" />
-                <Text style={styles.waDeleteText}>
-                  {waDestroying ? 'Menghapus session...' : 'Hapus Session'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          {/* Koneksi WhatsApp dikelola di Notification Channel (Web) */}
           <Text style={styles.fieldHint}>
-            {form.notification_whatsapp
-              ? waStatus?.connected
-                ? 'Aktif dan terhubung. Notifikasi terkirim otomatis.'
-                : 'Aktif. Kalau session belum ada, barcode WA muncul — scan untuk pairing.'
-              : 'Nonaktif. Koneksi WhatsApp diabaikan.'}
+            Koneksi WhatsApp dikelola dari menu Notification → Notification
+            Channel di aplikasi web.
           </Text>
 
           <TouchableOpacity
@@ -579,48 +325,6 @@ const AppSettingView = ({navigation, route}) => {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal QR pairing WhatsApp */}
-      <Modal
-        visible={qrModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setQrModalVisible(false)}>
-        <View style={styles.qrOverlay}>
-          <View style={styles.qrCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Scan QR WhatsApp</Text>
-              <TouchableOpacity onPress={() => setQrModalVisible(false)}>
-                <Icon name="x" size={22} color="#666" />
-              </TouchableOpacity>
-            </View>
-            {waQrExpired ? (
-              <View style={styles.qrExpiredBox}>
-                <Text style={styles.qrExpiredText}>
-                  QR sudah kedaluwarsa. Silakan muat ulang QR untuk menampilkan
-                  kode baru.
-                </Text>
-                <TouchableOpacity
-                  style={styles.qrReloadButton}
-                  onPress={handleReloadQr}>
-                  <Text style={styles.qrReloadButtonText}>Muat Ulang QR</Text>
-                </TouchableOpacity>
-              </View>
-            ) : waQR ? (
-              <Image
-                source={{uri: waQR}}
-                style={styles.qrImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <Text style={styles.qrEmpty}>QR belum tersedia.</Text>
-            )}
-            <Text style={styles.qrHint}>
-              WhatsApp → Settings → Linked Devices → Link a Device
-            </Text>
           </View>
         </View>
       </Modal>
@@ -800,103 +504,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: color.primaryColor,
-  },
-  waBox: {
-    borderWidth: 1,
-    borderColor: '#D9D9E3',
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#fff',
-    marginBottom: 4,
-  },
-  waDeleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
-  },
-  waDeleteText: {
-    color: '#EF4444',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  waRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  waInfo: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  waTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  waDesc: {
-    fontSize: 11,
-    color: '#8A8A8A',
-    marginTop: 3,
-  },
-  qrOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  qrCard: {
-    backgroundColor: color.white,
-    borderRadius: 20,
-    padding: 20,
-    width: '100%',
-    maxWidth: 320,
-  },
-  qrImage: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: '#F4F4F8',
-  },
-  qrEmpty: {
-    textAlign: 'center',
-    color: '#999',
-    fontSize: 13,
-    paddingVertical: 40,
-  },
-  qrHint: {
-    fontSize: 11,
-    color: '#8A8A8A',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  qrExpiredBox: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  qrExpiredText: {
-    textAlign: 'center',
-    color: '#B45309',
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  qrReloadButton: {
-    backgroundColor: color.primaryColor,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  qrReloadButtonText: {
-    color: color.white,
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

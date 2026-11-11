@@ -32,6 +32,9 @@ import PaymentCreate from '../screens/Payment/PaymentCreate';
 import PaymentCustomerDetail from '../screens/Payment/PaymentCustomerDetail';
 import MessageTemplateList from '../screens/MessageTemplate/MessageTemplateList';
 import MessageTemplateEdit from '../screens/MessageTemplate/MessageTemplateEdit';
+import NotificationView from '../screens/Notification/NotificationView';
+import NotificationChannelEdit from '../screens/Notification/NotificationChannelEdit';
+import NotificationReportView from '../screens/Notification/NotificationReportView';
 
 const Router = () => {
   return (
@@ -70,6 +73,15 @@ const Router = () => {
       <Stack.Screen name="Form" component={Form} />
       <Stack.Screen name="MessageTemplateList" component={MessageTemplateList} />
       <Stack.Screen name="MessageTemplateEdit" component={MessageTemplateEdit} />
+      <Stack.Screen name="NotificationView" component={NotificationView} />
+      <Stack.Screen
+        name="NotificationChannelEdit"
+        component={NotificationChannelEdit}
+      />
+      <Stack.Screen
+        name="NotificationReportView"
+        component={NotificationReportView}
+      />
     </Stack.Navigator>
   );
 };
