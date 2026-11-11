@@ -1,7 +1,7 @@
 import Toast from 'react-native-toast-message';
 import $axios from '../config/Api';
 
-let url = `/api/v1/configuration/message-template`;
+let url = `/api/v1/notification/message-template`;
 let urlVar = `/api/v1/configuration/template-variable`;
 
 // List message template (mst_message_template)

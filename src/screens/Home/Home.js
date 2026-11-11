@@ -126,7 +126,7 @@ const Home = () => {
       )}
 
 
-      {/* Quick action: Customer, Price Code, Message Template & Country */}
+      {/* Quick action: Customer & Price Code */}
       <View style={styles.quickRow}>
         <TouchableOpacity
           style={styles.quickTile}
@@ -143,22 +143,6 @@ const Home = () => {
             <Icon name="tags" size={20} color={color.white} />
           </View>
           <Text style={styles.quickLabel}>Price Code</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickTile}
-          onPress={() => RootNavigation.navigate('MessageTemplateList')}>
-          <View style={[styles.quickIcon, {backgroundColor: '#8B5CF6'}]}>
-            <Icon name="message-square" size={20} color={color.white} />
-          </View>
-          <Text style={styles.quickLabel}>Message Template</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickTile}
-          onPress={() => RootNavigation.navigate('CountryList')}>
-          <View style={[styles.quickIcon, {backgroundColor: '#3B82F6'}]}>
-            <Icon name="globe" size={20} color={color.white} />
-          </View>
-          <Text style={styles.quickLabel}>Country</Text>
         </TouchableOpacity>
       </View>
 

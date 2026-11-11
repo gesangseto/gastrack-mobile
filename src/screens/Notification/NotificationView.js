@@ -3,6 +3,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -77,6 +78,19 @@ const NotificationView = () => {
   const defaultStatus = statusFor('default');
   const defaultChannel = channels.find(c => c.code === 'default');
 
+  const openDefaultChannel = () => {
+    if (defaultChannel) {
+      RootNavigation.navigate('NotificationChannelEdit', {
+        item: defaultChannel,
+      });
+      return;
+    }
+    Alert.alert(
+      'Channel belum tersedia',
+      'Data channel notification belum diterima dari server. Tarik layar untuk memuat ulang, atau periksa koneksi Backend.',
+    );
+  };
+
   return (
     <View style={styles.root}>
       <StatusBar
@@ -99,50 +113,44 @@ const NotificationView = () => {
                 colors={[color.primaryColor]}
               />
             }>
-            <Text style={styles.sectionTitle}>Kanal Pengiriman</Text>
-
-            {/* Kartu utama: WhatsApp default (Baileys) */}
+            {/* Kartu utama: WhatsApp default (Baileys) — status sesi + nomor.
+                Tap kartu membuka pengaturan koneksi channel. */}
             <TouchableOpacity
               style={styles.waCard}
               activeOpacity={0.85}
-              onPress={() =>
-                defaultChannel &&
-                RootNavigation.navigate('NotificationChannelEdit', {
-                  item: defaultChannel,
-                })
-              }>
+              onPress={openDefaultChannel}>
               <View style={styles.waTop}>
                 <View style={styles.waIcon}>
                   <Icon name="message-circle" size={20} color={color.white} />
                 </View>
                 <View style={styles.flex}>
                   <Text style={styles.waTitle} numberOfLines={1}>
-                    {defaultChannel?.name || 'WhatsApp Default'}
+                    WhatsApp
                   </Text>
                   <Text style={styles.waSub}>Channel default · Baileys</Text>
                 </View>
                 <View
                   style={[
                     styles.statusChip,
-                    defaultChannel?.status === 'Active' && styles.statusChipOn,
+                    defaultStatus?.connected && styles.statusChipOn,
                   ]}>
                   <View
                     style={[
                       styles.statusDot,
-                      defaultChannel?.status === 'Active'
+                      defaultStatus?.connected
                         ? styles.statusDotOn
                         : styles.statusDotOff,
                     ]}
                   />
                   <Text style={styles.statusChipText}>
-                    {defaultChannel?.status || 'Inactive'}
+                    {defaultStatus?.connected ? 'Terhubung' : 'Offline'}
                   </Text>
                 </View>
               </View>
 
               <Text style={styles.waState}>
                 {defaultStatus?.connected
-                  ? 'WhatsApp terhubung'
+                  ? defaultStatus?.phone_number || 'WhatsApp terhubung'
                   : 'WhatsApp belum terhubung'}
               </Text>
               {defaultStatus?.daily_limit ? (
@@ -154,62 +162,59 @@ const NotificationView = () => {
               <View style={styles.waAction}>
                 <Icon name="qr-code" size={13} color="#E7E1F7" />
                 <Text style={styles.waActionText}>
-                  Atur status, kredensial & QR di sini
+                  Mengatur koneksi channel
                 </Text>
                 <Icon name="chevron-right" size={16} color="#E7E1F7" />
               </View>
             </TouchableOpacity>
 
             {/* Channel lain (send_wia / kirimi / ...) */}
-            <View style={styles.card}>
-              {channels
-                .filter(c => c.code !== 'default')
-                .map((item, index, arr) => {
-                  const st = styleFor(item.code);
-                  const status = statusFor(item.code);
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.row,
-                        index < arr.length - 1 && styles.rowBorder,
-                      ]}
-                      onPress={() =>
-                        RootNavigation.navigate('NotificationChannelEdit', {
-                          item,
-                        })
-                      }>
-                      <View style={[styles.rowIcon, {backgroundColor: st.bg}]}>
-                        <Icon name={st.icon} size={19} color={st.tint} />
-                      </View>
-                      <View style={styles.flex}>
-                        <Text style={styles.rowTitle} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                        <Text style={styles.rowDesc} numberOfLines={1}>
-                          {item.code} · {item.status}
-                          {status
-                            ? status.ready
-                              ? ' · siap'
-                              : ' · belum siap'
-                            : ''}
-                        </Text>
-                      </View>
-                      <Icon name="chevron-right" size={18} color="#CCC" />
-                    </TouchableOpacity>
-                  );
-                })}
-              {channels.filter(c => c.code !== 'default').length === 0 && (
-                <Text style={styles.emptyText}>
-                  Belum ada channel lain dari server.
-                </Text>
-              )}
-            </View>
+            {channels.filter(c => c.code !== 'default').length > 0 && (
+              <View style={styles.card}>
+                {channels
+                  .filter(c => c.code !== 'default')
+                  .map((item, index, arr) => {
+                    const st = styleFor(item.code);
+                    const status = statusFor(item.code);
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[
+                          styles.row,
+                          index < arr.length - 1 && styles.rowBorder,
+                        ]}
+                        onPress={() =>
+                          RootNavigation.navigate('NotificationChannelEdit', {
+                            item,
+                          })
+                        }>
+                        <View style={[styles.rowIcon, {backgroundColor: st.bg}]}>
+                          <Icon name={st.icon} size={19} color={st.tint} />
+                        </View>
+                        <View style={styles.flex}>
+                          <Text style={styles.rowTitle} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          <Text style={styles.rowDesc} numberOfLines={1}>
+                            {item.code} · {item.status}
+                            {status
+                              ? status.ready
+                                ? ' · siap'
+                                : ' · belum siap'
+                              : ''}
+                          </Text>
+                        </View>
+                        <Icon name="chevron-right" size={18} color="#CCC" />
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            )}
 
-            <Text style={styles.sectionTitle}>Laporan</Text>
+            <Text style={styles.sectionTitle}>Laporan & template</Text>
             <View style={styles.card}>
               <TouchableOpacity
-                style={styles.row}
+                style={[styles.row, styles.rowBorder]}
                 onPress={() => RootNavigation.navigate('NotificationReportView')}>
                 <View style={[styles.rowIcon, styles.rowIconDanger]}>
                   <Icon name="shield-alert" size={19} color="#EF4444" />
@@ -217,7 +222,7 @@ const NotificationView = () => {
                 <View style={styles.flex}>
                   <Text style={styles.rowTitle}>Notification Report</Text>
                   <Text style={styles.rowDesc} numberOfLines={1}>
-                    Penerima yang ditahan karena belum pernah membalas
+                    Penerima diblokir – belum pernah membalas
                   </Text>
                 </View>
                 {reportTotal > 0 && (
@@ -227,14 +232,29 @@ const NotificationView = () => {
                 )}
                 <Icon name="chevron-right" size={18} color="#CCC" />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => RootNavigation.navigate('MessageTemplateList')}>
+                <View style={[styles.rowIcon, styles.rowIconPurple]}>
+                  <Icon name="message-square" size={19} color="#8B5CF6" />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.rowTitle}>Message Template</Text>
+                  <Text style={styles.rowDesc} numberOfLines={1}>
+                    Template pesan WhatsApp
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={18} color="#CCC" />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.hint}>
               <Icon name="info" size={14} color={color.primaryColor} />
               <Text style={styles.hintText}>
-                Channel default hanya mengirim ke nomor yang pernah membalas.
-                Setelah customer membalas, buka Notification Report dan tekan
-                Kirim Ulang.
+                Penerima baru tidak dikirimi pesan sampai ia pernah mengirim
+                pesan ke nomor ini (anti-bot). Yang terlewat dicatat di
+                Notification Report.
               </Text>
             </View>
           </ScrollView>
@@ -328,6 +348,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowIconDanger: {backgroundColor: '#FEE2E2'},
+  rowIconPurple: {backgroundColor: '#EDE9FE'},
   rowTitle: {fontSize: 13.5, fontWeight: '600', color: '#333'},
   rowDesc: {fontSize: 10.5, color: '#999', marginTop: 2},
   badge: {
@@ -340,12 +361,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {color: color.white, fontSize: 10, fontWeight: '800'},
-  emptyText: {
-    textAlign: 'center',
-    color: '#999',
-    fontSize: 12,
-    paddingVertical: 16,
-  },
   hint: {
     flexDirection: 'row',
     alignItems: 'flex-start',
