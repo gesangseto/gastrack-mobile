@@ -32,6 +32,22 @@ const CHANNEL_STYLE = {
 const styleFor = code =>
   CHANNEL_STYLE[code] || {icon: 'radio', tint: '#8B5CF6', bg: '#EDE9FE'};
 
+// Progres pemanasan nomor: hari ke-N dari total hari (berjalan + sisa).
+// Total dihitung dari data backend supaya tidak perlu tahu rumus plafon di UI.
+const warmupProgress = status => {
+  const day = Number(status?.warmup_day || 0);
+  const remaining = Number(status?.warmup_days_remaining || 0);
+  const total = day + remaining;
+  if (!day || !total) {return null;}
+  return {
+    day,
+    total,
+    percent: status.warmup_complete
+      ? 100
+      : Math.min(100, Math.round((day / total) * 100)),
+  };
+};
+
 const NotificationView = () => {
   const [channels, setChannels] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -85,6 +101,9 @@ const NotificationView = () => {
 
   const statusFor = code => statuses.find(s => s.code === code) || null;
   const defaultStatus = statusFor('default');
+  const defaultWarmup = defaultStatus?.warmup_started_on
+    ? warmupProgress(defaultStatus)
+    : null;
   const defaultChannel = channels.find(c => c.code === 'default');
 
   const openDefaultChannel = () => {
@@ -162,7 +181,49 @@ const NotificationView = () => {
                   ? defaultStatus?.phone_number || 'WhatsApp terhubung'
                   : 'WhatsApp belum terhubung'}
               </Text>
-              {defaultStatus?.daily_limit ? (
+              {defaultWarmup ? (
+                <View style={styles.warm}>
+                  <View style={styles.warmHead}>
+                    <View style={styles.warmTitle}>
+                      <Icon
+                        name={
+                          defaultStatus.warmup_complete
+                            ? 'circle-check'
+                            : 'trending-up'
+                        }
+                        size={12}
+                        color={color.white}
+                      />
+                      <Text style={styles.warmLabel}>
+                        {defaultStatus.warmup_complete
+                          ? 'Pemanasan selesai'
+                          : 'Pemanasan nomor'}
+                      </Text>
+                    </View>
+                    <Text style={styles.warmDay}>
+                      {defaultStatus.warmup_complete
+                        ? `${defaultStatus.daily_limit || 0} pesan/hari`
+                        : `Hari ${defaultWarmup.day}/${defaultWarmup.total}`}
+                    </Text>
+                  </View>
+                  <View style={styles.warmTrack}>
+                    <View
+                      style={[
+                        styles.warmFill,
+                        defaultStatus.warmup_complete && styles.warmFillDone,
+                        {width: `${defaultWarmup.percent}%`},
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.waQuota}>
+                    Kuota hari ini: {defaultStatus.daily_used || 0}/
+                    {defaultStatus.daily_limit || 0} pesan
+                    {defaultStatus.warmup_complete
+                      ? ' · pemanasan selesai'
+                      : ` · sisa ${defaultStatus.warmup_days_remaining || 0} hari`}
+                  </Text>
+                </View>
+              ) : defaultStatus?.daily_limit ? (
                 <Text style={styles.waQuota}>
                   Kuota hari ini: {defaultStatus.daily_used || 0}/
                   {defaultStatus.daily_limit} pesan
@@ -348,6 +409,28 @@ const styles = StyleSheet.create({
   statusDotOff: {backgroundColor: '#C4C4C4'},
   waState: {color: color.white, fontSize: 17, fontWeight: '700', marginTop: 12},
   waQuota: {color: '#C9BCE8', fontSize: 10.5, marginTop: 2},
+  warm: {marginTop: 10},
+  warmHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  warmTitle: {flexDirection: 'row', alignItems: 'center', gap: 5},
+  warmLabel: {color: '#C9BCE8', fontSize: 10.5},
+  warmDay: {color: color.white, fontSize: 10.5, fontWeight: '700'},
+  warmTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  warmFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#8DE3B5',
+  },
+  warmFillDone: {backgroundColor: '#6EE7A8'},
   waAction: {
     flexDirection: 'row',
     alignItems: 'center',
