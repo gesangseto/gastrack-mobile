@@ -35,6 +35,7 @@ import MessageTemplateEdit from '../screens/MessageTemplate/MessageTemplateEdit'
 import NotificationView from '../screens/Notification/NotificationView';
 import NotificationChannelEdit from '../screens/Notification/NotificationChannelEdit';
 import NotificationReportView from '../screens/Notification/NotificationReportView';
+import NotificationQueueView from '../screens/Notification/NotificationQueueView';
 
 const Router = () => {
   return (
@@ -81,6 +82,10 @@ const Router = () => {
       <Stack.Screen
         name="NotificationReportView"
         component={NotificationReportView}
+      />
+      <Stack.Screen
+        name="NotificationQueueView"
+        component={NotificationQueueView}
       />
     </Stack.Navigator>
   );

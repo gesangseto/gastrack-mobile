@@ -20,6 +20,7 @@ import {
   getNotificationChannelStatus,
 } from '../../resource/NotificationChannel';
 import {getListNotificationReport} from '../../resource/NotificationReport';
+import {getNotificationQueueSummary} from '../../resource/NotificationQueue';
 
 // Ikon & warna per channel — mengikuti channel yang di-seed Backend.
 const CHANNEL_STYLE = {
@@ -35,16 +36,24 @@ const NotificationView = () => {
   const [channels, setChannels] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [reportTotal, setReportTotal] = useState(0);
+  const [queueActive, setQueueActive] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [list, report] = await Promise.all([
+    const [list, report, queue] = await Promise.all([
       getNotificationChannels({}, false),
       getListNotificationReport({limit: 1}, false),
+      getNotificationQueueSummary(false),
     ]);
     if (list) {setChannels(list);}
     if (report) {setReportTotal(report.total || 0);}
+    if (queue) {
+      const active = queue
+        .filter(row => row.status === 'pending' || row.status === 'processing')
+        .reduce((acc, row) => acc + Number(row.total || 0), 0);
+      setQueueActive(active);
+    }
   }, []);
 
   // Status channel bisa memanggil API provider (SendWia/Kirimi) sehingga
@@ -211,8 +220,28 @@ const NotificationView = () => {
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Laporan & template</Text>
+            <Text style={styles.sectionTitle}>Laporan, antrean & template</Text>
             <View style={styles.card}>
+              <TouchableOpacity
+                style={[styles.row, styles.rowBorder]}
+                onPress={() => RootNavigation.navigate('NotificationQueueView')}>
+                <View style={[styles.rowIcon, styles.rowIconInfo]}>
+                  <Icon name="send" size={19} color="#0EA5E9" />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.rowTitle}>Notification Queue</Text>
+                  <Text style={styles.rowDesc} numberOfLines={1}>
+                    Antrean pesan WhatsApp – pantau status kirim
+                  </Text>
+                </View>
+                {queueActive > 0 && (
+                  <View style={styles.badgeInfo}>
+                    <Text style={styles.badgeText}>{queueActive}</Text>
+                  </View>
+                )}
+                <Icon name="chevron-right" size={18} color="#CCC" />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.row, styles.rowBorder]}
                 onPress={() => RootNavigation.navigate('NotificationReportView')}>
@@ -349,6 +378,7 @@ const styles = StyleSheet.create({
   },
   rowIconDanger: {backgroundColor: '#FEE2E2'},
   rowIconPurple: {backgroundColor: '#EDE9FE'},
+  rowIconInfo: {backgroundColor: '#E0F2FE'},
   rowTitle: {fontSize: 13.5, fontWeight: '600', color: '#333'},
   rowDesc: {fontSize: 10.5, color: '#999', marginTop: 2},
   badge: {
@@ -361,6 +391,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {color: color.white, fontSize: 10, fontWeight: '800'},
+  badgeInfo: {
+    minWidth: 22,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    backgroundColor: '#0EA5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   hint: {
     flexDirection: 'row',
     alignItems: 'flex-start',
